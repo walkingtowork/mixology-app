@@ -82,7 +82,30 @@ API_BASE_URL=http://localhost:8000
 
 **Note**: For development, you can use the default secret key, but for production, generate a secure key.
 
-### 6. Verify Django Setup
+### 6. Run Database Migrations
+
+```bash
+python manage.py migrate
+```
+
+This will create the necessary database tables, including the custom User model.
+
+### 7. Create Superuser (Optional)
+
+To access the Django admin interface, create a superuser account:
+
+```bash
+python manage.py createsuperuser
+```
+
+Follow the prompts to create an admin account. For development/testing, you can use:
+- **Username**: `admin`
+- **Email**: `admin@example.com` (or leave blank)
+- **Password**: `admin` (or any password you prefer)
+
+**Note**: Using simple credentials like "admin"/"admin" is acceptable for development but should never be used in production.
+
+### 8. Verify Django Setup
 
 ```bash
 python manage.py check
@@ -146,6 +169,14 @@ The React development server will start on `http://localhost:3000` (or the next 
 ### Access the Application
 
 Open your browser and navigate to `http://localhost:3000`. You should see the "Hello World" message fetched from the Django API.
+
+### Access Django Admin
+
+To access the Django admin interface for user management:
+
+1. Navigate to `http://localhost:8000/admin/` in your browser
+2. Log in with your superuser credentials (e.g., username: `admin`, password: `admin`)
+3. You can view, create, and edit users from the admin interface
 
 ## API Endpoint
 
