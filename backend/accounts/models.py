@@ -15,6 +15,4 @@ class User(AbstractUser):
 
     def __str__(self):
         """Return a string representation of the user."""
-        if self.fullname:
-            return f"{self.fullname} ({self.username})"
         return self.username
