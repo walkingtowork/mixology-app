@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'api',
     'accounts',
+    'cocktails',
 ]
 
 # Custom User Model
@@ -139,6 +140,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://localhost:5173",  # Vite default port
+    "http://127.0.0.1:5173",
 ]
 
 # Allow credentials if needed
