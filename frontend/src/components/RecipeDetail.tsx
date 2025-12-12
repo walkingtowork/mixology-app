@@ -113,6 +113,22 @@ const RecipeDetail = ({ recipeId, onEdit, onBack }: RecipeDetailProps) => {
         </div>
       )}
 
+      {recipe.source_url && (
+        <div style={{ marginBottom: '2rem' }}>
+          <h2 style={{ marginBottom: '0.5rem' }}>Source</h2>
+          <p>
+            <a 
+              href={recipe.source_url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              style={{ color: '#007bff', textDecoration: 'underline' }}
+            >
+              {recipe.source_url}
+            </a>
+          </p>
+        </div>
+      )}
+
       {onEdit && (
         <button
           onClick={onEdit}

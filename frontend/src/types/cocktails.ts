@@ -2,7 +2,7 @@
  * Type definitions for cocktails API
  */
 
-export type Unit = 'oz' | 'ml' | 'tsp' | 'barspoon' | 'dash';
+export type Unit = 'oz' | 'ml' | 'tsp' | 'tbsp' | 'barspoon' | 'dash' | 'drops' | 'spritz' | 'rinse' | 'pinch';
 
 export interface Ingredient {
   id: number;
@@ -21,6 +21,7 @@ export interface Recipe {
   name: string;
   notes: string | null;
   garnish: string | null;
+  source_url: string | null;
   ingredients: RecipeIngredient[];
 }
 

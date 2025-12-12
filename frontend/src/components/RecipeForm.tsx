@@ -8,13 +8,14 @@ interface RecipeFormProps {
   onCancel?: () => void;
 }
 
-const UNIT_OPTIONS: Unit[] = ['oz', 'ml', 'tsp', 'barspoon', 'dash'];
+const UNIT_OPTIONS: Unit[] = ['oz', 'ml', 'tsp', 'tbsp', 'barspoon', 'dash', 'drops', 'spritz', 'rinse', 'pinch'];
 
 const RecipeForm = ({ recipeId, onSave, onCancel }: RecipeFormProps) => {
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [name, setName] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
   const [garnish, setGarnish] = useState<string>('');
+  const [sourceUrl, setSourceUrl] = useState<string>('');
   const [recipeIngredients, setRecipeIngredients] = useState<Array<{
     ingredientId: number;
     amount: number;
@@ -37,6 +38,7 @@ const RecipeForm = ({ recipeId, onSave, onCancel }: RecipeFormProps) => {
           setName(recipeData.name);
           setNotes(recipeData.notes || '');
           setGarnish(recipeData.garnish || '');
+          setSourceUrl(recipeData.source_url || '');
           setRecipeIngredients(
             recipeData.ingredients.map((ri) => ({
               ingredientId: ri.ingredient.id,
@@ -113,6 +115,7 @@ const RecipeForm = ({ recipeId, onSave, onCancel }: RecipeFormProps) => {
         name: name.trim(),
         notes: notes.trim() || null,
         garnish: garnish.trim() || null,
+        source_url: sourceUrl.trim() || null,
         ingredients: recipeIngredients.map((ri) => ({
           id: 0, // Will be assigned by backend
           ingredient: ingredients.find((ing) => ing.id === ri.ingredientId)!,
@@ -201,6 +204,25 @@ const RecipeForm = ({ recipeId, onSave, onCancel }: RecipeFormProps) => {
             type="text"
             value={garnish}
             onChange={(e) => setGarnish(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '0.5rem',
+              border: '1px solid #ddd',
+              borderRadius: '4px',
+            }}
+          />
+        </div>
+
+        <div style={{ marginBottom: '1rem' }}>
+          <label htmlFor="sourceUrl" style={{ display: 'block', marginBottom: '0.5rem' }}>
+            Source URL
+          </label>
+          <input
+            id="sourceUrl"
+            type="url"
+            value={sourceUrl}
+            onChange={(e) => setSourceUrl(e.target.value)}
+            placeholder="https://..."
             style={{
               width: '100%',
               padding: '0.5rem',
