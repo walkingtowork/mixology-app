@@ -18,7 +18,7 @@ class RecipeAdmin(admin.ModelAdmin):
     inlines = [RecipeIngredientInline]
     fieldsets = (
         ('Basic Information', {
-            'fields': ('name', 'notes', 'garnish')
+            'fields': ('name', 'notes', 'garnish', 'source_url')
         }),
     )
     

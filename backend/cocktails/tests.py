@@ -313,3 +313,159 @@ class RecipeAPITests(APITestCase):
         response = self.client.post(url, data, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_recipe_with_new_units(self):
+        """Test that new unit types (tbsp, drops, spritz, rinse, pinch) work correctly."""
+        url = '/api/recipes/'
+        
+        # Test tbsp
+        data = {
+            'name': 'Test Recipe with tbsp',
+            'ingredients': [
+                {
+                    'ingredient_id': self.gin.id,
+                    'amount': 1.0,
+                    'unit': 'tbsp'
+                }
+            ]
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['ingredients'][0]['unit'], 'tbsp')
+        
+        # Test drops
+        data = {
+            'name': 'Test Recipe with drops',
+            'ingredients': [
+                {
+                    'ingredient_id': self.gin.id,
+                    'amount': 2.0,
+                    'unit': 'drops'
+                }
+            ]
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['ingredients'][0]['unit'], 'drops')
+        
+        # Test spritz
+        data = {
+            'name': 'Test Recipe with spritz',
+            'ingredients': [
+                {
+                    'ingredient_id': self.gin.id,
+                    'amount': 1.0,
+                    'unit': 'spritz'
+                }
+            ]
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['ingredients'][0]['unit'], 'spritz')
+        
+        # Test rinse
+        data = {
+            'name': 'Test Recipe with rinse',
+            'ingredients': [
+                {
+                    'ingredient_id': self.gin.id,
+                    'amount': 1.0,
+                    'unit': 'rinse'
+                }
+            ]
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['ingredients'][0]['unit'], 'rinse')
+        
+        # Test pinch
+        data = {
+            'name': 'Test Recipe with pinch',
+            'ingredients': [
+                {
+                    'ingredient_id': self.gin.id,
+                    'amount': 1.0,
+                    'unit': 'pinch'
+                }
+            ]
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['ingredients'][0]['unit'], 'pinch')
+
+    def test_create_recipe_with_source_url(self):
+        """Test that recipes can be created with source_url field."""
+        url = '/api/recipes/'
+        data = {
+            'name': 'Test Recipe with Source',
+            'source_url': 'https://www.example.com/recipe',
+            'ingredients': [
+                {
+                    'ingredient_id': self.gin.id,
+                    'amount': 2.0,
+                    'unit': 'oz'
+                }
+            ]
+        }
+        response = self.client.post(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['source_url'], 'https://www.example.com/recipe')
+        
+        # Verify in database
+        recipe = Recipe.objects.get(name='Test Recipe with Source')
+        self.assertEqual(recipe.source_url, 'https://www.example.com/recipe')
+
+    def test_retrieve_recipe_with_source_url(self):
+        """Test that source_url is included in recipe retrieval."""
+        # Create recipe with source_url
+        recipe = Recipe.objects.create(
+            name='Test Recipe',
+            source_url='https://www.example.com/test'
+        )
+        RecipeIngredient.objects.create(
+            recipe=recipe,
+            ingredient=self.gin,
+            amount=2.0,
+            unit='oz'
+        )
+        
+        url = f'/api/recipes/{recipe.id}/'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('source_url', response.data)
+        self.assertEqual(response.data['source_url'], 'https://www.example.com/test')
+
+    def test_update_recipe_source_url(self):
+        """Test that source_url can be updated."""
+        url = f'/api/recipes/{self.recipe.id}/'
+        data = {
+            'source_url': 'https://www.example.com/updated'
+        }
+        response = self.client.patch(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['source_url'], 'https://www.example.com/updated')
+        
+        # Verify in database
+        self.recipe.refresh_from_db()
+        self.assertEqual(self.recipe.source_url, 'https://www.example.com/updated')
+
+    def test_create_recipe_without_source_url(self):
+        """Test that source_url is optional when creating recipes."""
+        url = '/api/recipes/'
+        data = {
+            'name': 'Test Recipe No Source',
+            'ingredients': [
+                {
+                    'ingredient_id': self.gin.id,
+                    'amount': 2.0,
+                    'unit': 'oz'
+                }
+            ]
+        }
+        response = self.client.post(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIsNone(response.data.get('source_url'))

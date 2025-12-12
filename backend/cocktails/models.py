@@ -7,8 +7,13 @@ UNIT_CHOICES = [
     ('oz', 'oz'),
     ('ml', 'ml'),
     ('tsp', 'tsp'),
+    ('tbsp', 'tbsp'),
     ('barspoon', 'barspoon'),
     ('dash', 'dash'),
+    ('drops', 'drops'),
+    ('spritz', 'spritz'),
+    ('rinse', 'rinse'),
+    ('pinch', 'pinch'),
 ]
 
 
@@ -28,6 +33,7 @@ class Recipe(models.Model):
     name = models.CharField(max_length=200)
     notes = models.TextField(blank=True)
     garnish = models.CharField(max_length=200, blank=True)
+    source_url = models.URLField(blank=True, null=True, help_text="Optional URL to the recipe source")
     ingredients = models.ManyToManyField(
         Ingredient,
         through='RecipeIngredient',

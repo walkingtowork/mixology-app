@@ -30,7 +30,7 @@ class RecipeSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Recipe
-        fields = ['id', 'name', 'notes', 'garnish', 'ingredients']
+        fields = ['id', 'name', 'notes', 'garnish', 'source_url', 'ingredients']
     
     def create(self, validated_data):
         """Create a recipe with its ingredients."""
@@ -56,6 +56,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         instance.name = validated_data.get('name', instance.name)
         instance.notes = validated_data.get('notes', instance.notes)
         instance.garnish = validated_data.get('garnish', instance.garnish)
+        instance.source_url = validated_data.get('source_url', instance.source_url)
         instance.save()
         
         # Update ingredients if provided
