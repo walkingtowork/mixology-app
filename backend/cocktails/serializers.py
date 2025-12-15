@@ -1,13 +1,62 @@
 from rest_framework import serializers
-from .models import Ingredient, Recipe, RecipeIngredient
+from .models import Ingredient, Recipe, RecipeIngredient, IngredientCategory
+
+
+class IngredientCategorySerializer(serializers.ModelSerializer):
+    """Serializer for IngredientCategory model."""
+    ingredients = serializers.SerializerMethodField()
+    generic_ingredient = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = IngredientCategory
+        fields = ['id', 'name', 'notes', 'ingredients', 'generic_ingredient']
+    
+    def get_ingredients(self, obj):
+        """Return all ingredients in this category."""
+        ingredients = Ingredient.objects.filter(category=obj)
+        # Use a simple serializer to avoid circular reference
+        return [
+            {
+                'id': ing.id,
+                'name': ing.name,
+                'is_generic': ing.is_generic,
+            }
+            for ing in ingredients
+        ]
+    
+    def get_generic_ingredient(self, obj):
+        """Return the generic ingredient for this category if it exists."""
+        generic = Ingredient.objects.filter(category=obj, is_generic=True).first()
+        if generic:
+            return {
+                'id': generic.id,
+                'name': generic.name,
+                'is_generic': generic.is_generic,
+            }
+        return None
+
+
+class IngredientCategorySimpleSerializer(serializers.ModelSerializer):
+    """Simple serializer for IngredientCategory to avoid circular references."""
+    class Meta:
+        model = IngredientCategory
+        fields = ['id', 'name', 'notes']
 
 
 class IngredientSerializer(serializers.ModelSerializer):
     """Serializer for Ingredient model."""
+    category = IngredientCategorySimpleSerializer(read_only=True)
+    category_id = serializers.PrimaryKeyRelatedField(
+        queryset=IngredientCategory.objects.all(),
+        source='category',
+        write_only=True,
+        required=False,
+        allow_null=True
+    )
     
     class Meta:
         model = Ingredient
-        fields = ['id', 'name']
+        fields = ['id', 'name', 'category', 'category_id', 'is_generic']
 
 
 class RecipeIngredientSerializer(serializers.ModelSerializer):

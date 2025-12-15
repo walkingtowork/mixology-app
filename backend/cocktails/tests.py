@@ -1,7 +1,7 @@
 from django.test import TestCase
 from rest_framework.test import APITestCase
 from rest_framework import status
-from .models import Ingredient, Recipe, RecipeIngredient
+from .models import Ingredient, Recipe, RecipeIngredient, IngredientCategory
 
 
 class IngredientAPITests(APITestCase):
@@ -469,3 +469,375 @@ class RecipeAPITests(APITestCase):
         
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertIsNone(response.data.get('source_url'))
+
+
+class IngredientCategoryAPITests(APITestCase):
+    """Test cases for IngredientCategory API endpoints."""
+
+    def setUp(self):
+        """Set up test data."""
+        self.category1 = IngredientCategory.objects.create(name='Whiskey', notes='Various whiskey types')
+        self.category2 = IngredientCategory.objects.create(name='Gin', notes='Gin category')
+
+    def test_list_categories(self):
+        """Test GET /api/categories/ returns all categories."""
+        url = '/api/categories/'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+        self.assertEqual(response.data[0]['name'], 'Gin')  # Ordered by name
+        self.assertEqual(response.data[1]['name'], 'Whiskey')
+
+    def test_create_category(self):
+        """Test POST /api/categories/ creates a new category."""
+        url = '/api/categories/'
+        data = {'name': 'Vodka', 'notes': 'Vodka category'}
+        response = self.client.post(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['name'], 'Vodka')
+        self.assertEqual(response.data['notes'], 'Vodka category')
+        self.assertTrue(IngredientCategory.objects.filter(name='Vodka').exists())
+
+    def test_create_category_with_auto_create_generic_ingredient(self):
+        """Test that creating a category with create_generic_ingredient=True creates generic ingredient."""
+        url = '/api/categories/'
+        data = {
+            'name': 'Rum',
+            'notes': 'Rum category',
+            'create_generic_ingredient': True
+        }
+        response = self.client.post(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        
+        # Check that generic ingredient was created
+        generic_ingredient = Ingredient.objects.filter(name='Rum', is_generic=True).first()
+        self.assertIsNotNone(generic_ingredient)
+        self.assertEqual(generic_ingredient.category.name, 'Rum')
+        self.assertTrue(generic_ingredient.is_generic)
+
+    def test_create_category_without_auto_create_generic_ingredient(self):
+        """Test that creating a category with create_generic_ingredient=False doesn't create generic ingredient."""
+        url = '/api/categories/'
+        data = {
+            'name': 'Tequila',
+            'create_generic_ingredient': False
+        }
+        response = self.client.post(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        
+        # Check that generic ingredient was NOT created
+        generic_ingredient = Ingredient.objects.filter(name='Tequila', is_generic=True).first()
+        self.assertIsNone(generic_ingredient)
+
+    def test_create_category_with_existing_ingredient_name(self):
+        """Test that creating a category with existing ingredient name links it to category."""
+        # Create an ingredient first
+        existing_ingredient = Ingredient.objects.create(name='Brandy')
+        
+        url = '/api/categories/'
+        data = {
+            'name': 'Brandy',
+            'create_generic_ingredient': True
+        }
+        response = self.client.post(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        
+        # Check that existing ingredient was linked to category and marked as generic
+        existing_ingredient.refresh_from_db()
+        self.assertIsNotNone(existing_ingredient.category)
+        self.assertEqual(existing_ingredient.category.name, 'Brandy')
+        self.assertTrue(existing_ingredient.is_generic)
+
+    def test_create_category_duplicate_name(self):
+        """Test that creating a category with duplicate name fails."""
+        url = '/api/categories/'
+        data = {'name': 'Whiskey'}  # Already exists
+        response = self.client.post(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_retrieve_category(self):
+        """Test GET /api/categories/{id}/ returns a single category."""
+        url = f'/api/categories/{self.category1.id}/'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['id'], self.category1.id)
+        self.assertEqual(response.data['name'], 'Whiskey')
+        self.assertEqual(response.data['notes'], 'Various whiskey types')
+
+    def test_retrieve_category_with_ingredients(self):
+        """Test that category retrieval includes ingredients."""
+        # Create ingredients in category
+        ingredient1 = Ingredient.objects.create(name='Jameson', category=self.category1)
+        ingredient2 = Ingredient.objects.create(name='Red Breast 12', category=self.category1)
+        
+        url = f'/api/categories/{self.category1.id}/'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('ingredients', response.data)
+        self.assertEqual(len(response.data['ingredients']), 2)
+
+    def test_retrieve_category_with_generic_ingredient(self):
+        """Test that category retrieval includes generic ingredient if it exists."""
+        # Create generic ingredient
+        generic = Ingredient.objects.create(
+            name='Whiskey',
+            category=self.category1,
+            is_generic=True
+        )
+        
+        url = f'/api/categories/{self.category1.id}/'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('generic_ingredient', response.data)
+        self.assertIsNotNone(response.data['generic_ingredient'])
+        self.assertEqual(response.data['generic_ingredient']['name'], 'Whiskey')
+
+    def test_update_category(self):
+        """Test PATCH /api/categories/{id}/ updates a category."""
+        url = f'/api/categories/{self.category1.id}/'
+        data = {
+            'name': 'Scotch Whiskey',
+            'notes': 'Updated notes'
+        }
+        response = self.client.patch(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['name'], 'Scotch Whiskey')
+        self.assertEqual(response.data['notes'], 'Updated notes')
+        
+        # Verify in database
+        self.category1.refresh_from_db()
+        self.assertEqual(self.category1.name, 'Scotch Whiskey')
+
+    def test_update_category_name_updates_generic_ingredient(self):
+        """Test that updating category name also updates generic ingredient name."""
+        # Create generic ingredient
+        generic = Ingredient.objects.create(
+            name='Whiskey',
+            category=self.category1,
+            is_generic=True
+        )
+        
+        url = f'/api/categories/{self.category1.id}/'
+        data = {'name': 'Scotch Whiskey'}
+        response = self.client.patch(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # Check that generic ingredient name was updated
+        generic.refresh_from_db()
+        self.assertEqual(generic.name, 'Scotch Whiskey')
+
+    def test_delete_category(self):
+        """Test DELETE /api/categories/{id}/ deletes a category."""
+        category_id = self.category1.id
+        url = f'/api/categories/{category_id}/'
+        response = self.client.delete(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(IngredientCategory.objects.filter(id=category_id).exists())
+
+    def test_delete_category_with_recipes_prevents_deletion(self):
+        """Test that deleting a category used in recipes is prevented."""
+        # Create ingredient in category
+        ingredient = Ingredient.objects.create(name='Jameson', category=self.category1)
+        
+        # Create recipe using that ingredient
+        recipe = Recipe.objects.create(name='Irish Coffee')
+        RecipeIngredient.objects.create(
+            recipe=recipe,
+            ingredient=ingredient,
+            amount=1.5,
+            unit='oz'
+        )
+        
+        url = f'/api/categories/{self.category1.id}/'
+        response = self.client.delete(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('detail', response.data)
+        self.assertIn('used in one or more recipes', response.data['detail'])
+        
+        # Verify category still exists
+        self.assertTrue(IngredientCategory.objects.filter(id=self.category1.id).exists())
+
+    def test_category_ingredients_endpoint(self):
+        """Test GET /api/categories/{id}/ingredients/ returns ingredients in category."""
+        ingredient1 = Ingredient.objects.create(name='Jameson', category=self.category1)
+        ingredient2 = Ingredient.objects.create(name='Red Breast 12', category=self.category1)
+        ingredient3 = Ingredient.objects.create(name='Gin', category=self.category2)  # Different category
+        
+        url = f'/api/categories/{self.category1.id}/ingredients/'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+        ingredient_names = [ing['name'] for ing in response.data]
+        self.assertIn('Jameson', ingredient_names)
+        self.assertIn('Red Breast 12', ingredient_names)
+        self.assertNotIn('Gin', ingredient_names)
+
+
+class IngredientWithCategoryTests(APITestCase):
+    """Test cases for Ingredient API with category support."""
+
+    def setUp(self):
+        """Set up test data."""
+        self.category = IngredientCategory.objects.create(name='Whiskey')
+        self.ingredient = Ingredient.objects.create(name='Jameson', category=self.category)
+
+    def test_ingredient_includes_category(self):
+        """Test that ingredient API response includes category information."""
+        url = f'/api/ingredients/{self.ingredient.id}/'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('category', response.data)
+        self.assertIsNotNone(response.data['category'])
+        self.assertEqual(response.data['category']['name'], 'Whiskey')
+        self.assertIn('is_generic', response.data)
+        self.assertFalse(response.data['is_generic'])
+
+    def test_ingredient_without_category(self):
+        """Test that ingredient without category returns null category."""
+        ingredient = Ingredient.objects.create(name='Uncategorized Ingredient')
+        url = f'/api/ingredients/{ingredient.id}/'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsNone(response.data['category'])
+
+    def test_update_ingredient_category(self):
+        """Test that ingredient category can be updated."""
+        new_category = IngredientCategory.objects.create(name='Rum')
+        url = f'/api/ingredients/{self.ingredient.id}/'
+        data = {'category_id': new_category.id}
+        response = self.client.patch(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['category']['name'], 'Rum')
+        
+        # Verify in database
+        self.ingredient.refresh_from_db()
+        self.assertEqual(self.ingredient.category.name, 'Rum')
+
+    def test_remove_ingredient_category(self):
+        """Test that ingredient category can be removed."""
+        url = f'/api/ingredients/{self.ingredient.id}/'
+        data = {'category_id': None}
+        response = self.client.patch(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsNone(response.data['category'])
+        
+        # Verify in database
+        self.ingredient.refresh_from_db()
+        self.assertIsNone(self.ingredient.category)
+
+
+class RecipeCategoryFilterTests(APITestCase):
+    """Test cases for recipe filtering by category."""
+
+    def setUp(self):
+        """Set up test data."""
+        self.whiskey_category = IngredientCategory.objects.create(name='Whiskey')
+        self.gin_category = IngredientCategory.objects.create(name='Gin')
+        
+        # Create generic ingredients
+        self.whiskey_generic = Ingredient.objects.create(
+            name='Whiskey',
+            category=self.whiskey_category,
+            is_generic=True
+        )
+        self.gin_generic = Ingredient.objects.create(
+            name='Gin',
+            category=self.gin_category,
+            is_generic=True
+        )
+        
+        # Create brand ingredients
+        self.jameson = Ingredient.objects.create(name='Jameson', category=self.whiskey_category)
+        self.red_breast = Ingredient.objects.create(name='Red Breast 12', category=self.whiskey_category)
+        self.tanqueray = Ingredient.objects.create(name='Tanqueray', category=self.gin_category)
+        
+        # Create recipes
+        self.recipe1 = Recipe.objects.create(name='Irish Coffee')
+        RecipeIngredient.objects.create(
+            recipe=self.recipe1,
+            ingredient=self.jameson,
+            amount=1.5,
+            unit='oz'
+        )
+        
+        self.recipe2 = Recipe.objects.create(name='Whiskey Sour')
+        RecipeIngredient.objects.create(
+            recipe=self.recipe2,
+            ingredient=self.whiskey_generic,
+            amount=2.0,
+            unit='oz'
+        )
+        
+        self.recipe3 = Recipe.objects.create(name='Gin and Tonic')
+        RecipeIngredient.objects.create(
+            recipe=self.recipe3,
+            ingredient=self.tanqueray,
+            amount=2.0,
+            unit='oz'
+        )
+
+    def test_filter_recipes_by_category(self):
+        """Test that filtering recipes by category returns all recipes with ingredients in that category."""
+        url = f'/api/recipes/?category={self.whiskey_category.id}'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+        recipe_names = [recipe['name'] for recipe in response.data]
+        self.assertIn('Irish Coffee', recipe_names)
+        self.assertIn('Whiskey Sour', recipe_names)
+        self.assertNotIn('Gin and Tonic', recipe_names)
+
+    def test_filter_recipes_by_category_and_ingredient(self):
+        """Test that both category and ingredient filters can be used together."""
+        # Create recipe with both whiskey category ingredient and specific ingredient
+        recipe4 = Recipe.objects.create(name='Complex Recipe')
+        RecipeIngredient.objects.create(
+            recipe=recipe4,
+            ingredient=self.jameson,
+            amount=1.0,
+            unit='oz'
+        )
+        RecipeIngredient.objects.create(
+            recipe=recipe4,
+            ingredient=self.tanqueray,
+            amount=1.0,
+            unit='oz'
+        )
+        
+        # Filter by category and ingredient - should return recipes that match both
+        url = f'/api/recipes/?category={self.whiskey_category.id}&ingredient={self.jameson.id}'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Should return recipes that have both whiskey category ingredient AND jameson
+        recipe_names = [recipe['name'] for recipe in response.data]
+        self.assertIn('Irish Coffee', recipe_names)
+        self.assertIn('Complex Recipe', recipe_names)
+
+    def test_filter_recipes_by_category_no_matches(self):
+        """Test that filtering by category with no matches returns empty list."""
+        empty_category = IngredientCategory.objects.create(name='Empty Category')
+        url = f'/api/recipes/?category={empty_category.id}'
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 0)

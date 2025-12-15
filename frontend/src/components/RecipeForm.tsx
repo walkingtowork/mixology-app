@@ -167,6 +167,7 @@ const RecipeForm = ({ recipeId, onSave, onCancel }: RecipeFormProps) => {
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            autoComplete="off"
             style={{
               width: '100%',
               padding: '0.5rem',
@@ -186,6 +187,7 @@ const RecipeForm = ({ recipeId, onSave, onCancel }: RecipeFormProps) => {
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={4}
+            autoComplete="off"
             style={{
               width: '100%',
               padding: '0.5rem',
@@ -204,6 +206,7 @@ const RecipeForm = ({ recipeId, onSave, onCancel }: RecipeFormProps) => {
             type="text"
             value={garnish}
             onChange={(e) => setGarnish(e.target.value)}
+            autoComplete="off"
             style={{
               width: '100%',
               padding: '0.5rem',
@@ -223,6 +226,7 @@ const RecipeForm = ({ recipeId, onSave, onCancel }: RecipeFormProps) => {
             value={sourceUrl}
             onChange={(e) => setSourceUrl(e.target.value)}
             placeholder="https://..."
+            autoComplete="off"
             style={{
               width: '100%',
               padding: '0.5rem',
