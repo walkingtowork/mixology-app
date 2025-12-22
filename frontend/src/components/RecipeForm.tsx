@@ -1,16 +1,14 @@
 import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { fetchIngredients, createRecipe, updateRecipe, fetchRecipe } from '../services/cocktailsApi';
 import type { Ingredient, Recipe, Unit } from '../types/cocktails';
 
-interface RecipeFormProps {
-  recipeId?: number;
-  onSave?: (recipe: Recipe) => void;
-  onCancel?: () => void;
-}
-
 const UNIT_OPTIONS: Unit[] = ['oz', 'ml', 'tsp', 'tbsp', 'barspoon', 'dash', 'drops', 'spritz', 'rinse', 'pinch'];
 
-const RecipeForm = ({ recipeId, onSave, onCancel }: RecipeFormProps) => {
+const RecipeForm = () => {
+  const { id } = useParams<{ id?: string }>();
+  const navigate = useNavigate();
+  const recipeId = id ? parseInt(id, 10) : undefined;
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [name, setName] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
@@ -131,7 +129,8 @@ const RecipeForm = ({ recipeId, onSave, onCancel }: RecipeFormProps) => {
         savedRecipe = await createRecipe(recipeData);
       }
 
-      onSave?.(savedRecipe);
+      // Navigate to recipe detail page after save
+      navigate(`/recipes/${savedRecipe.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save recipe');
     } finally {
@@ -373,22 +372,26 @@ const RecipeForm = ({ recipeId, onSave, onCancel }: RecipeFormProps) => {
           >
             {saving ? 'Saving...' : recipeId ? 'Update Recipe' : 'Create Recipe'}
           </button>
-          {onCancel && (
-            <button
-              type="button"
-              onClick={onCancel}
-              style={{
-                padding: '0.75rem 1.5rem',
-                backgroundColor: '#6c757d',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
-            >
-              Cancel
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => {
+              if (recipeId) {
+                navigate(`/recipes/${recipeId}`);
+              } else {
+                navigate('/recipes');
+              }
+            }}
+            style={{
+              padding: '0.75rem 1.5rem',
+              backgroundColor: '#6c757d',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+            }}
+          >
+            Cancel
+          </button>
         </div>
       </form>
     </div>

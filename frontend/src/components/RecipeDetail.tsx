@@ -1,14 +1,12 @@
 import { useState, useEffect } from 'react';
-import { fetchRecipe } from '../services/cocktailsApi';
+import { useParams, useNavigate } from 'react-router-dom';
+import { fetchRecipe, deleteRecipe } from '../services/cocktailsApi';
 import type { Recipe } from '../types/cocktails';
 
-interface RecipeDetailProps {
-  recipeId: number;
-  onEdit?: () => void;
-  onBack?: () => void;
-}
-
-const RecipeDetail = ({ recipeId, onEdit, onBack }: RecipeDetailProps) => {
+const RecipeDetail = () => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const recipeId = parseInt(id || '0', 10);
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,15 +36,24 @@ const RecipeDetail = ({ recipeId, onEdit, onBack }: RecipeDetailProps) => {
     );
   }
 
+  const handleDelete = async () => {
+    if (window.confirm('Are you sure you want to delete this recipe?')) {
+      try {
+        await deleteRecipe(recipeId);
+        navigate('/recipes');
+      } catch (err) {
+        alert(err instanceof Error ? err.message : 'Failed to delete recipe');
+      }
+    }
+  };
+
   if (error) {
     return (
       <div style={{ padding: '2rem', textAlign: 'center', color: 'red' }}>
         <p>Error: {error}</p>
-        {onBack && (
-          <button onClick={onBack} style={{ marginTop: '1rem', padding: '0.5rem 1rem' }}>
-            Back to Recipes
-          </button>
-        )}
+        <button onClick={() => navigate('/recipes')} style={{ marginTop: '1rem', padding: '0.5rem 1rem' }}>
+          Back to Recipes
+        </button>
       </div>
     );
   }
@@ -55,11 +62,9 @@ const RecipeDetail = ({ recipeId, onEdit, onBack }: RecipeDetailProps) => {
     return (
       <div style={{ padding: '2rem', textAlign: 'center' }}>
         <p>Recipe not found.</p>
-        {onBack && (
-          <button onClick={onBack} style={{ marginTop: '1rem', padding: '0.5rem 1rem' }}>
-            Back to Recipes
-          </button>
-        )}
+        <button onClick={() => navigate('/recipes')} style={{ marginTop: '1rem', padding: '0.5rem 1rem' }}>
+          Back to Recipes
+        </button>
       </div>
     );
   }
@@ -70,11 +75,9 @@ const RecipeDetail = ({ recipeId, onEdit, onBack }: RecipeDetailProps) => {
 
   return (
     <div style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
-      {onBack && (
-        <button onClick={onBack} style={{ marginBottom: '1rem', padding: '0.5rem 1rem' }}>
-          ← Back to Recipes
-        </button>
-      )}
+      <button onClick={() => navigate('/recipes')} style={{ marginBottom: '1rem', padding: '0.5rem 1rem' }}>
+        ← Back to Recipes
+      </button>
       
       <h1 style={{ marginBottom: '1rem' }}>{recipe.name}</h1>
 
@@ -129,11 +132,10 @@ const RecipeDetail = ({ recipeId, onEdit, onBack }: RecipeDetailProps) => {
         </div>
       )}
 
-      {onEdit && (
+      <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
         <button
-          onClick={onEdit}
+          onClick={() => navigate(`/recipes/${recipeId}/edit`)}
           style={{
-            marginTop: '1rem',
             padding: '0.75rem 1.5rem',
             backgroundColor: '#007bff',
             color: 'white',
@@ -144,7 +146,20 @@ const RecipeDetail = ({ recipeId, onEdit, onBack }: RecipeDetailProps) => {
         >
           Edit Recipe
         </button>
-      )}
+        <button
+          onClick={handleDelete}
+          style={{
+            padding: '0.75rem 1.5rem',
+            backgroundColor: '#dc3545',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+          }}
+        >
+          Delete Recipe
+        </button>
+      </div>
     </div>
   );
 };

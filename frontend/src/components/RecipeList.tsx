@@ -1,12 +1,9 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { fetchRecipes, fetchIngredients, fetchCategories } from '../services/cocktailsApi';
 import type { Recipe, Ingredient, IngredientCategory } from '../types/cocktails';
 
-interface RecipeListProps {
-  onRecipeSelect?: (recipeId: number) => void;
-}
-
-const RecipeList = ({ onRecipeSelect }: RecipeListProps) => {
+const RecipeList = () => {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [categories, setCategories] = useState<IngredientCategory[]>([]);
@@ -143,17 +140,24 @@ const RecipeList = ({ onRecipeSelect }: RecipeListProps) => {
                 marginBottom: '1rem',
                 border: '1px solid #ddd',
                 borderRadius: '4px',
-                cursor: onRecipeSelect ? 'pointer' : 'default',
               }}
-              onClick={() => onRecipeSelect?.(recipe.id)}
             >
-              <h3 style={{ margin: '0 0 0.5rem 0' }}>{recipe.name}</h3>
-              {recipe.garnish && (
-                <p style={{ margin: '0.25rem 0', color: '#666' }}>Garnish: {recipe.garnish}</p>
-              )}
-              <p style={{ margin: '0.25rem 0', color: '#666' }}>
-                {recipe.ingredients.length} ingredient{recipe.ingredients.length !== 1 ? 's' : ''}
-              </p>
+              <Link
+                to={`/recipes/${recipe.id}`}
+                style={{
+                  textDecoration: 'none',
+                  color: 'inherit',
+                  display: 'block',
+                }}
+              >
+                <h3 style={{ margin: '0 0 0.5rem 0' }}>{recipe.name}</h3>
+                {recipe.garnish && (
+                  <p style={{ margin: '0.25rem 0', color: '#666' }}>Garnish: {recipe.garnish}</p>
+                )}
+                <p style={{ margin: '0.25rem 0', color: '#666' }}>
+                  {recipe.ingredients.length} ingredient{recipe.ingredients.length !== 1 ? 's' : ''}
+                </p>
+              </Link>
             </li>
           ))}
         </ul>
