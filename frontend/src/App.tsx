@@ -1,97 +1,71 @@
-import { useState } from 'react';
+import { Routes, Route, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import IngredientList from './components/IngredientList';
 import RecipeList from './components/RecipeList';
 import RecipeDetail from './components/RecipeDetail';
 import RecipeForm from './components/RecipeForm';
 import CategoryList from './components/CategoryList';
-import type { Recipe } from './types/cocktails';
+import HomePage from './components/HomePage';
 import './App.css';
 
-type View = 'recipes' | 'ingredients' | 'categories' | 'recipe-detail' | 'recipe-form' | 'recipe-edit';
+// Wrapper component to extract recipe ID from route params
+const RecipeDetailWrapper = () => {
+  return <RecipeDetail />;
+};
+
+// Wrapper component for RecipeForm to handle both create and edit
+const RecipeFormWrapper = () => {
+  return <RecipeForm />;
+};
 
 function App() {
-  const [currentView, setCurrentView] = useState<View>('recipes');
-  const [selectedRecipeId, setSelectedRecipeId] = useState<number | null>(null);
-
-  const handleRecipeSelect = (recipeId: number) => {
-    setSelectedRecipeId(recipeId);
-    setCurrentView('recipe-detail');
-  };
-
-  const handleCreateRecipe = () => {
-    setSelectedRecipeId(null);
-    setCurrentView('recipe-form');
-  };
-
-  const handleEditRecipe = () => {
-    setCurrentView('recipe-edit');
-  };
-
-  const handleRecipeSaved = (recipe: Recipe) => {
-    setSelectedRecipeId(recipe.id);
-    setCurrentView('recipe-detail');
-  };
-
-  const handleBackToRecipes = () => {
-    setSelectedRecipeId(null);
-    setCurrentView('recipes');
-  };
-
-  const handleCancelForm = () => {
-    if (selectedRecipeId) {
-      setCurrentView('recipe-detail');
-    } else {
-      setCurrentView('recipes');
-    }
-  };
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isRecipesRoute = location.pathname === '/recipes';
 
   return (
     <div className="app">
       <nav style={{ padding: '1rem 2rem', borderBottom: '1px solid #ddd', marginBottom: '2rem' }}>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <h1 style={{ margin: 0, flex: 1 }}>Mixology App</h1>
-          <button
-            onClick={() => setCurrentView('recipes')}
-            style={{
+          <NavLink
+            to="/recipes"
+            style={({ isActive }) => ({
               padding: '0.5rem 1rem',
-              backgroundColor: currentView === 'recipes' ? '#007bff' : '#6c757d',
+              backgroundColor: isActive ? '#007bff' : '#6c757d',
               color: 'white',
-              border: 'none',
+              textDecoration: 'none',
               borderRadius: '4px',
-              cursor: 'pointer',
-            }}
+            })}
           >
             Recipes
-          </button>
-          <button
-            onClick={() => setCurrentView('ingredients')}
-            style={{
+          </NavLink>
+          <NavLink
+            to="/ingredients"
+            style={({ isActive }) => ({
               padding: '0.5rem 1rem',
-              backgroundColor: currentView === 'ingredients' ? '#007bff' : '#6c757d',
+              backgroundColor: isActive ? '#007bff' : '#6c757d',
               color: 'white',
-              border: 'none',
+              textDecoration: 'none',
               borderRadius: '4px',
-              cursor: 'pointer',
-            }}
+            })}
           >
             Ingredients
-          </button>
-          <button
-            onClick={() => setCurrentView('categories')}
-            style={{
+          </NavLink>
+          <NavLink
+            to="/categories"
+            style={({ isActive }) => ({
               padding: '0.5rem 1rem',
-              backgroundColor: currentView === 'categories' ? '#007bff' : '#6c757d',
+              backgroundColor: isActive ? '#007bff' : '#6c757d',
               color: 'white',
-              border: 'none',
+              textDecoration: 'none',
               borderRadius: '4px',
-              cursor: 'pointer',
-            }}
+            })}
           >
             Categories
-          </button>
-          {currentView === 'recipes' && (
+          </NavLink>
+          {isRecipesRoute && (
             <button
-              onClick={handleCreateRecipe}
+              onClick={() => navigate('/recipes/new')}
               style={{
                 padding: '0.5rem 1rem',
                 backgroundColor: '#28a745',
@@ -108,28 +82,15 @@ function App() {
       </nav>
 
       <main>
-        {currentView === 'recipes' && (
-          <RecipeList onRecipeSelect={handleRecipeSelect} />
-        )}
-        {currentView === 'ingredients' && <IngredientList />}
-        {currentView === 'categories' && <CategoryList />}
-        {currentView === 'recipe-detail' && selectedRecipeId && (
-          <RecipeDetail
-            recipeId={selectedRecipeId}
-            onEdit={handleEditRecipe}
-            onBack={handleBackToRecipes}
-          />
-        )}
-        {currentView === 'recipe-form' && (
-          <RecipeForm onSave={handleRecipeSaved} onCancel={handleCancelForm} />
-        )}
-        {currentView === 'recipe-edit' && selectedRecipeId && (
-          <RecipeForm
-            recipeId={selectedRecipeId}
-            onSave={handleRecipeSaved}
-            onCancel={handleCancelForm}
-          />
-        )}
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/recipes" element={<RecipeList />} />
+          <Route path="/recipes/:id" element={<RecipeDetailWrapper />} />
+          <Route path="/recipes/new" element={<RecipeFormWrapper />} />
+          <Route path="/recipes/:id/edit" element={<RecipeFormWrapper />} />
+          <Route path="/ingredients" element={<IngredientList />} />
+          <Route path="/categories" element={<CategoryList />} />
+        </Routes>
       </main>
     </div>
   );

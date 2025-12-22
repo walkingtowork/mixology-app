@@ -7,12 +7,20 @@
 - [ ] Add ingredient substitutions
 - [ ] Add recipes for home-made ingredients
 - [ ] Think more about handling sugar cubes
-- [ ] Add tags to recipes (and ingredients?)
+- [ ] Add tags to recipes (and ingredients?) Use the existing @prd-tags.md, but review first
 - [ ] Add Menus
 - [ ] Add new ingredients on front-end
 - [ ] View ingredient, amount remaining, add to shopping list
 - [ ] Shopping list
 - [ ] Deploy
+
+## Testing
+
+- [ ] Set up frontend testing framework (Vitest + React Testing Library)
+- [ ] Add unit tests for routing functionality (route rendering, navigation, active states)
+- [ ] Add unit tests for React components (RecipeList, RecipeDetail, RecipeForm, etc.)
+- [ ] Add integration tests for user flows (create recipe, edit recipe, delete recipe)
+- [ ] Add tests for navigation bar and routing behavior
 
 ## Ingredient Categories - Out of Scope
 
