@@ -4,9 +4,19 @@
 
 export type Unit = 'oz' | 'ml' | 'tsp' | 'tbsp' | 'barspoon' | 'dash' | 'drops' | 'spritz' | 'rinse' | 'pinch';
 
+export interface IngredientCategory {
+  id: number;
+  name: string;
+  notes: string | null;
+  ingredients?: Ingredient[];
+  generic_ingredient?: Ingredient | null;
+}
+
 export interface Ingredient {
   id: number;
   name: string;
+  category: IngredientCategory | null;
+  is_generic: boolean;
 }
 
 export interface RecipeIngredient {

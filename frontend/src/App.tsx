@@ -3,10 +3,11 @@ import IngredientList from './components/IngredientList';
 import RecipeList from './components/RecipeList';
 import RecipeDetail from './components/RecipeDetail';
 import RecipeForm from './components/RecipeForm';
+import CategoryList from './components/CategoryList';
 import type { Recipe } from './types/cocktails';
 import './App.css';
 
-type View = 'recipes' | 'ingredients' | 'recipe-detail' | 'recipe-form' | 'recipe-edit';
+type View = 'recipes' | 'ingredients' | 'categories' | 'recipe-detail' | 'recipe-form' | 'recipe-edit';
 
 function App() {
   const [currentView, setCurrentView] = useState<View>('recipes');
@@ -75,6 +76,19 @@ function App() {
           >
             Ingredients
           </button>
+          <button
+            onClick={() => setCurrentView('categories')}
+            style={{
+              padding: '0.5rem 1rem',
+              backgroundColor: currentView === 'categories' ? '#007bff' : '#6c757d',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+            }}
+          >
+            Categories
+          </button>
           {currentView === 'recipes' && (
             <button
               onClick={handleCreateRecipe}
@@ -98,6 +112,7 @@ function App() {
           <RecipeList onRecipeSelect={handleRecipeSelect} />
         )}
         {currentView === 'ingredients' && <IngredientList />}
+        {currentView === 'categories' && <CategoryList />}
         {currentView === 'recipe-detail' && selectedRecipeId && (
           <RecipeDetail
             recipeId={selectedRecipeId}

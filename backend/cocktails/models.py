@@ -17,9 +17,34 @@ UNIT_CHOICES = [
 ]
 
 
+class IngredientCategory(models.Model):
+    """Category model for organizing ingredients into groups."""
+    name = models.CharField(max_length=200, unique=True)
+    notes = models.TextField(blank=True, help_text="Optional notes about this category")
+
+    class Meta:
+        ordering = ['name']
+        verbose_name_plural = 'Ingredient Categories'
+
+    def __str__(self):
+        return self.name
+
+
 class Ingredient(models.Model):
     """Ingredient model representing a cocktail ingredient."""
     name = models.CharField(max_length=200, unique=True)
+    category = models.ForeignKey(
+        IngredientCategory,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='ingredients',
+        help_text="Optional category this ingredient belongs to"
+    )
+    is_generic = models.BooleanField(
+        default=False,
+        help_text="True if this is the auto-created generic ingredient for a category"
+    )
 
     class Meta:
         ordering = ['name']

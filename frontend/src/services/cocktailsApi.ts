@@ -1,4 +1,4 @@
-import type { Ingredient, Recipe } from '../types/cocktails';
+import type { Ingredient, Recipe, IngredientCategory } from '../types/cocktails';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
@@ -48,15 +48,23 @@ export async function createIngredient(name: string): Promise<Ingredient> {
 }
 
 /**
- * Fetches all recipes from the API, optionally filtered by ingredient
+ * Fetches all recipes from the API, optionally filtered by ingredient or category
  * @param ingredientId - Optional ingredient ID to filter recipes
+ * @param categoryId - Optional category ID to filter recipes
  * @returns Promise resolving to an array of Recipe objects
  * @throws Error if the API request fails
  */
-export async function fetchRecipes(ingredientId?: number): Promise<Recipe[]> {
+export async function fetchRecipes(ingredientId?: number, categoryId?: number): Promise<Recipe[]> {
   let url = `${API_BASE_URL}/api/recipes/`;
+  const params = new URLSearchParams();
   if (ingredientId) {
-    url += `?ingredient=${ingredientId}`;
+    params.append('ingredient', ingredientId.toString());
+  }
+  if (categoryId) {
+    params.append('category', categoryId.toString());
+  }
+  if (params.toString()) {
+    url += `?${params.toString()}`;
   }
 
   const response = await fetch(url, {
@@ -203,5 +211,171 @@ export async function deleteRecipe(id: number): Promise<void> {
     }
     throw new Error(`Failed to delete recipe: ${response.status} ${response.statusText}`);
   }
+}
+
+/**
+ * Fetches all ingredient categories from the API
+ * @returns Promise resolving to an array of IngredientCategory objects
+ * @throws Error if the API request fails
+ */
+export async function fetchCategories(): Promise<IngredientCategory[]> {
+  const response = await fetch(`${API_BASE_URL}/api/categories/`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch categories: ${response.status} ${response.statusText}`);
+  }
+
+  const data: IngredientCategory[] = await response.json();
+  return data;
+}
+
+/**
+ * Fetches a single category by ID
+ * @param id - The category ID
+ * @returns Promise resolving to the IngredientCategory object
+ * @throws Error if the API request fails
+ */
+export async function fetchCategory(id: number): Promise<IngredientCategory> {
+  const response = await fetch(`${API_BASE_URL}/api/categories/${id}/`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error(`Category with ID ${id} not found`);
+    }
+    throw new Error(`Failed to fetch category: ${response.status} ${response.statusText}`);
+  }
+
+  const data: IngredientCategory = await response.json();
+  return data;
+}
+
+/**
+ * Creates a new ingredient category
+ * @param category - Category data without the id field
+ * @param createGenericIngredient - Whether to auto-create a generic ingredient (default: true)
+ * @returns Promise resolving to the created IngredientCategory object
+ * @throws Error if the API request fails
+ */
+export async function createCategory(
+  category: Omit<IngredientCategory, 'id' | 'ingredients' | 'generic_ingredient'>,
+  createGenericIngredient: boolean = true
+): Promise<IngredientCategory> {
+  const categoryData = {
+    name: category.name,
+    notes: category.notes || '',
+    create_generic_ingredient: createGenericIngredient,
+  };
+
+  const response = await fetch(`${API_BASE_URL}/api/categories/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(categoryData),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    const errorMessage = errorData.detail || 
+                        errorData.name?.[0] || 
+                        `Failed to create category: ${response.status} ${response.statusText}`;
+    throw new Error(errorMessage);
+  }
+
+  const data: IngredientCategory = await response.json();
+  return data;
+}
+
+/**
+ * Updates an existing category
+ * @param id - The category ID
+ * @param category - Partial category data to update
+ * @returns Promise resolving to the updated IngredientCategory object
+ * @throws Error if the API request fails
+ */
+export async function updateCategory(
+  id: number,
+  category: Partial<Omit<IngredientCategory, 'id' | 'ingredients' | 'generic_ingredient'>>
+): Promise<IngredientCategory> {
+  const categoryData: any = {};
+  
+  if (category.name !== undefined) categoryData.name = category.name;
+  if (category.notes !== undefined) categoryData.notes = category.notes || '';
+
+  const response = await fetch(`${API_BASE_URL}/api/categories/${id}/`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(categoryData),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    const errorMessage = errorData.detail || 
+                        errorData.name?.[0] || 
+                        `Failed to update category: ${response.status} ${response.statusText}`;
+    throw new Error(errorMessage);
+  }
+
+  const data: IngredientCategory = await response.json();
+  return data;
+}
+
+/**
+ * Deletes a category
+ * @param id - The category ID
+ * @returns Promise resolving when the category is deleted
+ * @throws Error if the API request fails
+ */
+export async function deleteCategory(id: number): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/categories/${id}/`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error(`Category with ID ${id} not found`);
+    }
+    const errorData = await response.json().catch(() => ({}));
+    const errorMessage = errorData.detail || 
+                        `Failed to delete category: ${response.status} ${response.statusText}`;
+    throw new Error(errorMessage);
+  }
+}
+
+/**
+ * Fetches all ingredients in a category
+ * @param categoryId - The category ID
+ * @returns Promise resolving to an array of Ingredient objects
+ * @throws Error if the API request fails
+ */
+export async function fetchCategoryIngredients(categoryId: number): Promise<Ingredient[]> {
+  const response = await fetch(`${API_BASE_URL}/api/categories/${categoryId}/ingredients/`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch category ingredients: ${response.status} ${response.statusText}`);
+  }
+
+  const data: Ingredient[] = await response.json();
+  return data;
 }
 
