@@ -37,7 +37,6 @@
 .rocks-glass .glass::before {
   content: '';
   position: absolute;
-  /* top: -1.5px; */
   left: 0;
   width: 37.5px;
   height: 1.5px;
@@ -83,8 +82,6 @@
   height: 22px;
   left: 11px;
   top: 8px;
-  /* border-left: 1.5px solid #000; */
-  /* border-right: 1.5px solid #000; */
   border-top: 1.5px solid #000;
   border-bottom: none;
   background: linear-gradient(to right, 
@@ -204,7 +201,6 @@
 .wine-glass .bowl::before {
   content: '';
   position: absolute;
-  /* top: 0.5px; */
   left: 0;
   width: 20px;
   height: 1.5px;
@@ -273,7 +269,6 @@
 .champagne-flute .glass::before {
   content: '';
   position: absolute;
-  /* top: 0.5px; */
   left: 0;
   width: 16px;
   height: 1.5px;
