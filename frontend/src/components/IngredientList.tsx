@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { fetchIngredients, fetchCategories } from '../services/cocktailsApi';
 import type { Ingredient, IngredientCategory } from '../types/cocktails';
 
@@ -94,7 +95,23 @@ const IngredientList = () => {
                       gap: '0.5rem',
                     }}
                   >
-                    {ingredient.name}
+                    <Link
+                      to={`/ingredients/${ingredient.id}`}
+                      style={{
+                        textDecoration: 'none',
+                        color: '#007bff',
+                        flex: 1,
+                        cursor: 'pointer',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.textDecoration = 'underline';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.textDecoration = 'none';
+                      }}
+                    >
+                      {ingredient.name}
+                    </Link>
                     {ingredient.is_generic && (
                       <span
                         style={{
@@ -130,7 +147,22 @@ const IngredientList = () => {
                       borderBottom: '1px solid #eee',
                     }}
                   >
-                    {ingredient.name}
+                    <Link
+                      to={`/ingredients/${ingredient.id}`}
+                      style={{
+                        textDecoration: 'none',
+                        color: '#007bff',
+                        cursor: 'pointer',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.textDecoration = 'underline';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.textDecoration = 'none';
+                      }}
+                    >
+                      {ingredient.name}
+                    </Link>
                   </li>
                 ))}
               </ul>

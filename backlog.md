@@ -10,6 +10,7 @@
 - [ ] Add tags to recipes (and ingredients?) Use the existing @prd-tags.md, but review first
 - [ ] Add Menus
 - [ ] Add new ingredients on front-end
+- [ ] Add ability to click on an ingredient and see all recipes that use it
 - [ ] View ingredient, amount remaining, add to shopping list
 - [ ] Shopping list
 - [ ] Deploy

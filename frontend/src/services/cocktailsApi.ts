@@ -24,6 +24,31 @@ export async function fetchIngredients(): Promise<Ingredient[]> {
 }
 
 /**
+ * Fetches a single ingredient by ID
+ * @param id - The ingredient ID
+ * @returns Promise resolving to the Ingredient object
+ * @throws Error if the API request fails
+ */
+export async function fetchIngredient(id: number): Promise<Ingredient> {
+  const response = await fetch(`${API_BASE_URL}/api/ingredients/${id}/`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error(`Ingredient with ID ${id} not found`);
+    }
+    throw new Error(`Failed to fetch ingredient: ${response.status} ${response.statusText}`);
+  }
+
+  const data: Ingredient = await response.json();
+  return data;
+}
+
+/**
  * Creates a new ingredient
  * @param name - The name of the ingredient
  * @returns Promise resolving to the created Ingredient object
@@ -45,6 +70,65 @@ export async function createIngredient(name: string): Promise<Ingredient> {
 
   const data: Ingredient = await response.json();
   return data;
+}
+
+/**
+ * Updates an existing ingredient
+ * @param id - The ingredient ID
+ * @param ingredient - Partial ingredient data to update (name and/or category_id)
+ * @returns Promise resolving to the updated Ingredient object
+ * @throws Error if the API request fails
+ */
+export async function updateIngredient(
+  id: number,
+  ingredient: { name?: string; category_id?: number | null }
+): Promise<Ingredient> {
+  const ingredientData: any = {};
+  if (ingredient.name !== undefined) ingredientData.name = ingredient.name;
+  if (ingredient.category_id !== undefined) {
+    ingredientData.category_id = ingredient.category_id;
+  }
+
+  const response = await fetch(`${API_BASE_URL}/api/ingredients/${id}/`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(ingredientData),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    const errorMessage = errorData.detail || 
+                        errorData.name?.[0] || 
+                        `Failed to update ingredient: ${response.status} ${response.statusText}`;
+    throw new Error(errorMessage);
+  }
+
+  const data: Ingredient = await response.json();
+  return data;
+}
+
+/**
+ * Deletes an ingredient
+ * @param id - The ingredient ID
+ * @returns Promise resolving when the ingredient is deleted
+ * @throws Error if the API request fails
+ */
+export async function deleteIngredient(id: number): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/ingredients/${id}/`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error(`Ingredient with ID ${id} not found`);
+    }
+    throw new Error(`Failed to delete ingredient: ${response.status} ${response.statusText}`);
+  }
 }
 
 /**
