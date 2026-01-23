@@ -1,5 +1,6 @@
-import { Routes, Route, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { Routes, Route, NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
 import IngredientList from './components/IngredientList';
+import IngredientDetail from './components/IngredientDetail';
 import RecipeList from './components/RecipeList';
 import RecipeDetail from './components/RecipeDetail';
 import RecipeForm from './components/RecipeForm';
@@ -17,6 +18,11 @@ const RecipeFormWrapper = () => {
   return <RecipeForm />;
 };
 
+// Wrapper component to extract ingredient ID from route params
+const IngredientDetailWrapper = () => {
+  return <IngredientDetail />;
+};
+
 function App() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -26,7 +32,9 @@ function App() {
     <div className="app">
       <nav style={{ padding: '1rem 2rem', borderBottom: '1px solid #ddd', marginBottom: '2rem' }}>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <h1 style={{ margin: 0, flex: 1 }}>Mixology App</h1>
+          <Link to="/" style={{ textDecoration: 'none', color: 'inherit', flex: 1 }}>
+            <h1 style={{ margin: 0 }}>Mixology App</h1>
+          </Link>
           <NavLink
             to="/recipes"
             style={({ isActive }) => ({
@@ -89,6 +97,7 @@ function App() {
           <Route path="/recipes/new" element={<RecipeFormWrapper />} />
           <Route path="/recipes/:id/edit" element={<RecipeFormWrapper />} />
           <Route path="/ingredients" element={<IngredientList />} />
+          <Route path="/ingredients/:id" element={<IngredientDetailWrapper />} />
           <Route path="/categories" element={<CategoryList />} />
         </Routes>
       </main>

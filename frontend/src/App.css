@@ -7,3 +7,386 @@
 .app main {
   flex: 1;
 }
+
+/* Rocks Glass - 50px × 50px */
+.rocks-glass {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  display: inline-block;
+}
+
+.rocks-glass .glass {
+  position: absolute;
+  width: 37.5px;
+  height: 40px;
+  left: 6.25px;
+  top: 5px;
+  background: linear-gradient(to right, 
+    rgba(0, 0, 0, 0.1) 0%,
+    rgba(0, 0, 0, 0.05) 50%,
+    rgba(0, 0, 0, 0.1) 100%);
+  border: 1.5px solid #000;
+  border-radius: 0 0 4px 4px;
+  border-top: none;
+  box-shadow: 
+    inset 0 0 5px rgba(0, 0, 0, 0.2),
+    0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.rocks-glass .glass::before {
+  content: '';
+  position: absolute;
+  /* top: -1.5px; */
+  left: 0;
+  width: 37.5px;
+  height: 1.5px;
+  background: #000;
+}
+
+.rocks-glass .glass::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 1px;
+  width: 8px;
+  height: 36px;
+  background: linear-gradient(to right,
+    rgba(255, 255, 255, 0.4) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 100%);
+  border-radius: 0 0 3px 3px;
+}
+
+.rocks-glass .ice {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  left: 12.75px;
+  top: 15px;
+  background: rgba(255, 255, 255, 0.3);
+  border: 0.5px solid rgba(0, 0, 0, 0.2);
+  border-radius: 2px;
+}
+
+/* Martini Glass - 50px × 50px */
+.martini-glass {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  display: inline-block;
+}
+
+.martini-glass .glass {
+  position: absolute;
+  width: 28px;
+  height: 22px;
+  left: 11px;
+  top: 8px;
+  /* border-left: 1.5px solid #000; */
+  /* border-right: 1.5px solid #000; */
+  border-top: 1.5px solid #000;
+  border-bottom: none;
+  background: linear-gradient(to right, 
+    rgba(0, 0, 0, 0.1) 0%,
+    rgba(0, 0, 0, 0.05) 50%,
+    rgba(0, 0, 0, 0.1) 100%);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  box-shadow: 
+    inset 0 0 5px rgba(0, 0, 0, 0.2),
+    0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.martini-glass .glass::before {
+  content: '';
+  position: absolute;
+  top: -1.5px;
+  left: -1.5px;
+  right: -1.5px;
+  height: 1.5px;
+  background: #000;
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+
+
+.martini-glass .glass::after {
+  content: '';
+  position: absolute;
+  top: 1.5px;
+  left: 1px;
+  width: 24px;
+  height: 18px;
+  background: linear-gradient(to right,
+    rgba(255, 255, 255, 0.4) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 100%);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+
+.martini-glass .glass-left-edge {
+  position: absolute;
+  top: 9px;
+  left: 11px;
+  width: 1px;
+  height: 24px;
+  background: #000;
+  transform: rotate(-26.5deg);
+  transform-origin: top left;
+}
+
+.martini-glass .glass-right-edge {
+  position: absolute;
+  top: 9px;
+  right: 11px;
+  width: 1px;
+  height: 24px;
+  background: #000;
+  transform: rotate(26.5deg);
+  transform-origin: top right;
+}
+
+.martini-glass .stem {
+  position: absolute;
+  width: 2px;
+  height: 18px;
+  left: 24px;
+  top: 30px;
+  background: #000;
+}
+
+.martini-glass .stem::before {
+  content: '';
+  position: absolute;
+  top: -0.5px;
+  left: -2.5px;
+  right: -2.5px;
+  height: 2.5px;
+  background: #000;
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+
+.martini-glass .base {
+  position: absolute;
+  width: 12px;
+  height: 2px;
+  left: 19px;
+  top: 48px;
+  background: #000;
+  border-radius: 2px;
+}
+
+/* Wine Glass - 50px × 50px */
+.wine-glass {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  display: inline-block;
+}
+
+.wine-glass .bowl {
+  position: absolute;
+  width: 20px;
+  height: 22px;
+  left: 15px;
+  top: 5px;
+  border: 1.5px solid #000;
+  border-radius: 0 0 10px 10px;
+  border-top: none;
+  background: linear-gradient(to right, 
+    rgba(0, 0, 0, 0.1) 0%,
+    rgba(0, 0, 0, 0.05) 50%,
+    rgba(0, 0, 0, 0.1) 100%);
+  box-shadow: 
+    inset 0 0 5px rgba(0, 0, 0, 0.2),
+    0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.wine-glass .bowl::before {
+  content: '';
+  position: absolute;
+  /* top: 0.5px; */
+  left: 0;
+  width: 20px;
+  height: 1.5px;
+  background: #000;
+}
+
+.wine-glass .bowl::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 1px;
+  width: 6px;
+  height: 18px;
+  background: linear-gradient(to right,
+    rgba(255, 255, 255, 0.4) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 100%);
+  border-radius: 0 0 8px 8px;
+}
+
+.wine-glass .stem {
+  position: absolute;
+  width: 2px;
+  height: 21px;
+  left: 25px;
+  top: 27px;
+  background: #000;
+}
+
+.wine-glass .base {
+  position: absolute;
+  width: 14px;
+  height: 2px;
+  left: 19px;
+  top: 48px;
+  background: #000;
+  border-radius: 2px;
+}
+
+/* Champagne Flute - 50px × 50px */
+.champagne-flute {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  display: inline-block;
+}
+
+.champagne-flute .glass {
+  position: absolute;
+  width: 16px;
+  height: 28px;
+  left: 17px;
+  top: 5px;
+  border: 1.5px solid #000;
+  border-radius: 0 0 8px 8px;
+  border-top: none;
+  background: linear-gradient(to right, 
+    rgba(0, 0, 0, 0.1) 0%,
+    rgba(0, 0, 0, 0.05) 50%,
+    rgba(0, 0, 0, 0.1) 100%);
+  box-shadow: 
+    inset 0 0 5px rgba(0, 0, 0, 0.2),
+    0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.champagne-flute .glass::before {
+  content: '';
+  position: absolute;
+  /* top: 0.5px; */
+  left: 0;
+  width: 16px;
+  height: 1.5px;
+  background: #000;
+}
+
+.champagne-flute .glass::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 1px;
+  width: 5px;
+  height: 24px;
+  background: linear-gradient(to right,
+    rgba(255, 255, 255, 0.4) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 100%);
+  border-radius: 0 0 6px 6px;
+}
+
+.champagne-flute .stem {
+  position: absolute;
+  width: 2px;
+  height: 15px;
+  left: 25px;
+  top: 33px;
+  background: #000;
+}
+
+.champagne-flute .base {
+  position: absolute;
+  width: 12px;
+  height: 2px;
+  left: 20px;
+  top: 48px;
+  background: #000;
+  border-radius: 2px;
+}
+
+/* Collins Glass - 50px × 50px */
+.collins-glass {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  display: inline-block;
+}
+
+.collins-glass .glass {
+  position: absolute;
+  width: 18px;
+  height: 45px;
+  left: 16px;
+  top: 5px;
+  background: linear-gradient(to right, 
+    rgba(0, 0, 0, 0.1) 0%,
+    rgba(0, 0, 0, 0.05) 50%,
+    rgba(0, 0, 0, 0.1) 100%);
+  border: 1.5px solid #000;
+  border-radius: 0 0 3px 3px;
+  border-top: none;
+  box-shadow: 
+    inset 0 0 5px rgba(0, 0, 0, 0.2),
+    0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.collins-glass .glass::before {
+  content: '';
+  position: absolute;
+  /* top: -1.5px; */
+  left: -1.5px;
+  right: -1.5px;
+  height: 1.5px;
+  background: #000;
+}
+
+.collins-glass .glass::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 1px;
+  width: 5px;
+  height: 34px;
+  background: linear-gradient(to right,
+    rgba(255, 255, 255, 0.4) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 100%);
+  border-radius: 0 0 2px 2px;
+}
+
+.collins-glass .ice {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.3);
+  border: 0.5px solid rgba(0, 0, 0, 0.2);
+  border-radius: 1px;
+}
+
+.collins-glass .ice-1 {
+  width: 10px;
+  height: 10px;
+  left: 21px;
+  top: 15px;
+}
+
+.collins-glass .ice-2 {
+  width: 10px;
+  height: 10px;
+  left: 18px;
+  top: 25px;
+}
+
+.collins-glass .ice-3 {
+  width: 10px;
+  height: 10px;
+  left: 23px;
+  top: 36px;
+}
