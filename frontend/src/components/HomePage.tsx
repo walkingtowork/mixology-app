@@ -4,7 +4,7 @@ import '../App.css';
 const HomePage = () => {
   return (
     <div style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto', textAlign: 'center' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem', marginBottom: '1rem' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: '1rem', marginBottom: '1rem' }}>
         <div className="rocks-glass">
           <div className="glass"></div>
           <div className="ice"></div>
