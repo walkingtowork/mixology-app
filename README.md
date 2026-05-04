@@ -145,6 +145,11 @@ VITE_API_BASE_URL=http://localhost:8000
 
 ## Running the Application
 
+Activate the virtual environment:
+```bash
+source venv/bin/activate  
+```
+
 ### Start Django Backend Server
 
 In the `backend/` directory (with virtual environment activated):

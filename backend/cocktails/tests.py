@@ -58,6 +58,64 @@ class IngredientAPITests(APITestCase):
         
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
+    def test_update_ingredient_name(self):
+        """Test PATCH /api/ingredients/{id}/ updates ingredient name."""
+        url = f'/api/ingredients/{self.ingredient1.id}/'
+        data = {'name': 'Updated Gin'}
+        response = self.client.patch(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['name'], 'Updated Gin')
+        
+        # Verify in database
+        self.ingredient1.refresh_from_db()
+        self.assertEqual(self.ingredient1.name, 'Updated Gin')
+
+    def test_update_ingredient_name_duplicate(self):
+        """Test that updating ingredient name to duplicate name fails."""
+        url = f'/api/ingredients/{self.ingredient1.id}/'
+        data = {'name': 'Vermouth'}  # Already exists (ingredient2)
+        response = self.client.patch(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_delete_ingredient(self):
+        """Test DELETE /api/ingredients/{id}/ deletes an ingredient."""
+        ingredient_id = self.ingredient1.id
+        url = f'/api/ingredients/{ingredient_id}/'
+        response = self.client.delete(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Ingredient.objects.filter(id=ingredient_id).exists())
+
+    def test_delete_ingredient_used_in_recipes(self):
+        """Test that deleting an ingredient used in recipes deletes the ingredient and related RecipeIngredients."""
+        # Create a recipe using ingredient1
+        recipe = Recipe.objects.create(name='Test Recipe')
+        RecipeIngredient.objects.create(
+            recipe=recipe,
+            ingredient=self.ingredient1,
+            amount=2.0,
+            unit='oz'
+        )
+        
+        ingredient_id = self.ingredient1.id
+        recipe_ingredient_id = RecipeIngredient.objects.get(
+            recipe=recipe,
+            ingredient=self.ingredient1
+        ).id
+        
+        url = f'/api/ingredients/{ingredient_id}/'
+        response = self.client.delete(url)
+        
+        # Should succeed (CASCADE delete)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Ingredient.objects.filter(id=ingredient_id).exists())
+        # RecipeIngredient should also be deleted
+        self.assertFalse(RecipeIngredient.objects.filter(id=recipe_ingredient_id).exists())
+        # Recipe should still exist
+        self.assertTrue(Recipe.objects.filter(id=recipe.id).exists())
+
 
 class RecipeAPITests(APITestCase):
     """Test cases for Recipe API endpoints."""
@@ -742,6 +800,25 @@ class IngredientWithCategoryTests(APITestCase):
         # Verify in database
         self.ingredient.refresh_from_db()
         self.assertIsNone(self.ingredient.category)
+
+    def test_update_ingredient_name_and_category(self):
+        """Test that ingredient name and category can be updated together."""
+        new_category = IngredientCategory.objects.create(name='Rum')
+        url = f'/api/ingredients/{self.ingredient.id}/'
+        data = {
+            'name': 'Updated Jameson',
+            'category_id': new_category.id
+        }
+        response = self.client.patch(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['name'], 'Updated Jameson')
+        self.assertEqual(response.data['category']['name'], 'Rum')
+        
+        # Verify in database
+        self.ingredient.refresh_from_db()
+        self.assertEqual(self.ingredient.name, 'Updated Jameson')
+        self.assertEqual(self.ingredient.category.name, 'Rum')
 
 
 class RecipeCategoryFilterTests(APITestCase):
