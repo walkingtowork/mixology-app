@@ -1,170 +1,99 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { fetchRecipes, fetchIngredients, fetchCategories } from '../services/cocktailsApi';
 import type { Recipe, Ingredient, IngredientCategory } from '../types/cocktails';
+import RecipeCard from './RecipeCard';
+import LoadingSpinner from './ui/LoadingSpinner';
+import './RecipeList.css';
 
-const RecipeList = () => {
+export default function RecipeList() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [categories, setCategories] = useState<IngredientCategory[]>([]);
-  const [selectedIngredientId, setSelectedIngredientId] = useState<number | undefined>(undefined);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>(undefined);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [selectedIngredientId, setSelectedIngredientId] = useState<number | undefined>();
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>();
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [ingredientsData, categoriesData] = await Promise.all([
-          fetchIngredients(),
-          fetchCategories(),
-        ]);
-        setIngredients(ingredientsData);
-        setCategories(categoriesData);
-      } catch (err) {
-        console.error('Failed to load filter data:', err);
-      }
-    };
-
-    loadData();
+    Promise.all([fetchIngredients(), fetchCategories()])
+      .then(([ing, cat]) => { setIngredients(ing); setCategories(cat); })
+      .catch(console.error);
   }, []);
 
   useEffect(() => {
-    const loadRecipes = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await fetchRecipes(selectedIngredientId, selectedCategoryId);
-        setRecipes(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load recipes');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadRecipes();
+    setLoading(true);
+    setError(null);
+    fetchRecipes(selectedIngredientId, selectedCategoryId)
+      .then(setRecipes)
+      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load recipes'))
+      .finally(() => setLoading(false));
   }, [selectedIngredientId, selectedCategoryId]);
 
-  const handleIngredientFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value;
-    setSelectedIngredientId(value === '' ? undefined : parseInt(value, 10));
-    // Clear category filter when ingredient is selected
-    if (value !== '') {
-      setSelectedCategoryId(undefined);
-    }
+  const handleIngredientChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value;
+    setSelectedIngredientId(val === '' ? undefined : parseInt(val, 10));
+    if (val !== '') setSelectedCategoryId(undefined);
   };
 
-  const handleCategoryFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value;
-    setSelectedCategoryId(value === '' ? undefined : parseInt(value, 10));
-    // Clear ingredient filter when category is selected
-    if (value !== '') {
-      setSelectedIngredientId(undefined);
-    }
+  const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value;
+    setSelectedCategoryId(val === '' ? undefined : parseInt(val, 10));
+    if (val !== '') setSelectedIngredientId(undefined);
   };
-
-  if (loading) {
-    return (
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <p>Loading recipes...</p>
-      </div>
-    );
-  }
 
   if (error) {
     return (
-      <div style={{ padding: '2rem', textAlign: 'center', color: 'red' }}>
-        <p>Error: {error}</p>
+      <div className="recipe-list">
+        <p style={{ color: 'var(--color-danger)' }}>Error: {error}</p>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: '2rem' }}>
-      <h2>Recipes</h2>
-      
-      <div style={{ marginBottom: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-        <div>
-          <label htmlFor="ingredient-filter" style={{ marginRight: '0.5rem' }}>
-            Filter by ingredient:
-          </label>
-          <select
-            id="ingredient-filter"
-            value={selectedIngredientId || ''}
-            onChange={handleIngredientFilterChange}
-            style={{ padding: '0.5rem', minWidth: '200px' }}
-          >
+    <div className="recipe-list">
+      <div className="recipe-list-header">
+        <h2>Recipes</h2>
+        {!loading && (
+          <span className="recipe-list-count">
+            {recipes.length} {recipes.length === 1 ? 'recipe' : 'recipes'}
+          </span>
+        )}
+      </div>
+
+      <div className="recipe-list-filters">
+        <div className="recipe-list-filter">
+          <label htmlFor="filter-ingredient">Ingredient</label>
+          <select id="filter-ingredient" value={selectedIngredientId ?? ''} onChange={handleIngredientChange}>
             <option value="">All ingredients</option>
-            {ingredients.map((ingredient) => (
-              <option key={ingredient.id} value={ingredient.id}>
-                {ingredient.name}
-              </option>
+            {ingredients.map((i) => (
+              <option key={i.id} value={i.id}>{i.name}</option>
             ))}
           </select>
         </div>
-        
-        <div>
-          <label htmlFor="category-filter" style={{ marginRight: '0.5rem' }}>
-            Filter by category:
-          </label>
-          <select
-            id="category-filter"
-            value={selectedCategoryId || ''}
-            onChange={handleCategoryFilterChange}
-            style={{ padding: '0.5rem', minWidth: '200px' }}
-          >
+        <div className="recipe-list-filter">
+          <label htmlFor="filter-category">Category</label>
+          <select id="filter-category" value={selectedCategoryId ?? ''} onChange={handleCategoryChange}>
             <option value="">All categories</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
         </div>
       </div>
 
-      {recipes.length === 0 ? (
-        <p>
-          No recipes found
-          {selectedIngredientId ? ' for selected ingredient' : ''}
-          {selectedCategoryId ? ' for selected category' : ''}.
-        </p>
+      {loading ? (
+        <LoadingSpinner label="Loading recipes…" />
+      ) : recipes.length === 0 ? (
+        <div className="recipe-list-empty">
+          <p>No recipes found{selectedIngredientId || selectedCategoryId ? ' for the selected filter' : ''}.</p>
+        </div>
       ) : (
-        <ul style={{ listStyle: 'none', padding: 0 }}>
+        <div className="recipe-grid">
           {recipes.map((recipe) => (
-            <li
-              key={recipe.id}
-              style={{
-                padding: '1rem',
-                marginBottom: '1rem',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-              }}
-            >
-              <Link
-                to={`/recipes/${recipe.id}`}
-                style={{
-                  textDecoration: 'none',
-                  color: 'inherit',
-                  display: 'block',
-                }}
-              >
-                <h3 style={{ margin: '0 0 0.5rem 0' }}>{recipe.name}</h3>
-                {recipe.garnish && (
-                  <p style={{ margin: '0.25rem 0', color: '#666' }}>Garnish: {recipe.garnish}</p>
-                )}
-                <p style={{ margin: '0.25rem 0', color: '#666' }}>
-                  {recipe.ingredients.length} ingredient{recipe.ingredients.length !== 1 ? 's' : ''}
-                </p>
-              </Link>
-            </li>
+            <RecipeCard key={recipe.id} recipe={recipe} />
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );
-};
-
-export default RecipeList;
-
+}

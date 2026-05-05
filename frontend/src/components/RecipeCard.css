@@ -1,0 +1,60 @@
+.recipe-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  text-decoration: none;
+  color: inherit;
+  transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s;
+  box-shadow: var(--shadow-sm);
+  min-height: 130px;
+}
+
+.recipe-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+  border-color: var(--color-accent-border);
+  text-decoration: none;
+  color: inherit;
+}
+
+.recipe-card-name {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-3);
+  line-height: 1.3;
+}
+
+.recipe-card-ingredients {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.recipe-card-chip {
+  font-size: var(--text-xs);
+  background: var(--color-surface-alt);
+  color: var(--color-text-secondary);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+}
+
+.recipe-card-chip-more {
+  font-size: var(--text-xs);
+  color: var(--color-text-disabled);
+  padding: 2px var(--space-1);
+  font-style: italic;
+}
+
+.recipe-card-garnish {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  margin-top: auto;
+  padding-top: var(--space-2);
+}

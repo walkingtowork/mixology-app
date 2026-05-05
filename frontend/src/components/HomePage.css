@@ -1,0 +1,108 @@
+.home-page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: var(--space-12) var(--space-8) var(--space-16);
+  text-align: center;
+}
+
+/* ── Hero ────────────────────────────────────────────────────── */
+.home-hero {
+  margin-bottom: var(--space-12);
+}
+
+.home-title-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: var(--space-5);
+  margin-bottom: var(--space-4);
+}
+
+.home-title {
+  font-family: var(--font-display);
+  font-size: var(--text-4xl);
+  font-weight: 700;
+  line-height: 1;
+  margin: 0 0 4px;
+}
+
+.home-subtitle {
+  font-size: var(--text-lg);
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+/* ── Stat cards ──────────────────────────────────────────────── */
+.home-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-12);
+}
+
+.home-stat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-6) var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  color: inherit;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s;
+}
+
+.home-stat-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+  border-color: var(--color-accent-border);
+  text-decoration: none;
+  color: inherit;
+}
+
+.home-stat-number {
+  font-family: var(--font-display);
+  font-size: var(--text-4xl);
+  font-weight: 700;
+  color: var(--color-accent);
+  line-height: 1;
+  margin-bottom: var(--space-2);
+  min-height: 2.25rem;
+}
+
+.home-stat-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+/* ── Glass art row ───────────────────────────────────────────── */
+.home-glasses {
+  display: flex;
+  gap: var(--space-10);
+  justify-content: center;
+  align-items: flex-end;
+}
+
+@media (max-width: 640px) {
+  .home-page {
+    padding: var(--space-8) var(--space-4) var(--space-12);
+  }
+
+  .home-stats {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-3);
+  }
+
+  .home-stat-number {
+    font-size: var(--text-2xl);
+  }
+
+  .home-glasses {
+    gap: var(--space-6);
+  }
+}
