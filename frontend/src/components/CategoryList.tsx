@@ -1,29 +1,23 @@
 import { useState, useEffect } from 'react';
 import { fetchCategories, deleteCategory } from '../services/cocktailsApi';
 import type { IngredientCategory } from '../types/cocktails';
+import Button from './ui/Button';
+import LoadingSpinner from './ui/LoadingSpinner';
 import CategoryForm from './CategoryForm';
+import './CategoryList.css';
 
-interface CategoryListProps {
-  onCategorySelect?: (categoryId: number) => void;
-}
-
-const CategoryList = ({ onCategorySelect }: CategoryListProps) => {
+export default function CategoryList() {
   const [categories, setCategories] = useState<IngredientCategory[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showForm, setShowForm] = useState<boolean>(false);
-  const [editingCategory, setEditingCategory] = useState<IngredientCategory | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<IngredientCategory | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
 
-  useEffect(() => {
-    loadCategories();
-  }, []);
-
-  const loadCategories = async () => {
+  const load = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      setError(null);
-      const data = await fetchCategories();
-      setCategories(data);
+      setCategories(await fetchCategories());
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load categories');
     } finally {
@@ -31,114 +25,89 @@ const CategoryList = ({ onCategorySelect }: CategoryListProps) => {
     }
   };
 
-  const handleCreate = () => {
-    setEditingCategory(null);
+  useEffect(() => { load(); }, []);
+
+  const handleEdit = (cat: IngredientCategory) => {
+    setEditing(cat);
     setShowForm(true);
   };
 
-  const handleEdit = (category: IngredientCategory) => {
-    setEditingCategory(category);
-    setShowForm(true);
+  const handleFormClose = () => {
+    setShowForm(false);
+    setEditing(null);
+    load();
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('Are you sure you want to delete this category?')) {
-      return;
-    }
-
     try {
       await deleteCategory(id);
-      await loadCategories();
+      setConfirmDeleteId(null);
+      load();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to delete category');
     }
   };
 
-  const handleFormClose = () => {
-    setShowForm(false);
-    setEditingCategory(null);
-    loadCategories();
-  };
-
-  if (loading) {
-    return (
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <p>Loading categories...</p>
-      </div>
-    );
+  if (showForm) {
+    return <CategoryForm category={editing} onClose={handleFormClose} onSave={handleFormClose} />;
   }
+
+  if (loading) return <LoadingSpinner label="Loading categories…" />;
 
   if (error) {
     return (
-      <div style={{ padding: '2rem', textAlign: 'center', color: 'red' }}>
-        <p>Error: {error}</p>
-        <button onClick={loadCategories}>Retry</button>
+      <div className="category-list">
+        <p style={{ color: 'var(--color-danger)' }}>{error}</p>
+        <Button variant="secondary" onClick={load} style={{ marginTop: 'var(--space-4)' }}>Retry</Button>
       </div>
-    );
-  }
-
-  if (showForm) {
-    return (
-      <CategoryForm
-        category={editingCategory}
-        onClose={handleFormClose}
-        onSave={handleFormClose}
-      />
     );
   }
 
   return (
-    <div style={{ padding: '2rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <h2>Ingredient Categories</h2>
-        <button onClick={handleCreate}>Create Category</button>
+    <div className="category-list">
+      <div className="category-list-header">
+        <h2>Categories</h2>
+        <Button variant="primary" onClick={() => { setEditing(null); setShowForm(true); }}>
+          + New Category
+        </Button>
       </div>
+
       {categories.length === 0 ? (
-        <p>No categories found. Create one to get started!</p>
+        <div className="category-list-empty">
+          No categories yet. Create one to get started.
+        </div>
       ) : (
-        <ul style={{ listStyle: 'none', padding: 0 }}>
-          {categories.map((category) => (
-            <li
-              key={category.id}
-              style={{
-                padding: '1rem',
-                marginBottom: '0.5rem',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                backgroundColor: '#f9f9f9',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ flex: 1 }}>
-                  <h3
-                    style={{ margin: 0, marginBottom: '0.5rem', cursor: onCategorySelect ? 'pointer' : 'default' }}
-                    onClick={() => onCategorySelect?.(category.id)}
-                  >
-                    {category.name}
-                  </h3>
-                  {category.notes && (
-                    <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>{category.notes}</p>
+        <div className="category-cards">
+          {categories.map((cat) => (
+            <div key={cat.id} className="category-card">
+              <div className="category-card-body">
+                <div className="category-card-name">{cat.name}</div>
+                {cat.notes && <div className="category-card-notes">{cat.notes}</div>}
+                <div className="category-card-meta">
+                  <span>{cat.ingredients?.length ?? 0} ingredient{cat.ingredients?.length !== 1 ? 's' : ''}</span>
+                  {cat.generic_ingredient && (
+                    <span>Generic: {cat.generic_ingredient.name}</span>
                   )}
-                  <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#888' }}>
-                    {category.ingredients?.length || 0} ingredient{category.ingredients?.length !== 1 ? 's' : ''}
-                    {category.generic_ingredient && (
-                      <span style={{ marginLeft: '1rem' }}>
-                        (Generic: {category.generic_ingredient.name})
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button onClick={() => handleEdit(category)}>Edit</button>
-                  <button onClick={() => handleDelete(category.id)}>Delete</button>
                 </div>
               </div>
-            </li>
+              <div className="category-card-actions">
+                <Button variant="secondary" size="sm" onClick={() => handleEdit(cat)}>Edit</Button>
+                {confirmDeleteId === cat.id ? (
+                  <>
+                    <Button variant="danger" size="sm" onClick={() => handleDelete(cat.id)}>Confirm</Button>
+                    <Button variant="ghost" size="sm" onClick={() => setConfirmDeleteId(null)}>Cancel</Button>
+                  </>
+                ) : (
+                  <Button variant="ghost" size="sm" onClick={() => setConfirmDeleteId(cat.id)}
+                    style={{ color: 'var(--color-danger)' }}>
+                    Delete
+                  </Button>
+                )}
+              </div>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );
-};
-
-export default CategoryList;
+}

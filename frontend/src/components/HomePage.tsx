@@ -1,96 +1,76 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import '../App.css';
+import { fetchRecipes, fetchIngredients, fetchCategories } from '../services/cocktailsApi';
+import './HomePage.css';
 
-const HomePage = () => {
+export default function HomePage() {
+  const [counts, setCounts] = useState<{ recipes: number; ingredients: number; categories: number } | null>(null);
+
+  useEffect(() => {
+    Promise.all([fetchRecipes(), fetchIngredients(), fetchCategories()])
+      .then(([recipes, ingredients, categories]) =>
+        setCounts({ recipes: recipes.length, ingredients: ingredients.length, categories: categories.length })
+      )
+      .catch(() => setCounts({ recipes: 0, ingredients: 0, categories: 0 }));
+  }, []);
+
   return (
-    <div style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto', textAlign: 'center' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: '1rem', marginBottom: '1rem' }}>
-        <div className="rocks-glass">
-          <div className="glass"></div>
-          <div className="ice"></div>
+    <div className="home-page">
+      <div className="home-hero">
+        <div className="home-title-row">
+          <div className="rocks-glass">
+            <div className="glass" />
+            <div className="ice" />
+          </div>
+          <h1 className="home-title">Mixology App</h1>
+          <div className="rocks-glass">
+            <div className="glass" />
+            <div className="ice" />
+          </div>
         </div>
-        <h1 style={{ marginBottom: 0 }}>Mixology App</h1>
-        <div className="rocks-glass">
-          <div className="glass"></div>
-          <div className="ice"></div>
-        </div>
+        <p className="home-subtitle">Your personal cocktail recipe book.</p>
       </div>
-      <p style={{ fontSize: '1.1rem', marginBottom: '2rem', color: '#666' }}>
-        Manage your cocktail recipes, ingredients, and categories all in one place.
-        Create, edit, and organize your favorite drinks with ease.
-      </p>
-      <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-        <Link
-          to="/recipes"
-          style={{
-            padding: '1rem 2rem',
-            backgroundColor: '#007bff',
-            color: 'white',
-            textDecoration: 'none',
-            borderRadius: '4px',
-            fontSize: '1.1rem',
-            fontWeight: 'bold',
-          }}
-        >
-          View Recipes
+
+      <div className="home-stats">
+        <Link to="/recipes" className="home-stat-card">
+          <span className="home-stat-number">{counts?.recipes ?? '—'}</span>
+          <span className="home-stat-label">Recipes</span>
         </Link>
-        <Link
-          to="/ingredients"
-          style={{
-            padding: '1rem 2rem',
-            backgroundColor: '#28a745',
-            color: 'white',
-            textDecoration: 'none',
-            borderRadius: '4px',
-            fontSize: '1.1rem',
-            fontWeight: 'bold',
-          }}
-        >
-          View Ingredients
+        <Link to="/ingredients" className="home-stat-card">
+          <span className="home-stat-number">{counts?.ingredients ?? '—'}</span>
+          <span className="home-stat-label">Ingredients</span>
         </Link>
-        <Link
-          to="/categories"
-          style={{
-            padding: '1rem 2rem',
-            backgroundColor: '#6f42c1',
-            color: 'white',
-            textDecoration: 'none',
-            borderRadius: '4px',
-            fontSize: '1.1rem',
-            fontWeight: 'bold',
-          }}
-        >
-          View Categories
+        <Link to="/categories" className="home-stat-card">
+          <span className="home-stat-number">{counts?.categories ?? '—'}</span>
+          <span className="home-stat-label">Categories</span>
         </Link>
       </div>
-      <div style={{ display: 'flex', gap: '2rem', justifyContent: 'center', alignItems: 'flex-end', marginTop: '3rem', flexWrap: 'wrap' }}>
+
+      <div className="home-glasses">
         <div className="martini-glass">
-          <div className="glass"></div>
-          <div className="glass-left-edge"></div>
-          <div className="glass-right-edge"></div>
-          <div className="stem"></div>
-          <div className="base"></div>
+          <div className="glass" />
+          <div className="glass-left-edge" />
+          <div className="glass-right-edge" />
+          <div className="stem" />
+          <div className="base" />
         </div>
         <div className="wine-glass">
-          <div className="bowl"></div>
-          <div className="stem"></div>
-          <div className="base"></div>
+          <div className="bowl" />
+          <div className="stem" />
+          <div className="base" />
         </div>
         <div className="champagne-flute">
-          <div className="glass"></div>
-          <div className="stem"></div>
-          <div className="base"></div>
+          <div className="glass" />
+          <div className="stem" />
+          <div className="base" />
         </div>
         <div className="collins-glass">
-          <div className="glass"></div>
-          <div className="ice ice-1"></div>
-          <div className="ice ice-2"></div>
-          <div className="ice ice-3"></div>
+          <div className="glass" />
+          <div className="ice ice-1" />
+          <div className="ice ice-2" />
+          <div className="ice ice-3" />
         </div>
       </div>
     </div>
   );
-};
-
-export default HomePage;
-
+}

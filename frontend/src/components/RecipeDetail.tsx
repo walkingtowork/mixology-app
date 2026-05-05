@@ -1,168 +1,118 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { fetchRecipe, deleteRecipe } from '../services/cocktailsApi';
 import type { Recipe } from '../types/cocktails';
+import Button from './ui/Button';
+import LoadingSpinner from './ui/LoadingSpinner';
+import './RecipeDetail.css';
 
-const RecipeDetail = () => {
+export default function RecipeDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const recipeId = parseInt(id || '0', 10);
   const [recipe, setRecipe] = useState<Recipe | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    const loadRecipe = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await fetchRecipe(recipeId);
-        setRecipe(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load recipe');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadRecipe();
+    setLoading(true);
+    fetchRecipe(recipeId)
+      .then(setRecipe)
+      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load recipe'))
+      .finally(() => setLoading(false));
   }, [recipeId]);
 
-  if (loading) {
-    return (
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <p>Loading recipe...</p>
-      </div>
-    );
-  }
-
   const handleDelete = async () => {
-    if (window.confirm('Are you sure you want to delete this recipe?')) {
-      try {
-        await deleteRecipe(recipeId);
-        navigate('/recipes');
-      } catch (err) {
-        alert(err instanceof Error ? err.message : 'Failed to delete recipe');
-      }
+    setDeleting(true);
+    try {
+      await deleteRecipe(recipeId);
+      navigate('/recipes');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete recipe');
+      setDeleting(false);
+      setConfirmDelete(false);
     }
   };
 
-  if (error) {
+  if (loading) return <LoadingSpinner label="Loading recipe…" />;
+
+  if (error || !recipe) {
     return (
-      <div style={{ padding: '2rem', textAlign: 'center', color: 'red' }}>
-        <p>Error: {error}</p>
-        <button onClick={() => navigate('/recipes')} style={{ marginTop: '1rem', padding: '0.5rem 1rem' }}>
-          Back to Recipes
-        </button>
+      <div className="recipe-detail">
+        <p style={{ color: 'var(--color-danger)', marginBottom: 'var(--space-4)' }}>
+          {error ?? 'Recipe not found.'}
+        </p>
+        <Button variant="secondary" onClick={() => navigate('/recipes')}>← Back to Recipes</Button>
       </div>
     );
   }
-
-  if (!recipe) {
-    return (
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <p>Recipe not found.</p>
-        <button onClick={() => navigate('/recipes')} style={{ marginTop: '1rem', padding: '0.5rem 1rem' }}>
-          Back to Recipes
-        </button>
-      </div>
-    );
-  }
-
-  const formatIngredient = (amount: number, unit: string, ingredientName: string): string => {
-    return `${amount} ${unit} ${ingredientName}`;
-  };
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
-      <button onClick={() => navigate('/recipes')} style={{ marginBottom: '1rem', padding: '0.5rem 1rem' }}>
-        ← Back to Recipes
-      </button>
-      
-      <h1 style={{ marginBottom: '1rem' }}>{recipe.name}</h1>
+    <div className="recipe-detail">
+      <Link to="/recipes" className="recipe-detail-back">← Recipes</Link>
 
-      <div style={{ marginBottom: '2rem' }}>
-        <h2 style={{ marginBottom: '0.5rem' }}>Ingredients</h2>
-        <ul style={{ listStyle: 'none', padding: 0 }}>
-          {recipe.ingredients.map((recipeIngredient) => (
-            <li
-              key={recipeIngredient.id}
-              style={{
-                padding: '0.5rem 0',
-                borderBottom: '1px solid #eee',
-              }}
-            >
-              {formatIngredient(
-                recipeIngredient.amount,
-                recipeIngredient.unit,
-                recipeIngredient.ingredient.name
-              )}
+      <h1 className="recipe-detail-title">{recipe.name}</h1>
+
+      <div className="recipe-detail-section">
+        <h2>Ingredients</h2>
+        <ul className="recipe-detail-ingredient-list">
+          {recipe.ingredients.map((ri) => (
+            <li key={ri.id} className="recipe-detail-ingredient">
+              <span className="recipe-detail-ingredient-measure">{ri.amount} {ri.unit}</span>
+              <span className="recipe-detail-ingredient-name">{ri.ingredient.name}</span>
             </li>
           ))}
         </ul>
       </div>
 
       {recipe.garnish && (
-        <div style={{ marginBottom: '2rem' }}>
-          <h2 style={{ marginBottom: '0.5rem' }}>Garnish</h2>
+        <div className="recipe-detail-section">
+          <h2>Garnish</h2>
           <p>{recipe.garnish}</p>
         </div>
       )}
 
       {recipe.notes && (
-        <div style={{ marginBottom: '2rem' }}>
-          <h2 style={{ marginBottom: '0.5rem' }}>Notes</h2>
-          <p style={{ whiteSpace: 'pre-wrap' }}>{recipe.notes}</p>
+        <div className="recipe-detail-section">
+          <h2>Notes</h2>
+          <div className="recipe-detail-notes">{recipe.notes}</div>
         </div>
       )}
 
       {recipe.source_url && (
-        <div style={{ marginBottom: '2rem' }}>
-          <h2 style={{ marginBottom: '0.5rem' }}>Source</h2>
-          <p>
-            <a 
-              href={recipe.source_url} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              style={{ color: '#007bff', textDecoration: 'underline' }}
-            >
-              {recipe.source_url}
-            </a>
-          </p>
+        <div className="recipe-detail-section recipe-detail-source">
+          <h2>Source</h2>
+          <a href={recipe.source_url} target="_blank" rel="noopener noreferrer">
+            View source →
+          </a>
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-        <button
-          onClick={() => navigate(`/recipes/${recipeId}/edit`)}
-          style={{
-            padding: '0.75rem 1.5rem',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-          }}
-        >
+      <div className="recipe-detail-actions">
+        <Button variant="primary" onClick={() => navigate(`/recipes/${recipeId}/edit`)}>
           Edit Recipe
-        </button>
-        <button
-          onClick={handleDelete}
-          style={{
-            padding: '0.75rem 1.5rem',
-            backgroundColor: '#dc3545',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-          }}
-        >
-          Delete Recipe
-        </button>
+        </Button>
+        <div className="recipe-detail-actions-divider" />
+        {confirmDelete ? (
+          <>
+            <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)' }}>
+              Are you sure?
+            </span>
+            <Button variant="danger" size="sm" onClick={handleDelete} disabled={deleting}>
+              {deleting ? 'Deleting…' : 'Yes, delete'}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(false)} disabled={deleting}>
+              Cancel
+            </Button>
+          </>
+        ) : (
+          <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(true)}>
+            Delete
+          </Button>
+        )}
       </div>
     </div>
   );
-};
-
-export default RecipeDetail;
-
+}

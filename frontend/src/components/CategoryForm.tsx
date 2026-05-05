@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { createCategory, updateCategory } from '../services/cocktailsApi';
 import type { IngredientCategory } from '../types/cocktails';
+import Button from './ui/Button';
+import FormField from './ui/FormField';
+import './CategoryForm.css';
 
 interface CategoryFormProps {
   category?: IngredientCategory | null;
@@ -8,109 +11,95 @@ interface CategoryFormProps {
   onSave: () => void;
 }
 
-const CategoryForm = ({ category, onClose, onSave }: CategoryFormProps) => {
-  const [name, setName] = useState<string>('');
-  const [notes, setNotes] = useState<string>('');
-  const [createGenericIngredient, setCreateGenericIngredient] = useState<boolean>(true);
-  const [loading, setLoading] = useState<boolean>(false);
+export default function CategoryForm({ category, onClose, onSave }: CategoryFormProps) {
+  const [name, setName] = useState('');
+  const [notes, setNotes] = useState('');
+  const [createGenericIngredient, setCreateGenericIngredient] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (category) {
       setName(category.name);
       setNotes(category.notes || '');
-      // Don't show checkbox for editing existing categories
-      setCreateGenericIngredient(false);
     }
   }, [category]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    if (!name.trim()) return;
+    setSaving(true);
     setError(null);
-
     try {
       if (category) {
-        // Update existing category
         await updateCategory(category.id, { name, notes });
       } else {
-        // Create new category
         await createCategory({ name, notes }, createGenericIngredient);
       }
       onSave();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save category');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '600px' }}>
-      <h2>{category ? 'Edit Category' : 'Create Category'}</h2>
+    <div className="category-form">
+      <h2>{category ? 'Edit Category' : 'New Category'}</h2>
+
+      {error && <div className="category-form-error">{error}</div>}
+
       <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '1rem' }}>
-          <label htmlFor="name" style={{ display: 'block', marginBottom: '0.5rem' }}>
-            Name <span style={{ color: 'red' }}>*</span>
-          </label>
-          <input
-            type="text"
-            id="name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            autoComplete="off"
-            style={{ width: '100%', padding: '0.5rem', fontSize: '1rem' }}
-          />
+        <div className="category-form-fields">
+          <FormField label="Name" htmlFor="cat-name" required>
+            <input
+              id="cat-name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              autoComplete="off"
+              autoFocus
+              required
+            />
+          </FormField>
+
+          <FormField label="Notes" htmlFor="cat-notes">
+            <textarea
+              id="cat-notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+              autoComplete="off"
+            />
+          </FormField>
+
+          {!category && (
+            <div className="category-form-checkbox">
+              <label className="category-form-checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={createGenericIngredient}
+                  onChange={(e) => setCreateGenericIngredient(e.target.checked)}
+                />
+                Create a generic ingredient with the same name
+              </label>
+              <p className="category-form-checkbox-hint">
+                Useful for recipes that specify a category (e.g. "any Bourbon") rather than a specific brand.
+              </p>
+            </div>
+          )}
         </div>
 
-        <div style={{ marginBottom: '1rem' }}>
-          <label htmlFor="notes" style={{ display: 'block', marginBottom: '0.5rem' }}>
-            Notes
-          </label>
-          <textarea
-            id="notes"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={4}
-            autoComplete="off"
-            style={{ width: '100%', padding: '0.5rem', fontSize: '1rem' }}
-          />
-        </div>
-
-        {!category && (
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <input
-                type="checkbox"
-                checked={createGenericIngredient}
-                onChange={(e) => setCreateGenericIngredient(e.target.checked)}
-              />
-              <span>Create generic ingredient with same name</span>
-            </label>
-            <p style={{ margin: '0.25rem 0 0 1.5rem', fontSize: '0.85rem', color: '#666' }}>
-              Automatically creates an ingredient with the same name as this category
-            </p>
-          </div>
-        )}
-
-        {error && (
-          <div style={{ padding: '0.5rem', marginBottom: '1rem', backgroundColor: '#fee', color: '#c00', borderRadius: '4px' }}>
-            {error}
-          </div>
-        )}
-
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button type="submit" disabled={loading} style={{ padding: '0.5rem 1rem' }}>
-            {loading ? 'Saving...' : category ? 'Update' : 'Create'}
-          </button>
-          <button type="button" onClick={onClose} disabled={loading} style={{ padding: '0.5rem 1rem' }}>
+        <div className="category-form-actions">
+          <Button type="submit" variant="primary" disabled={saving || !name.trim()}>
+            {saving ? 'Saving…' : category ? 'Update' : 'Create'}
+          </Button>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
             Cancel
-          </button>
+          </Button>
         </div>
       </form>
     </div>
   );
-};
-
-export default CategoryForm;
+}

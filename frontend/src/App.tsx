@@ -1,4 +1,4 @@
-import { Routes, Route, NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
+import { Routes, Route, NavLink, Link } from 'react-router-dom';
 import IngredientList from './components/IngredientList';
 import IngredientDetail from './components/IngredientDetail';
 import RecipeList from './components/RecipeList';
@@ -24,68 +24,21 @@ const IngredientDetailWrapper = () => {
 };
 
 function App() {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const isRecipesRoute = location.pathname === '/recipes';
-
   return (
     <div className="app">
-      <nav style={{ padding: '1rem 2rem', borderBottom: '1px solid #ddd', marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <Link to="/" style={{ textDecoration: 'none', color: 'inherit', flex: 1 }}>
-            <h1 style={{ margin: 0 }}>Mixology App</h1>
-          </Link>
-          <NavLink
-            to="/recipes"
-            style={({ isActive }) => ({
-              padding: '0.5rem 1rem',
-              backgroundColor: isActive ? '#007bff' : '#6c757d',
-              color: 'white',
-              textDecoration: 'none',
-              borderRadius: '4px',
-            })}
-          >
+      <nav className="app-nav">
+        <Link to="/" className="nav-wordmark">Mixology App</Link>
+        <div className="nav-links">
+          <NavLink to="/recipes" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
             Recipes
           </NavLink>
-          <NavLink
-            to="/ingredients"
-            style={({ isActive }) => ({
-              padding: '0.5rem 1rem',
-              backgroundColor: isActive ? '#007bff' : '#6c757d',
-              color: 'white',
-              textDecoration: 'none',
-              borderRadius: '4px',
-            })}
-          >
+          <NavLink to="/ingredients" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
             Ingredients
           </NavLink>
-          <NavLink
-            to="/categories"
-            style={({ isActive }) => ({
-              padding: '0.5rem 1rem',
-              backgroundColor: isActive ? '#007bff' : '#6c757d',
-              color: 'white',
-              textDecoration: 'none',
-              borderRadius: '4px',
-            })}
-          >
+          <NavLink to="/categories" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
             Categories
           </NavLink>
-          {isRecipesRoute && (
-            <button
-              onClick={() => navigate('/recipes/new')}
-              style={{
-                padding: '0.5rem 1rem',
-                backgroundColor: '#28a745',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
-            >
-              + New Recipe
-            </button>
-          )}
+          <Link to="/recipes/new" className="nav-action">+ New Recipe</Link>
         </div>
       </nav>
 
