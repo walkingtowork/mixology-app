@@ -1,0 +1,3016 @@
+[
+{
+  "model": "cocktails.ingredientcategory",
+  "pk": 1,
+  "fields": {
+    "name": "Cognac",
+    "notes": ""
+  }
+},
+{
+  "model": "cocktails.ingredientcategory",
+  "pk": 2,
+  "fields": {
+    "name": "Rye Whiskey",
+    "notes": ""
+  }
+},
+{
+  "model": "cocktails.ingredientcategory",
+  "pk": 3,
+  "fields": {
+    "name": "Bourbon",
+    "notes": ""
+  }
+},
+{
+  "model": "cocktails.ingredientcategory",
+  "pk": 4,
+  "fields": {
+    "name": "Irish Whiskey",
+    "notes": ""
+  }
+},
+{
+  "model": "cocktails.ingredientcategory",
+  "pk": 5,
+  "fields": {
+    "name": "Gin",
+    "notes": ""
+  }
+},
+{
+  "model": "cocktails.ingredientcategory",
+  "pk": 6,
+  "fields": {
+    "name": "Vodka",
+    "notes": ""
+  }
+},
+{
+  "model": "cocktails.ingredientcategory",
+  "pk": 7,
+  "fields": {
+    "name": "Rum",
+    "notes": ""
+  }
+},
+{
+  "model": "cocktails.ingredientcategory",
+  "pk": 8,
+  "fields": {
+    "name": "Light Rum",
+    "notes": ""
+  }
+},
+{
+  "model": "cocktails.ingredientcategory",
+  "pk": 9,
+  "fields": {
+    "name": "Jamaican Rum",
+    "notes": ""
+  }
+},
+{
+  "model": "cocktails.ingredientcategory",
+  "pk": 10,
+  "fields": {
+    "name": "Japanese Whiskey",
+    "notes": ""
+  }
+},
+{
+  "model": "cocktails.ingredientcategory",
+  "pk": 11,
+  "fields": {
+    "name": "Scotch",
+    "notes": ""
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 1,
+  "fields": {
+    "name": "Gin",
+    "category": 5,
+    "is_generic": true,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 2,
+  "fields": {
+    "name": "Sweet Vermouth",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 3,
+  "fields": {
+    "name": "Campari",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 4,
+  "fields": {
+    "name": "Hakutake Kin Shiro rice shochu",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 5,
+  "fields": {
+    "name": "Mr Black",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 6,
+  "fields": {
+    "name": "Anko",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 7,
+  "fields": {
+    "name": "Heavy cream",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 8,
+  "fields": {
+    "name": "Simple syrup",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 0
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 9,
+  "fields": {
+    "name": "Angostura bitters",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 10,
+  "fields": {
+    "name": "Rum",
+    "category": 7,
+    "is_generic": true,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 11,
+  "fields": {
+    "name": "Chai syrup",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 12,
+  "fields": {
+    "name": "Lime",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 13,
+  "fields": {
+    "name": "Miyagikyo single malt",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 14,
+  "fields": {
+    "name": "Matsui Umeshu",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 15,
+  "fields": {
+    "name": "Vermouth del Professore",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 16,
+  "fields": {
+    "name": "Chocolate bitters",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 17,
+  "fields": {
+    "name": "Lemon juice",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 18,
+  "fields": {
+    "name": "Honey syrup",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 19,
+  "fields": {
+    "name": "Citrus vodka",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 20,
+  "fields": {
+    "name": "Kabosu liqueur",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 21,
+  "fields": {
+    "name": "Espresso",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 22,
+  "fields": {
+    "name": "Vodka",
+    "category": 6,
+    "is_generic": true,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 23,
+  "fields": {
+    "name": "Coffee liqueur",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 24,
+  "fields": {
+    "name": "Irish whisky",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 25,
+  "fields": {
+    "name": "Hot Coffee",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 26,
+  "fields": {
+    "name": "Sugar",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 27,
+  "fields": {
+    "name": "Kahlua",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 29,
+  "fields": {
+    "name": "Egg white",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 30,
+  "fields": {
+    "name": "Soda water",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 31,
+  "fields": {
+    "name": "Orange bitters",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 32,
+  "fields": {
+    "name": "Rittenhouse Rye",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 33,
+  "fields": {
+    "name": "Smith & Cross",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 34,
+  "fields": {
+    "name": "Tempus Fugit Banana Liqueur",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 35,
+  "fields": {
+    "name": "Arabica infused Carpano Antica",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 36,
+  "fields": {
+    "name": "Mole Bitters",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 37,
+  "fields": {
+    "name": "Appleton Estate",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 38,
+  "fields": {
+    "name": "Demerara syrup",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 0
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 39,
+  "fields": {
+    "name": "Black tea",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 40,
+  "fields": {
+    "name": "Cognac",
+    "category": 1,
+    "is_generic": true,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 41,
+  "fields": {
+    "name": "Creme de cacao",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 42,
+  "fields": {
+    "name": "100 proof rye",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 43,
+  "fields": {
+    "name": "Fonseca Bin Ruby Port",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 44,
+  "fields": {
+    "name": "VSOP Cognac",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 45,
+  "fields": {
+    "name": "Creme de Menthe",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 46,
+  "fields": {
+    "name": "Ruby Port",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 47,
+  "fields": {
+    "name": "Creme de Cacao",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 48,
+  "fields": {
+    "name": "Semi-rich syrup",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 0
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 49,
+  "fields": {
+    "name": "Aquafaba",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 50,
+  "fields": {
+    "name": "Tequila",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 51,
+  "fields": {
+    "name": "Lemon Juice",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 52,
+  "fields": {
+    "name": "Absinthe",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 53,
+  "fields": {
+    "name": "Chartreuse Bitters",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 54,
+  "fields": {
+    "name": "Rye Whiskey",
+    "category": 2,
+    "is_generic": true,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 55,
+  "fields": {
+    "name": "Cold water",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 57,
+  "fields": {
+    "name": "Peychaud's Bitters",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 58,
+  "fields": {
+    "name": "Orange Curaçao",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 59,
+  "fields": {
+    "name": "Lime Juice",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 61,
+  "fields": {
+    "name": "Irish Whisky",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 62,
+  "fields": {
+    "name": "Benedictine",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 63,
+  "fields": {
+    "name": "Añejo Tequila",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 64,
+  "fields": {
+    "name": "Homemade coffee liqueur",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 65,
+  "fields": {
+    "name": "Dry Prosecco",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 66,
+  "fields": {
+    "name": "Limoncello",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 67,
+  "fields": {
+    "name": "Verde Amaro",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 68,
+  "fields": {
+    "name": "Lemon",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 69,
+  "fields": {
+    "name": "Cynar",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 70,
+  "fields": {
+    "name": "Vecchio del Capo",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 71,
+  "fields": {
+    "name": "Ginger Beer",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 72,
+  "fields": {
+    "name": "Hibiscus Cinnamon Gin",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 74,
+  "fields": {
+    "name": "Chili Amaro",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 75,
+  "fields": {
+    "name": "Pineapple syrup",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 76,
+  "fields": {
+    "name": "100-proof Bourbon",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 77,
+  "fields": {
+    "name": "Bourbon",
+    "category": 3,
+    "is_generic": true,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 79,
+  "fields": {
+    "name": "Saline Solution",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 80,
+  "fields": {
+    "name": "Reposado Tequila",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 81,
+  "fields": {
+    "name": "Chili Liqueur",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 82,
+  "fields": {
+    "name": "Brown sugar syrup",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 83,
+  "fields": {
+    "name": "Oat milk",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 84,
+  "fields": {
+    "name": "Sea salt",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 85,
+  "fields": {
+    "name": "Calvados",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 86,
+  "fields": {
+    "name": "Irish Whiskey",
+    "category": 4,
+    "is_generic": true,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 87,
+  "fields": {
+    "name": "Campari (infused with cacao nibs)",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 88,
+  "fields": {
+    "name": "White Creme de Cacao",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 89,
+  "fields": {
+    "name": "Banana liqueur",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 90,
+  "fields": {
+    "name": "Licor 43",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 91,
+  "fields": {
+    "name": "Apple Cider",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 92,
+  "fields": {
+    "name": "Dark Rum",
+    "category": null,
+    "is_generic": false,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 93,
+  "fields": {
+    "name": "Light Rum",
+    "category": 8,
+    "is_generic": true,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 94,
+  "fields": {
+    "name": "Jamaican Rum",
+    "category": 9,
+    "is_generic": true,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 95,
+  "fields": {
+    "name": "Japanese Whiskey",
+    "category": 10,
+    "is_generic": true,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.ingredient",
+  "pk": 96,
+  "fields": {
+    "name": "Scotch",
+    "category": 11,
+    "is_generic": true,
+    "stock_level": 75
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 1,
+  "fields": {
+    "name": "Negroni",
+    "notes": "Add all ingredients to a mixing glass, stir until chilled, pour over a big cube in a rocks glass. Take an orange peel and express oils on top, then add to glass.",
+    "garnish": "Orange peel",
+    "source_url": null
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 2,
+  "fields": {
+    "name": "Odango",
+    "notes": "",
+    "garnish": "Ground coffee + sweet potato chips",
+    "source_url": null
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 3,
+  "fields": {
+    "name": "Chaiquiri",
+    "notes": "",
+    "garnish": "",
+    "source_url": null
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 4,
+  "fields": {
+    "name": "Japanese Manhattan",
+    "notes": "",
+    "garnish": "",
+    "source_url": null
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 5,
+  "fields": {
+    "name": "Bee's Knees",
+    "notes": "",
+    "garnish": "",
+    "source_url": null
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 6,
+  "fields": {
+    "name": "Kabosu Drop",
+    "notes": "(Splash of honey syrup?)",
+    "garnish": "Sugar rim",
+    "source_url": null
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 7,
+  "fields": {
+    "name": "Espresso Martini",
+    "notes": "Small ice. Put espresso in freezer to chill",
+    "garnish": "",
+    "source_url": null
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 8,
+  "fields": {
+    "name": "Irish Coffee",
+    "notes": "",
+    "garnish": "Heavy cream (layer on top)",
+    "source_url": null
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 9,
+  "fields": {
+    "name": "White Russian",
+    "notes": "",
+    "garnish": "",
+    "source_url": null
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 10,
+  "fields": {
+    "name": "Gin Fizz",
+    "notes": "Small ice",
+    "garnish": "",
+    "source_url": null
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 11,
+  "fields": {
+    "name": "Rum Old Fashioned",
+    "notes": "",
+    "garnish": "Orange twist",
+    "source_url": null
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 12,
+  "fields": {
+    "name": "Winter Welcome",
+    "notes": "",
+    "garnish": "Lemon twist",
+    "source_url": "https://www.youtube.com/watch?v=N7VBqDCWUMI"
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 13,
+  "fields": {
+    "name": "Rum Hot Toddy",
+    "notes": "",
+    "garnish": "Cinnamon stick, Lemon twist with cloves",
+    "source_url": "https://www.youtube.com/watch?v=W50W19vwjmk"
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 14,
+  "fields": {
+    "name": "Brandy Alexander",
+    "notes": "",
+    "garnish": "Grated nutmeg",
+    "source_url": "https://www.youtube.com/watch?v=W50W19vwjmk"
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 15,
+  "fields": {
+    "name": "Elk's Own",
+    "notes": "",
+    "garnish": "Grated nutmeg",
+    "source_url": "https://www.youtube.com/watch?v=zxDfN7UCTZs&t=30s"
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 16,
+  "fields": {
+    "name": "The Stinger",
+    "notes": "",
+    "garnish": "",
+    "source_url": "https://www.youtube.com/watch?v=mBGgu3qRztY&t=1s"
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 17,
+  "fields": {
+    "name": "Chocolate Punch",
+    "notes": "",
+    "garnish": "Grated chocolate",
+    "source_url": "https://www.youtube.com/watch?v=s30L-iu171E&t=215s"
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 18,
+  "fields": {
+    "name": "21st Century",
+    "notes": "Stir 10s, strain into glass",
+    "garnish": "",
+    "source_url": null
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 19,
+  "fields": {
+    "name": "Espresso Martini (Chartreuse)",
+    "notes": "Shake, double strain. Put espresso in freezer to chill",
+    "garnish": "",
+    "source_url": null
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 20,
+  "fields": {
+    "name": "Sazerac",
+    "notes": "Can alternatively use a single sugar cube instead of 1 tsp sugar",
+    "garnish": "",
+    "source_url": null
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 21,
+  "fields": {
+    "name": "Pegu Club",
+    "notes": "Shake, double strain",
+    "garnish": "",
+    "source_url": null
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 22,
+  "fields": {
+    "name": "Irish Old Fashioned",
+    "notes": "",
+    "garnish": "",
+    "source_url": null
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 23,
+  "fields": {
+    "name": "The Federation",
+    "notes": "",
+    "garnish": "Orange twist",
+    "source_url": null
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 24,
+  "fields": {
+    "name": "Espresso Martini (Rum)",
+    "notes": "Small ice. Put espresso in freezer to chill. Optionally express lemon or orange peel.",
+    "garnish": "",
+    "source_url": null
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 25,
+  "fields": {
+    "name": "Limoncello Spritz",
+    "notes": "Small ice. Ice first, briefly stir, garnish with orange slice. Mint if you have it.",
+    "garnish": "Orange slice",
+    "source_url": null
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 26,
+  "fields": {
+    "name": "Rings a Bell",
+    "notes": "Small ice.",
+    "garnish": "Grated tonka bean",
+    "source_url": null
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 27,
+  "fields": {
+    "name": "Italian Buck",
+    "notes": "Small ice. Shake before adding Ginger Beer, lime wheel garnish. Optional bitters",
+    "garnish": "Lime wheel",
+    "source_url": null
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 28,
+  "fields": {
+    "name": "Hibiscus Sour",
+    "notes": "Ice optional?",
+    "garnish": "Grated nutmeg (could try ginger or chai syrup instead of simple?)",
+    "source_url": null
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 29,
+  "fields": {
+    "name": "Spicy Pineapple Daiquiri",
+    "notes": "Small ice. More lime if too sweet?",
+    "garnish": "",
+    "source_url": null
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 30,
+  "fields": {
+    "name": "Rancor's Toothpick",
+    "notes": "Stir and pour over a large block of ice.",
+    "garnish": "Orange peel",
+    "source_url": null
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 31,
+  "fields": {
+    "name": "Revolver",
+    "notes": "Ice optional.",
+    "garnish": "Flamed orange peel",
+    "source_url": null
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 32,
+  "fields": {
+    "name": "Leftovers",
+    "notes": "Add ice and shake",
+    "garnish": "",
+    "source_url": null
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 33,
+  "fields": {
+    "name": "Café Molé",
+    "notes": "",
+    "garnish": "",
+    "source_url": null
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 34,
+  "fields": {
+    "name": "American Trilogy",
+    "notes": "",
+    "garnish": "Orange twist",
+    "source_url": null
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 35,
+  "fields": {
+    "name": "Psycho Killer",
+    "notes": "",
+    "garnish": "",
+    "source_url": null
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 36,
+  "fields": {
+    "name": "Grasshopper",
+    "notes": "",
+    "garnish": "Grated nutmeg",
+    "source_url": null
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 37,
+  "fields": {
+    "name": "A La Mode",
+    "notes": "",
+    "garnish": "Heavy cream floated on top",
+    "source_url": null
+  }
+},
+{
+  "model": "cocktails.recipe",
+  "pk": 38,
+  "fields": {
+    "name": "Dark n Stormy",
+    "notes": "",
+    "garnish": "Lime wheel",
+    "source_url": null
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 1,
+  "fields": {
+    "recipe": 1,
+    "ingredient": 1,
+    "amount": 1.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 2,
+  "fields": {
+    "recipe": 1,
+    "ingredient": 2,
+    "amount": 1.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 3,
+  "fields": {
+    "recipe": 1,
+    "ingredient": 3,
+    "amount": 1.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 4,
+  "fields": {
+    "recipe": 2,
+    "ingredient": 4,
+    "amount": 1.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 5,
+  "fields": {
+    "recipe": 2,
+    "ingredient": 5,
+    "amount": 0.33,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 6,
+  "fields": {
+    "recipe": 2,
+    "ingredient": 6,
+    "amount": 0.33,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 7,
+  "fields": {
+    "recipe": 2,
+    "ingredient": 7,
+    "amount": 1.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 8,
+  "fields": {
+    "recipe": 2,
+    "ingredient": 8,
+    "amount": 0.33,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 9,
+  "fields": {
+    "recipe": 2,
+    "ingredient": 9,
+    "amount": 1.0,
+    "unit": "dash"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 10,
+  "fields": {
+    "recipe": 3,
+    "ingredient": 10,
+    "amount": 2.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 11,
+  "fields": {
+    "recipe": 3,
+    "ingredient": 11,
+    "amount": 0.75,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 12,
+  "fields": {
+    "recipe": 3,
+    "ingredient": 12,
+    "amount": 1.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 14,
+  "fields": {
+    "recipe": 4,
+    "ingredient": 13,
+    "amount": 2.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 15,
+  "fields": {
+    "recipe": 4,
+    "ingredient": 14,
+    "amount": 1.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 16,
+  "fields": {
+    "recipe": 4,
+    "ingredient": 15,
+    "amount": 0.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 17,
+  "fields": {
+    "recipe": 4,
+    "ingredient": 16,
+    "amount": 2.0,
+    "unit": "dash"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 18,
+  "fields": {
+    "recipe": 4,
+    "ingredient": 9,
+    "amount": 1.0,
+    "unit": "dash"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 19,
+  "fields": {
+    "recipe": 5,
+    "ingredient": 1,
+    "amount": 2.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 20,
+  "fields": {
+    "recipe": 5,
+    "ingredient": 17,
+    "amount": 1.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 21,
+  "fields": {
+    "recipe": 5,
+    "ingredient": 18,
+    "amount": 0.75,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 22,
+  "fields": {
+    "recipe": 6,
+    "ingredient": 19,
+    "amount": 0.75,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 23,
+  "fields": {
+    "recipe": 6,
+    "ingredient": 20,
+    "amount": 0.75,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 24,
+  "fields": {
+    "recipe": 6,
+    "ingredient": 17,
+    "amount": 1.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 25,
+  "fields": {
+    "recipe": 7,
+    "ingredient": 21,
+    "amount": 1.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 26,
+  "fields": {
+    "recipe": 7,
+    "ingredient": 22,
+    "amount": 2.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 27,
+  "fields": {
+    "recipe": 7,
+    "ingredient": 23,
+    "amount": 0.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 28,
+  "fields": {
+    "recipe": 7,
+    "ingredient": 8,
+    "amount": 0.25,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 29,
+  "fields": {
+    "recipe": 8,
+    "ingredient": 24,
+    "amount": 1.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 30,
+  "fields": {
+    "recipe": 8,
+    "ingredient": 25,
+    "amount": 4.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 31,
+  "fields": {
+    "recipe": 8,
+    "ingredient": 26,
+    "amount": 2.0,
+    "unit": "tbsp"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 35,
+  "fields": {
+    "recipe": 10,
+    "ingredient": 1,
+    "amount": 2.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 36,
+  "fields": {
+    "recipe": 10,
+    "ingredient": 17,
+    "amount": 1.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 37,
+  "fields": {
+    "recipe": 10,
+    "ingredient": 29,
+    "amount": 0.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 38,
+  "fields": {
+    "recipe": 10,
+    "ingredient": 8,
+    "amount": 0.75,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 39,
+  "fields": {
+    "recipe": 10,
+    "ingredient": 30,
+    "amount": 1.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 40,
+  "fields": {
+    "recipe": 11,
+    "ingredient": 10,
+    "amount": 2.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 41,
+  "fields": {
+    "recipe": 11,
+    "ingredient": 8,
+    "amount": 1.0,
+    "unit": "tsp"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 42,
+  "fields": {
+    "recipe": 11,
+    "ingredient": 11,
+    "amount": 1.0,
+    "unit": "tsp"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 43,
+  "fields": {
+    "recipe": 11,
+    "ingredient": 9,
+    "amount": 2.0,
+    "unit": "dash"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 44,
+  "fields": {
+    "recipe": 11,
+    "ingredient": 31,
+    "amount": 2.0,
+    "unit": "dash"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 45,
+  "fields": {
+    "recipe": 12,
+    "ingredient": 32,
+    "amount": 1.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 46,
+  "fields": {
+    "recipe": 12,
+    "ingredient": 33,
+    "amount": 0.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 47,
+  "fields": {
+    "recipe": 12,
+    "ingredient": 34,
+    "amount": 0.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 48,
+  "fields": {
+    "recipe": 12,
+    "ingredient": 35,
+    "amount": 0.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 49,
+  "fields": {
+    "recipe": 12,
+    "ingredient": 9,
+    "amount": 2.0,
+    "unit": "dash"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 50,
+  "fields": {
+    "recipe": 12,
+    "ingredient": 36,
+    "amount": 2.0,
+    "unit": "drops"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 51,
+  "fields": {
+    "recipe": 13,
+    "ingredient": 37,
+    "amount": 1.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 52,
+  "fields": {
+    "recipe": 13,
+    "ingredient": 38,
+    "amount": 0.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 53,
+  "fields": {
+    "recipe": 13,
+    "ingredient": 17,
+    "amount": 0.25,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 54,
+  "fields": {
+    "recipe": 13,
+    "ingredient": 39,
+    "amount": 4.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 55,
+  "fields": {
+    "recipe": 14,
+    "ingredient": 40,
+    "amount": 1.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 56,
+  "fields": {
+    "recipe": 14,
+    "ingredient": 41,
+    "amount": 0.75,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 57,
+  "fields": {
+    "recipe": 14,
+    "ingredient": 7,
+    "amount": 0.75,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 58,
+  "fields": {
+    "recipe": 15,
+    "ingredient": 42,
+    "amount": 1.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 59,
+  "fields": {
+    "recipe": 15,
+    "ingredient": 43,
+    "amount": 0.75,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 60,
+  "fields": {
+    "recipe": 15,
+    "ingredient": 17,
+    "amount": 0.75,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 61,
+  "fields": {
+    "recipe": 15,
+    "ingredient": 38,
+    "amount": 0.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 62,
+  "fields": {
+    "recipe": 15,
+    "ingredient": 29,
+    "amount": 0.75,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 63,
+  "fields": {
+    "recipe": 16,
+    "ingredient": 44,
+    "amount": 2.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 64,
+  "fields": {
+    "recipe": 16,
+    "ingredient": 45,
+    "amount": 1.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 65,
+  "fields": {
+    "recipe": 17,
+    "ingredient": 40,
+    "amount": 1.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 66,
+  "fields": {
+    "recipe": 17,
+    "ingredient": 46,
+    "amount": 0.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 67,
+  "fields": {
+    "recipe": 17,
+    "ingredient": 47,
+    "amount": 0.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 68,
+  "fields": {
+    "recipe": 17,
+    "ingredient": 48,
+    "amount": 0.25,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 69,
+  "fields": {
+    "recipe": 17,
+    "ingredient": 7,
+    "amount": 1.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 70,
+  "fields": {
+    "recipe": 18,
+    "ingredient": 50,
+    "amount": 2.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 71,
+  "fields": {
+    "recipe": 18,
+    "ingredient": 47,
+    "amount": 0.75,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 72,
+  "fields": {
+    "recipe": 18,
+    "ingredient": 51,
+    "amount": 0.75,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 73,
+  "fields": {
+    "recipe": 18,
+    "ingredient": 52,
+    "amount": 1.0,
+    "unit": "spritz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 74,
+  "fields": {
+    "recipe": 19,
+    "ingredient": 21,
+    "amount": 1.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 75,
+  "fields": {
+    "recipe": 19,
+    "ingredient": 22,
+    "amount": 2.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 76,
+  "fields": {
+    "recipe": 19,
+    "ingredient": 23,
+    "amount": 0.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 77,
+  "fields": {
+    "recipe": 19,
+    "ingredient": 8,
+    "amount": 0.25,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 78,
+  "fields": {
+    "recipe": 19,
+    "ingredient": 53,
+    "amount": 1.0,
+    "unit": "dash"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 79,
+  "fields": {
+    "recipe": 20,
+    "ingredient": 54,
+    "amount": 2.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 80,
+  "fields": {
+    "recipe": 20,
+    "ingredient": 52,
+    "amount": 1.0,
+    "unit": "spritz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 81,
+  "fields": {
+    "recipe": 20,
+    "ingredient": 26,
+    "amount": 1.0,
+    "unit": "tsp"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 82,
+  "fields": {
+    "recipe": 20,
+    "ingredient": 55,
+    "amount": 0.5,
+    "unit": "tsp"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 83,
+  "fields": {
+    "recipe": 20,
+    "ingredient": 9,
+    "amount": 1.0,
+    "unit": "dash"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 84,
+  "fields": {
+    "recipe": 20,
+    "ingredient": 57,
+    "amount": 4.0,
+    "unit": "dash"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 85,
+  "fields": {
+    "recipe": 21,
+    "ingredient": 1,
+    "amount": 2.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 86,
+  "fields": {
+    "recipe": 21,
+    "ingredient": 58,
+    "amount": 0.75,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 87,
+  "fields": {
+    "recipe": 21,
+    "ingredient": 59,
+    "amount": 0.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 88,
+  "fields": {
+    "recipe": 21,
+    "ingredient": 9,
+    "amount": 1.0,
+    "unit": "dash"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 89,
+  "fields": {
+    "recipe": 21,
+    "ingredient": 31,
+    "amount": 1.0,
+    "unit": "dash"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 90,
+  "fields": {
+    "recipe": 22,
+    "ingredient": 61,
+    "amount": 2.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 91,
+  "fields": {
+    "recipe": 22,
+    "ingredient": 62,
+    "amount": 0.75,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 92,
+  "fields": {
+    "recipe": 22,
+    "ingredient": 31,
+    "amount": 2.0,
+    "unit": "dash"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 93,
+  "fields": {
+    "recipe": 22,
+    "ingredient": 9,
+    "amount": 1.0,
+    "unit": "dash"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 94,
+  "fields": {
+    "recipe": 23,
+    "ingredient": 63,
+    "amount": 2.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 95,
+  "fields": {
+    "recipe": 23,
+    "ingredient": 52,
+    "amount": 1.0,
+    "unit": "spritz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 96,
+  "fields": {
+    "recipe": 23,
+    "ingredient": 47,
+    "amount": 0.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 97,
+  "fields": {
+    "recipe": 23,
+    "ingredient": 9,
+    "amount": 2.0,
+    "unit": "dash"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 98,
+  "fields": {
+    "recipe": 3,
+    "ingredient": 9,
+    "amount": 2.0,
+    "unit": "dash"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 99,
+  "fields": {
+    "recipe": 24,
+    "ingredient": 21,
+    "amount": 1.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 100,
+  "fields": {
+    "recipe": 24,
+    "ingredient": 10,
+    "amount": 2.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 101,
+  "fields": {
+    "recipe": 24,
+    "ingredient": 64,
+    "amount": 0.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 102,
+  "fields": {
+    "recipe": 24,
+    "ingredient": 8,
+    "amount": 0.25,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 103,
+  "fields": {
+    "recipe": 25,
+    "ingredient": 65,
+    "amount": 3.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 104,
+  "fields": {
+    "recipe": 25,
+    "ingredient": 66,
+    "amount": 2.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 105,
+  "fields": {
+    "recipe": 25,
+    "ingredient": 30,
+    "amount": 1.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 106,
+  "fields": {
+    "recipe": 26,
+    "ingredient": 1,
+    "amount": 0.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 107,
+  "fields": {
+    "recipe": 26,
+    "ingredient": 67,
+    "amount": 1.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 108,
+  "fields": {
+    "recipe": 26,
+    "ingredient": 29,
+    "amount": 0.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 109,
+  "fields": {
+    "recipe": 26,
+    "ingredient": 68,
+    "amount": 0.33,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 110,
+  "fields": {
+    "recipe": 26,
+    "ingredient": 18,
+    "amount": 1.0,
+    "unit": "tsp"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 111,
+  "fields": {
+    "recipe": 27,
+    "ingredient": 69,
+    "amount": 1.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 112,
+  "fields": {
+    "recipe": 27,
+    "ingredient": 70,
+    "amount": 1.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 113,
+  "fields": {
+    "recipe": 27,
+    "ingredient": 12,
+    "amount": 0.75,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 114,
+  "fields": {
+    "recipe": 27,
+    "ingredient": 71,
+    "amount": 3.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 115,
+  "fields": {
+    "recipe": 28,
+    "ingredient": 72,
+    "amount": 1.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 116,
+  "fields": {
+    "recipe": 28,
+    "ingredient": 8,
+    "amount": 1.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 117,
+  "fields": {
+    "recipe": 28,
+    "ingredient": 12,
+    "amount": 1.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 118,
+  "fields": {
+    "recipe": 28,
+    "ingredient": 29,
+    "amount": 0.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 119,
+  "fields": {
+    "recipe": 29,
+    "ingredient": 10,
+    "amount": 1.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 120,
+  "fields": {
+    "recipe": 29,
+    "ingredient": 74,
+    "amount": 1.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 121,
+  "fields": {
+    "recipe": 29,
+    "ingredient": 12,
+    "amount": 0.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 122,
+  "fields": {
+    "recipe": 29,
+    "ingredient": 75,
+    "amount": 0.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 123,
+  "fields": {
+    "recipe": 30,
+    "ingredient": 76,
+    "amount": 1.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 124,
+  "fields": {
+    "recipe": 30,
+    "ingredient": 69,
+    "amount": 1.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 125,
+  "fields": {
+    "recipe": 30,
+    "ingredient": 2,
+    "amount": 1.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 126,
+  "fields": {
+    "recipe": 30,
+    "ingredient": 36,
+    "amount": 2.0,
+    "unit": "dash"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 127,
+  "fields": {
+    "recipe": 31,
+    "ingredient": 77,
+    "amount": 2.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 128,
+  "fields": {
+    "recipe": 31,
+    "ingredient": 23,
+    "amount": 0.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 129,
+  "fields": {
+    "recipe": 31,
+    "ingredient": 31,
+    "amount": 2.0,
+    "unit": "dash"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 130,
+  "fields": {
+    "recipe": 32,
+    "ingredient": 72,
+    "amount": 1.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 131,
+  "fields": {
+    "recipe": 32,
+    "ingredient": 64,
+    "amount": 1.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 132,
+  "fields": {
+    "recipe": 32,
+    "ingredient": 75,
+    "amount": 1.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 133,
+  "fields": {
+    "recipe": 32,
+    "ingredient": 12,
+    "amount": 1.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 134,
+  "fields": {
+    "recipe": 33,
+    "ingredient": 80,
+    "amount": 1.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 135,
+  "fields": {
+    "recipe": 33,
+    "ingredient": 81,
+    "amount": 0.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 136,
+  "fields": {
+    "recipe": 33,
+    "ingredient": 82,
+    "amount": 0.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 137,
+  "fields": {
+    "recipe": 33,
+    "ingredient": 83,
+    "amount": 1.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 138,
+  "fields": {
+    "recipe": 33,
+    "ingredient": 21,
+    "amount": 1.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 139,
+  "fields": {
+    "recipe": 33,
+    "ingredient": 84,
+    "amount": 1.0,
+    "unit": "pinch"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 140,
+  "fields": {
+    "recipe": 34,
+    "ingredient": 77,
+    "amount": 1.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 141,
+  "fields": {
+    "recipe": 34,
+    "ingredient": 85,
+    "amount": 1.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 142,
+  "fields": {
+    "recipe": 34,
+    "ingredient": 11,
+    "amount": 0.25,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 143,
+  "fields": {
+    "recipe": 34,
+    "ingredient": 9,
+    "amount": 2.0,
+    "unit": "dash"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 144,
+  "fields": {
+    "recipe": 35,
+    "ingredient": 86,
+    "amount": 2.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 145,
+  "fields": {
+    "recipe": 35,
+    "ingredient": 87,
+    "amount": 0.75,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 146,
+  "fields": {
+    "recipe": 35,
+    "ingredient": 88,
+    "amount": 0.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 147,
+  "fields": {
+    "recipe": 35,
+    "ingredient": 89,
+    "amount": 0.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 148,
+  "fields": {
+    "recipe": 35,
+    "ingredient": 52,
+    "amount": 2.0,
+    "unit": "dash"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 149,
+  "fields": {
+    "recipe": 36,
+    "ingredient": 45,
+    "amount": 1.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 150,
+  "fields": {
+    "recipe": 36,
+    "ingredient": 88,
+    "amount": 1.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 151,
+  "fields": {
+    "recipe": 36,
+    "ingredient": 7,
+    "amount": 2.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 152,
+  "fields": {
+    "recipe": 37,
+    "ingredient": 77,
+    "amount": 1.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 153,
+  "fields": {
+    "recipe": 37,
+    "ingredient": 90,
+    "amount": 0.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 154,
+  "fields": {
+    "recipe": 37,
+    "ingredient": 91,
+    "amount": 5.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 155,
+  "fields": {
+    "recipe": 38,
+    "ingredient": 92,
+    "amount": 2.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 156,
+  "fields": {
+    "recipe": 38,
+    "ingredient": 59,
+    "amount": 0.5,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 157,
+  "fields": {
+    "recipe": 38,
+    "ingredient": 71,
+    "amount": 5.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 161,
+  "fields": {
+    "recipe": 9,
+    "ingredient": 7,
+    "amount": 1.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 162,
+  "fields": {
+    "recipe": 9,
+    "ingredient": 27,
+    "amount": 1.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.recipeingredient",
+  "pk": 163,
+  "fields": {
+    "recipe": 9,
+    "ingredient": 22,
+    "amount": 2.0,
+    "unit": "oz"
+  }
+},
+{
+  "model": "cocktails.menu",
+  "pk": 1,
+  "fields": {
+    "name": "Umeshu & Tacos",
+    "is_active": false,
+    "is_published": false,
+    "share_token": "3b378695-0f21-4a2b-ac60-9f1089692545",
+    "theme_notes": "",
+    "created_at": "2026-05-06T05:45:42.154Z",
+    "updated_at": "2026-05-06T05:45:42.154Z"
+  }
+},
+{
+  "model": "cocktails.menuitem",
+  "pk": 1,
+  "fields": {
+    "menu": 1,
+    "recipe": 23,
+    "order": 1
+  }
+},
+{
+  "model": "cocktails.menuitem",
+  "pk": 2,
+  "fields": {
+    "menu": 1,
+    "recipe": 34,
+    "order": 2
+  }
+},
+{
+  "model": "cocktails.menuitem",
+  "pk": 3,
+  "fields": {
+    "menu": 1,
+    "recipe": 33,
+    "order": 3
+  }
+},
+{
+  "model": "cocktails.menuitem",
+  "pk": 4,
+  "fields": {
+    "menu": 1,
+    "recipe": 2,
+    "order": 4
+  }
+},
+{
+  "model": "cocktails.buylistitem",
+  "pk": 1,
+  "fields": {
+    "ingredient": 8,
+    "notes": "",
+    "added_at": "2026-05-06T06:15:44.214Z"
+  }
+},
+{
+  "model": "cocktails.buylistitem",
+  "pk": 2,
+  "fields": {
+    "ingredient": 48,
+    "notes": "",
+    "added_at": "2026-05-06T06:15:56.722Z"
+  }
+},
+{
+  "model": "cocktails.buylistitem",
+  "pk": 3,
+  "fields": {
+    "ingredient": 38,
+    "notes": "",
+    "added_at": "2026-05-06T06:16:04.690Z"
+  }
+}
+]

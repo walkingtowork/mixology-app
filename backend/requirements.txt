@@ -1,8 +1,10 @@
 # Python 3.12+ required
 asgiref==3.10.0
+dj-database-url==2.3.0
 Django==4.2.26
 django-cors-headers==4.9.0
 djangorestframework==3.16.1
+psycopg2-binary==2.9.10
 python-dotenv==1.2.1
 sqlparse==0.5.3
 typing_extensions==4.15.0
