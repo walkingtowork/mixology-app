@@ -76,13 +76,15 @@ export default function MenuDetail() {
     const win = window.open('', '_blank');
     if (!win) return;
     win.document.write(`<!DOCTYPE html><html><head><title>${menu.name} — QR Code</title>
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
       <style>
         body { margin: 0; display: flex; flex-direction: column; align-items: center;
-               justify-content: center; min-height: 100vh; font-family: Georgia, serif; }
-        h1 { font-size: 1.5rem; margin-bottom: 1rem; }
-        p { color: #666; margin-top: 0.75rem; font-size: 0.875rem; }
+               justify-content: center; min-height: 100vh; font-family: 'Playfair Display', Georgia, serif; }
+        h1 { font-size: 1.5rem; margin-bottom: 1rem; font-weight: 700; }
+        p { color: #666; margin-top: 0.75rem; font-size: 0.875rem; font-family: Georgia, serif; }
       </style></head>
-      <body onload="window.print()">
+      <body onload="document.fonts.ready.then(() => window.print())">
         <h1>${menu.name}</h1>
         <img src="${dataUrl}" width="220" height="220" />
         <p>Scan to view the menu</p>
