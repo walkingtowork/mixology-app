@@ -27,7 +27,7 @@ function App() {
   return (
     <div className="app">
       <nav className="app-nav">
-        <Link to="/" className="nav-wordmark">Mixology App</Link>
+        <Link to="/" className="nav-wordmark">The Bar Cart</Link>
         <div className="nav-links">
           <NavLink to="/recipes" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
             Recipes
@@ -54,6 +54,21 @@ function App() {
           <Route path="/categories" element={<CategoryList />} />
         </Routes>
       </main>
+
+      <nav className="bottom-nav">
+        <NavLink to="/recipes" className={({ isActive }) => `bottom-nav-item${isActive ? ' active' : ''}`}>
+          Recipes
+        </NavLink>
+        <NavLink to="/ingredients" className={({ isActive }) => `bottom-nav-item${isActive ? ' active' : ''}`}>
+          Ingred.
+        </NavLink>
+        <NavLink to="/categories" className={({ isActive }) => `bottom-nav-item${isActive ? ' active' : ''}`}>
+          Categs.
+        </NavLink>
+        <Link to="/recipes/new" className="bottom-nav-item bottom-nav-new">
+          + New
+        </Link>
+      </nav>
     </div>
   );
 }

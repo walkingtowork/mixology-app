@@ -109,5 +109,23 @@
 
   .recipe-detail-title {
     font-size: var(--text-3xl);
+    margin-bottom: var(--space-6);
+  }
+
+  /* Larger, more scannable ingredients — primary reading surface when mixing */
+  .recipe-detail-ingredient {
+    padding: var(--space-4);
+    font-size: var(--text-lg);
+    gap: var(--space-4);
+  }
+
+  .recipe-detail-ingredient-measure {
+    min-width: 90px;
+    font-size: var(--text-lg);
+  }
+
+  .recipe-detail-actions {
+    flex-wrap: wrap;
+    gap: var(--space-2);
   }
 }
