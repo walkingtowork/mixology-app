@@ -1,0 +1,18 @@
+.menu-form {
+  padding: var(--space-8);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.menu-form h1 {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  margin-bottom: var(--space-8);
+}
+
+@media (max-width: 640px) {
+  .menu-form {
+    padding: var(--space-4);
+  }
+}
