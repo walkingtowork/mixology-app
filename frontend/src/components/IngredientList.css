@@ -75,4 +75,10 @@
   .ingredient-list {
     padding: var(--space-4);
   }
+
+  /* Taller tap targets */
+  .ingredient-item {
+    padding: var(--space-3) var(--space-3);
+    min-height: 44px;
+  }
 }

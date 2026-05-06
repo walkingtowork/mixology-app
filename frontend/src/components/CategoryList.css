@@ -76,4 +76,14 @@
   .category-list {
     padding: var(--space-4);
   }
+
+  /* Stack name/notes and action buttons vertically on narrow screens */
+  .category-card {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .category-card-actions {
+    align-self: flex-start;
+  }
 }

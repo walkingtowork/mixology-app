@@ -18,17 +18,38 @@ export default function HomePage() {
     <div className="home-page">
       <div className="home-hero">
         <div className="home-title-row">
-          <div className="rocks-glass">
-            <div className="glass" />
-            <div className="ice" />
+          <div className="home-divider-glass-inner">
+            <div className="martini-glass">
+              <div className="glass" />
+              <div className="glass-left-edge" />
+              <div className="glass-right-edge" />
+              <div className="stem" />
+              <div className="base" />
+            </div>
           </div>
-          <h1 className="home-title">Mixology App</h1>
-          <div className="rocks-glass">
-            <div className="glass" />
-            <div className="ice" />
+          <h1 className="home-title">What are we making tonight?</h1>
+          <div className="home-divider-glass-inner">
+            <div className="martini-glass">
+              <div className="glass" />
+              <div className="glass-left-edge" />
+              <div className="glass-right-edge" />
+              <div className="stem" />
+              <div className="base" />
+            </div>
           </div>
         </div>
-        <p className="home-subtitle">Your personal cocktail recipe book.</p>
+      </div>
+
+      <div className="home-divider-glass">
+        <div className="home-divider-glass-inner">
+          <div className="martini-glass">
+            <div className="glass" />
+            <div className="glass-left-edge" />
+            <div className="glass-right-edge" />
+            <div className="stem" />
+            <div className="base" />
+          </div>
+        </div>
       </div>
 
       <div className="home-stats">
@@ -47,12 +68,9 @@ export default function HomePage() {
       </div>
 
       <div className="home-glasses">
-        <div className="martini-glass">
+        <div className="rocks-glass">
           <div className="glass" />
-          <div className="glass-left-edge" />
-          <div className="glass-right-edge" />
-          <div className="stem" />
-          <div className="base" />
+          <div className="ice" />
         </div>
         <div className="wine-glass">
           <div className="bowl" />

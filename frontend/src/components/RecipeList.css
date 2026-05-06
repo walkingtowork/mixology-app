@@ -88,5 +88,19 @@
 
   .recipe-grid {
     grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+
+  .recipe-list-filters {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .recipe-list-filter {
+    min-width: 0;
+  }
+
+  .recipe-list-filter select {
+    width: 100%;
   }
 }
