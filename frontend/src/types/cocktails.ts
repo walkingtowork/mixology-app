@@ -1,8 +1,6 @@
-/**
- * Type definitions for cocktails API
- */
-
 export type Unit = 'oz' | 'ml' | 'tsp' | 'tbsp' | 'barspoon' | 'dash' | 'drops' | 'spritz' | 'rinse' | 'pinch';
+
+export type StockLevel = 0 | 25 | 50 | 75 | 100;
 
 export interface IngredientCategory {
   id: number;
@@ -17,6 +15,7 @@ export interface Ingredient {
   name: string;
   category: IngredientCategory | null;
   is_generic: boolean;
+  stock_level: StockLevel;
 }
 
 export interface RecipeIngredient {
@@ -35,3 +34,28 @@ export interface Recipe {
   ingredients: RecipeIngredient[];
 }
 
+export interface MenuItem {
+  id: number;
+  recipe: Recipe;
+  order: number;
+}
+
+export interface Menu {
+  id: number;
+  name: string;
+  is_active: boolean;
+  is_published: boolean;
+  share_token: string;
+  theme_notes: string;
+  created_at: string;
+  updated_at: string;
+  items: MenuItem[];
+  item_count: number;
+}
+
+export interface BuyListItem {
+  id: number;
+  ingredient: Ingredient;
+  notes: string;
+  added_at: string;
+}

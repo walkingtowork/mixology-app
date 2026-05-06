@@ -1,4 +1,4 @@
-import type { Ingredient, Recipe, IngredientCategory } from '../types/cocktails';
+import type { Ingredient, Recipe, IngredientCategory, Menu, BuyListItem, StockLevel } from '../types/cocktails';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
@@ -54,13 +54,16 @@ export async function fetchIngredient(id: number): Promise<Ingredient> {
  * @returns Promise resolving to the created Ingredient object
  * @throws Error if the API request fails
  */
-export async function createIngredient(name: string): Promise<Ingredient> {
+export async function createIngredient(
+  name: string,
+  options: { stock_level?: StockLevel; category_id?: number | null } = {}
+): Promise<Ingredient> {
   const response = await fetch(`${API_BASE_URL}/api/ingredients/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ name, ...options }),
   });
 
   if (!response.ok) {
@@ -81,13 +84,12 @@ export async function createIngredient(name: string): Promise<Ingredient> {
  */
 export async function updateIngredient(
   id: number,
-  ingredient: { name?: string; category_id?: number | null }
+  ingredient: { name?: string; category_id?: number | null; stock_level?: StockLevel }
 ): Promise<Ingredient> {
   const ingredientData: any = {};
   if (ingredient.name !== undefined) ingredientData.name = ingredient.name;
-  if (ingredient.category_id !== undefined) {
-    ingredientData.category_id = ingredient.category_id;
-  }
+  if (ingredient.category_id !== undefined) ingredientData.category_id = ingredient.category_id;
+  if (ingredient.stock_level !== undefined) ingredientData.stock_level = ingredient.stock_level;
 
   const response = await fetch(`${API_BASE_URL}/api/ingredients/${id}/`, {
     method: 'PATCH',
@@ -450,16 +452,149 @@ export async function deleteCategory(id: number): Promise<void> {
 export async function fetchCategoryIngredients(categoryId: number): Promise<Ingredient[]> {
   const response = await fetch(`${API_BASE_URL}/api/categories/${categoryId}/ingredients/`, {
     method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
   });
+  if (!response.ok) throw new Error(`Failed to fetch category ingredients: ${response.status}`);
+  return response.json();
+}
 
+export async function fetchIngredientRecipes(ingredientId: number): Promise<Recipe[]> {
+  const response = await fetch(`${API_BASE_URL}/api/ingredients/${ingredientId}/recipes/`, {
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!response.ok) throw new Error(`Failed to fetch ingredient recipes: ${response.status}`);
+  return response.json();
+}
+
+// ── Menus ──────────────────────────────────────────────────────────────────
+
+export async function fetchMenus(): Promise<Menu[]> {
+  const response = await fetch(`${API_BASE_URL}/api/menus/`, {
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!response.ok) throw new Error(`Failed to fetch menus: ${response.status}`);
+  return response.json();
+}
+
+export async function fetchMenu(id: number): Promise<Menu> {
+  const response = await fetch(`${API_BASE_URL}/api/menus/${id}/`, {
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!response.ok) throw new Error(`Failed to fetch menu: ${response.status}`);
+  return response.json();
+}
+
+export async function fetchPublicMenu(shareToken: string): Promise<Menu> {
+  const response = await fetch(`${API_BASE_URL}/api/public/menu/${shareToken}/`, {
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!response.ok) throw new Error(`Failed to fetch menu: ${response.status}`);
+  return response.json();
+}
+
+export async function createMenu(name: string): Promise<Menu> {
+  const response = await fetch(`${API_BASE_URL}/api/menus/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+  if (!response.ok) throw new Error(`Failed to create menu: ${response.status}`);
+  return response.json();
+}
+
+export async function updateMenu(id: number, data: { name?: string; theme_notes?: string; is_published?: boolean }): Promise<Menu> {
+  const response = await fetch(`${API_BASE_URL}/api/menus/${id}/`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error(`Failed to update menu: ${response.status}`);
+  return response.json();
+}
+
+export async function deleteMenu(id: number): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/menus/${id}/`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!response.ok) throw new Error(`Failed to delete menu: ${response.status}`);
+}
+
+export async function activateMenu(id: number): Promise<Menu> {
+  const response = await fetch(`${API_BASE_URL}/api/menus/${id}/activate/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!response.ok) throw new Error(`Failed to activate menu: ${response.status}`);
+  return response.json();
+}
+
+export async function addMenuItem(menuId: number, recipeId: number): Promise<Menu> {
+  const response = await fetch(`${API_BASE_URL}/api/menus/${menuId}/add-item/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ recipe_id: recipeId }),
+  });
   if (!response.ok) {
-    throw new Error(`Failed to fetch category ingredients: ${response.status} ${response.statusText}`);
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.detail || `Failed to add item: ${response.status}`);
   }
+  return response.json();
+}
 
-  const data: Ingredient[] = await response.json();
-  return data;
+export async function removeMenuItem(menuItemId: number): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/menu-items/${menuItemId}/`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!response.ok) throw new Error(`Failed to remove menu item: ${response.status}`);
+}
+
+export async function reorderMenuItems(menuId: number, items: { id: number; order: number }[]): Promise<Menu> {
+  const response = await fetch(`${API_BASE_URL}/api/menus/${menuId}/reorder-items/`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(items),
+  });
+  if (!response.ok) throw new Error(`Failed to reorder menu items: ${response.status}`);
+  return response.json();
+}
+
+// ── Buy List ───────────────────────────────────────────────────────────────
+
+export async function fetchBuyList(): Promise<BuyListItem[]> {
+  const response = await fetch(`${API_BASE_URL}/api/buy-list/`, {
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!response.ok) throw new Error(`Failed to fetch buy list: ${response.status}`);
+  return response.json();
+}
+
+export async function addToBuyList(ingredientId: number, notes = ''): Promise<BuyListItem> {
+  const response = await fetch(`${API_BASE_URL}/api/buy-list/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ingredient_id: ingredientId, notes }),
+  });
+  if (!response.ok) throw new Error(`Failed to add to buy list: ${response.status}`);
+  return response.json();
+}
+
+export async function removeBuyListItem(id: number): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/buy-list/${id}/`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!response.ok) throw new Error(`Failed to remove buy list item: ${response.status}`);
+}
+
+export async function updateBuyListItem(id: number, notes: string): Promise<BuyListItem> {
+  const response = await fetch(`${API_BASE_URL}/api/buy-list/${id}/`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ notes }),
+  });
+  if (!response.ok) throw new Error(`Failed to update buy list item: ${response.status}`);
+  return response.json();
 }
 

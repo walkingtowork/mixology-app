@@ -58,12 +58,25 @@ export default function RecipeDetail() {
       <div className="recipe-detail-section">
         <h2>Ingredients</h2>
         <ul className="recipe-detail-ingredient-list">
-          {recipe.ingredients.map((ri) => (
-            <li key={ri.id} className="recipe-detail-ingredient">
-              <span className="recipe-detail-ingredient-measure">{ri.amount} {ri.unit}</span>
-              <span className="recipe-detail-ingredient-name">{ri.ingredient.name}</span>
-            </li>
-          ))}
+          {recipe.ingredients.map((ri) => {
+            const stockClass = ri.ingredient.stock_level === 0
+              ? 'recipe-detail-ingredient--out'
+              : ri.ingredient.stock_level <= 25
+              ? 'recipe-detail-ingredient--low'
+              : '';
+            return (
+              <li key={ri.id} className={`recipe-detail-ingredient ${stockClass}`}>
+                <span className="recipe-detail-ingredient-measure">{ri.amount} {ri.unit}</span>
+                <span className="recipe-detail-ingredient-name">{ri.ingredient.name}</span>
+                {ri.ingredient.stock_level === 0 && (
+                  <span className="recipe-detail-stock-badge recipe-detail-stock-badge--out">Out</span>
+                )}
+                {ri.ingredient.stock_level > 0 && ri.ingredient.stock_level <= 25 && (
+                  <span className="recipe-detail-stock-badge recipe-detail-stock-badge--low">Low</span>
+                )}
+              </li>
+            );
+          })}
         </ul>
       </div>
 

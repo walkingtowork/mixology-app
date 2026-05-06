@@ -1,0 +1,144 @@
+.menu-detail {
+  padding: var(--space-8);
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.menu-detail-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--color-bg);
+  padding: var(--space-4) var(--space-5);
+  margin-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.menu-detail-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.menu-detail-title {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.menu-detail-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.menu-detail-error {
+  color: var(--color-danger);
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-4);
+}
+
+.menu-stock-warning {
+  background: #FEF3C7;
+  border: 1px solid #FCD34D;
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  color: #92400E;
+  margin-bottom: var(--space-5);
+}
+
+.menu-items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.menu-items-empty {
+  text-align: center;
+  padding: var(--space-12) var(--space-8);
+  color: var(--color-text-secondary);
+}
+
+.menu-item-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  box-shadow: var(--shadow-sm);
+}
+
+.menu-item-card--warn {
+  border-color: #FCD34D;
+  background: #FFFBEB;
+}
+
+.menu-item-body {
+  flex: 1;
+}
+
+.menu-item-name {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.menu-item-ingredients {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.menu-item-chip {
+  font-size: var(--text-xs);
+  background: var(--color-surface-alt);
+  color: var(--color-text-secondary);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.menu-item-chip.stock-low {
+  background: #FEF3C7;
+  color: #92400E;
+  border-color: #FCD34D;
+}
+
+.menu-item-chip.stock-out {
+  background: var(--color-danger-light);
+  color: var(--color-danger);
+  border-color: #FCA5A5;
+}
+
+.menu-item-chip-warn {
+  font-weight: 700;
+  font-size: 0.6rem;
+}
+
+
+@media (max-width: 640px) {
+  .menu-detail {
+    padding: var(--space-4);
+  }
+
+  .menu-detail-title {
+    font-size: var(--text-2xl);
+  }
+
+  .menu-item-card {
+    flex-direction: column;
+  }
+}

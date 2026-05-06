@@ -1,13 +1,18 @@
-from rest_framework import viewsets, filters, status
+from rest_framework import viewsets, filters, generics, status
 from rest_framework.decorators import action
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from django.core.exceptions import ValidationError
-from .models import Ingredient, Recipe, IngredientCategory, RecipeIngredient
-from .serializers import IngredientSerializer, RecipeSerializer, IngredientCategorySerializer
+from django.db.models import Max
+
+from .models import Ingredient, Recipe, IngredientCategory, RecipeIngredient, Menu, MenuItem, BuyListItem
+from .serializers import (
+    IngredientSerializer, RecipeSerializer, IngredientCategorySerializer,
+    MenuSerializer, MenuListSerializer, MenuItemSerializer,
+    BuyListItemSerializer,
+)
 
 
 class IngredientViewSet(viewsets.ModelViewSet):
-    """ViewSet for Ingredient model."""
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
@@ -15,127 +20,156 @@ class IngredientViewSet(viewsets.ModelViewSet):
     ordering_fields = ['name']
     ordering = ['name']
 
+    @action(detail=True, methods=['get'], url_path='recipes')
+    def recipes(self, request, pk=None):
+        ingredient = self.get_object()
+        recipes = Recipe.objects.filter(ingredients=ingredient).prefetch_related('recipe_ingredients__ingredient')
+        serializer = RecipeSerializer(recipes, many=True)
+        return Response(serializer.data)
+
 
 class RecipeViewSet(viewsets.ModelViewSet):
-    """ViewSet for Recipe model with filtering by ingredient and category."""
     queryset = Recipe.objects.prefetch_related('recipe_ingredients__ingredient').all()
     serializer_class = RecipeSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'notes', 'garnish']
     ordering_fields = ['name']
     ordering = ['name']
-    
+
     def get_queryset(self):
-        """Filter recipes by ingredient or category if query parameters are provided."""
         queryset = super().get_queryset()
-        ingredient_id = self.request.query_params.get('ingredient', None)
-        category_id = self.request.query_params.get('category', None)
-        
+        ingredient_id = self.request.query_params.get('ingredient')
+        category_id = self.request.query_params.get('category')
         if ingredient_id:
             queryset = queryset.filter(ingredients__id=ingredient_id).distinct()
-        
         if category_id:
-            # Get all ingredients in this category
             category_ingredients = Ingredient.objects.filter(category_id=category_id)
             queryset = queryset.filter(ingredients__in=category_ingredients).distinct()
-        
         return queryset
 
 
 class IngredientCategoryViewSet(viewsets.ModelViewSet):
-    """ViewSet for IngredientCategory model."""
     queryset = IngredientCategory.objects.prefetch_related('ingredients').all()
     serializer_class = IngredientCategorySerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'notes']
     ordering_fields = ['name']
     ordering = ['name']
-    
+
     def create(self, request, *args, **kwargs):
-        """Create a category and optionally auto-create a generic ingredient."""
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
-        # Get the create_generic_ingredient flag (default True)
         create_generic = request.data.get('create_generic_ingredient', True)
-        
-        # Create the category
         category = serializer.save()
-        
-        # Auto-create generic ingredient if requested
         if create_generic:
-            # Check if an ingredient with the same name already exists
-            existing_ingredient = Ingredient.objects.filter(name=category.name).first()
-            
-            if existing_ingredient:
-                # Link existing ingredient to category and mark as generic
-                if existing_ingredient.category is None:
-                    existing_ingredient.category = category
-                    existing_ingredient.is_generic = True
-                    existing_ingredient.save()
+            existing = Ingredient.objects.filter(name=category.name).first()
+            if existing:
+                if existing.category is None:
+                    existing.category = category
+                    existing.is_generic = True
+                    existing.save()
             else:
-                # Create new generic ingredient
-                Ingredient.objects.create(
-                    name=category.name,
-                    category=category,
-                    is_generic=True
-                )
-        
+                Ingredient.objects.create(name=category.name, category=category, is_generic=True)
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-    
+
     def update(self, request, *args, **kwargs):
-        """Update a category and update the generic ingredient name if it exists."""
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
-        
-        # Get old name before saving
-        old_name = instance.name
-        
-        # Update the category
         self.perform_update(serializer)
-        
-        # Update generic ingredient name if it exists
         if 'name' in request.data:
-            new_name = request.data['name']
-            generic_ingredient = Ingredient.objects.filter(
-                category=instance,
-                is_generic=True
-            ).first()
-            
-            if generic_ingredient:
-                generic_ingredient.name = new_name
-                generic_ingredient.save()
-        
+            generic = Ingredient.objects.filter(category=instance, is_generic=True).first()
+            if generic:
+                generic.name = request.data['name']
+                generic.save()
         return Response(serializer.data)
-    
+
     @action(detail=True, methods=['get'])
     def ingredients(self, request, pk=None):
-        """Get all ingredients in a category."""
         category = self.get_object()
-        ingredients = Ingredient.objects.filter(category=category)
-        serializer = IngredientSerializer(ingredients, many=True)
+        serializer = IngredientSerializer(Ingredient.objects.filter(category=category), many=True)
         return Response(serializer.data)
-    
+
     def destroy(self, request, *args, **kwargs):
-        """Override destroy to prevent deletion if recipes use category ingredients."""
         instance = self.get_object()
-        
-        # Check if any recipes use ingredients from this category
         ingredients_in_category = Ingredient.objects.filter(category=instance)
-        recipes_using_category = RecipeIngredient.objects.filter(
-            ingredient__in=ingredients_in_category
-        ).exists()
-        
-        if recipes_using_category:
+        if RecipeIngredient.objects.filter(ingredient__in=ingredients_in_category).exists():
             return Response(
-                {
-                    'detail': f"Cannot delete category '{instance.name}' because it is used in one or more recipes. "
-                             "Please remove all recipes using ingredients from this category before deleting."
-                },
-                status=status.HTTP_400_BAD_REQUEST
+                {'detail': f"Cannot delete category '{instance.name}' because it is used in one or more recipes."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
-        
         return super().destroy(request, *args, **kwargs)
+
+
+class MenuViewSet(viewsets.ModelViewSet):
+    queryset = Menu.objects.prefetch_related('items__recipe__recipe_ingredients__ingredient').all()
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return MenuListSerializer
+        return MenuSerializer
+
+    @action(detail=True, methods=['post'])
+    def activate(self, request, pk=None):
+        menu = self.get_object()
+        menu.is_active = True
+        menu.is_published = True
+        menu.save()
+        return Response(MenuSerializer(menu).data)
+
+    @action(detail=True, methods=['post'], url_path='add-item')
+    def add_item(self, request, pk=None):
+        menu = self.get_object()
+        serializer = MenuItemSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        max_order = menu.items.aggregate(Max('order'))['order__max'] or 0
+        try:
+            serializer.save(menu=menu, order=max_order + 1)
+        except Exception:
+            return Response(
+                {'detail': 'This recipe is already on the menu.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        # Re-fetch to get fresh prefetch cache including the new item
+        menu = self.get_object()
+        return Response(MenuSerializer(menu).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['patch'], url_path='reorder-items')
+    def reorder_items(self, request, pk=None):
+        menu = self.get_object()
+        for item_data in request.data:
+            menu.items.filter(pk=item_data['id']).update(order=item_data['order'])
+        return Response(MenuSerializer(menu).data)
+
+
+class MenuItemViewSet(viewsets.GenericViewSet):
+    queryset = MenuItem.objects.all()
+    serializer_class = MenuItemSerializer
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class PublicMenuView(generics.RetrieveAPIView):
+    queryset = Menu.objects.prefetch_related('items__recipe__recipe_ingredients__ingredient').all()
+    serializer_class = MenuSerializer
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    lookup_field = 'share_token'
+
+
+class BuyListViewSet(viewsets.ModelViewSet):
+    queryset = BuyListItem.objects.select_related('ingredient__category').all()
+    serializer_class = BuyListItemSerializer
+    http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
+
+    def create(self, request, *args, **kwargs):
+        ingredient_id = request.data.get('ingredient_id')
+        existing = BuyListItem.objects.filter(ingredient_id=ingredient_id).first()
+        if existing:
+            return Response(BuyListItemSerializer(existing).data, status=status.HTTP_200_OK)
+        return super().create(request, *args, **kwargs)
