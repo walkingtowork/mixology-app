@@ -3,6 +3,16 @@ from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from django.db.models import Max
+from django.utils.cache import patch_cache_control
+
+
+class CacheReadsMixin:
+    """Add browser cache headers to safe (read-only) responses."""
+    def finalize_response(self, request, response, *args, **kwargs):
+        response = super().finalize_response(request, response, *args, **kwargs)
+        if request.method in ('GET', 'HEAD') and response.status_code == 200:
+            patch_cache_control(response, max_age=60, stale_while_revalidate=300, public=True)
+        return response
 
 from .models import Ingredient, Recipe, IngredientCategory, RecipeIngredient, Menu, MenuItem, BuyListItem
 from .serializers import (
@@ -12,7 +22,7 @@ from .serializers import (
 )
 
 
-class IngredientViewSet(viewsets.ModelViewSet):
+class IngredientViewSet(CacheReadsMixin, viewsets.ModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
@@ -28,7 +38,7 @@ class IngredientViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class RecipeViewSet(viewsets.ModelViewSet):
+class RecipeViewSet(CacheReadsMixin, viewsets.ModelViewSet):
     queryset = Recipe.objects.prefetch_related('recipe_ingredients__ingredient').all()
     serializer_class = RecipeSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
@@ -48,7 +58,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return queryset
 
 
-class IngredientCategoryViewSet(viewsets.ModelViewSet):
+class IngredientCategoryViewSet(CacheReadsMixin, viewsets.ModelViewSet):
     queryset = IngredientCategory.objects.prefetch_related('ingredients').all()
     serializer_class = IngredientCategorySerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
