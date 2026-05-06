@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { QRCodeSVG } from 'qrcode.react';
 import { fetchMenu, removeMenuItem, activateMenu, fetchMenus } from '../../services/cocktailsApi';
 import type { Menu, MenuItem } from '../../types/cocktails';
 import Button from '../ui/Button';
@@ -31,6 +32,7 @@ export default function MenuDetail() {
   const [hasOtherActive, setHasOtherActive] = useState(false);
   const [activating, setActivating] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showQR, setShowQR] = useState(false);
 
   useEffect(() => {
     Promise.all([fetchMenu(menuId), fetchMenus()])
@@ -94,6 +96,9 @@ export default function MenuDetail() {
           <div className="menu-detail-actions">
             <Button variant="secondary" size="sm" onClick={handleShare}>
               {copied ? 'Copied!' : 'Share Link'}
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => setShowQR(true)}>
+              QR Code
             </Button>
             <Button variant="primary" size="sm" onClick={() => setShowDrawer(true)}>
               + Add Drink
@@ -162,6 +167,25 @@ export default function MenuDetail() {
           onClose={() => setShowDrawer(false)}
           onAdded={(updated) => setMenu(updated)}
         />
+      )}
+
+      {showQR && menu && (
+        <div className="qr-backdrop" onClick={() => setShowQR(false)}>
+          <div className="qr-modal" onClick={(e) => e.stopPropagation()}>
+            <h2 className="qr-modal-title">{menu.name}</h2>
+            <QRCodeSVG
+              value={`${window.location.origin}/share/${menu.share_token}`}
+              size={220}
+              className="qr-code"
+              bgColor="transparent"
+            />
+            <p className="qr-modal-hint">Scan to view the menu</p>
+            <div className="qr-modal-actions">
+              <Button variant="primary" size="sm" onClick={() => window.print()}>Print</Button>
+              <Button variant="ghost" size="sm" onClick={() => setShowQR(false)}>Close</Button>
+            </div>
+          </div>
+        </div>
       )}
 
       {activateTarget && (

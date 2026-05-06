@@ -129,6 +129,59 @@
 }
 
 
+.qr-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+}
+
+.qr-modal {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--space-8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  max-width: 320px;
+  width: 100%;
+}
+
+.qr-modal-title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  text-align: center;
+  color: var(--color-text-primary);
+}
+
+.qr-code {
+  border-radius: var(--radius-md);
+}
+
+.qr-modal-hint {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.qr-modal-actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+@media print {
+  body > * { display: none; }
+  .qr-backdrop { position: static; background: none; padding: 0; }
+  .qr-modal { box-shadow: none; margin: 0 auto; }
+  .qr-modal-actions { display: none; }
+}
+
 @media (max-width: 640px) {
   .menu-detail {
     padding: var(--space-4);
