@@ -134,6 +134,15 @@
     padding: var(--space-4);
   }
 
+  .menu-detail-header {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .menu-detail-actions {
+    flex-wrap: wrap;
+  }
+
   .menu-detail-title {
     font-size: var(--text-2xl);
   }
