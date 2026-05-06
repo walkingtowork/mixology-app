@@ -175,12 +175,6 @@
   gap: var(--space-3);
 }
 
-@media print {
-  body > * { display: none; }
-  .qr-backdrop { position: static; background: none; padding: 0; }
-  .qr-modal { box-shadow: none; margin: 0 auto; }
-  .qr-modal-actions { display: none; }
-}
 
 @media (max-width: 640px) {
   .menu-detail {

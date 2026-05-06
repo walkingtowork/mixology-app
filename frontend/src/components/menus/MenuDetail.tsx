@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { QRCodeSVG } from 'qrcode.react';
+import { QRCodeCanvas } from 'qrcode.react';
 import { fetchMenu, removeMenuItem, activateMenu, fetchMenus } from '../../services/cocktailsApi';
 import type { Menu, MenuItem } from '../../types/cocktails';
 import Button from '../ui/Button';
@@ -33,6 +33,7 @@ export default function MenuDetail() {
   const [activating, setActivating] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
+  const qrContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     Promise.all([fetchMenu(menuId), fetchMenus()])
@@ -65,6 +66,28 @@ export default function MenuDetail() {
       setActivating(false);
       setActivateTarget(false);
     }
+  };
+
+  const handlePrintQR = () => {
+    if (!menu) return;
+    const canvas = qrContainerRef.current?.querySelector('canvas');
+    if (!canvas) return;
+    const dataUrl = canvas.toDataURL('image/png');
+    const win = window.open('', '_blank');
+    if (!win) return;
+    win.document.write(`<!DOCTYPE html><html><head><title>${menu.name} — QR Code</title>
+      <style>
+        body { margin: 0; display: flex; flex-direction: column; align-items: center;
+               justify-content: center; min-height: 100vh; font-family: Georgia, serif; }
+        h1 { font-size: 1.5rem; margin-bottom: 1rem; }
+        p { color: #666; margin-top: 0.75rem; font-size: 0.875rem; }
+      </style></head>
+      <body onload="window.print()">
+        <h1>${menu.name}</h1>
+        <img src="${dataUrl}" width="220" height="220" />
+        <p>Scan to view the menu</p>
+      </body></html>`);
+    win.document.close();
   };
 
   const handleShare = () => {
@@ -173,15 +196,16 @@ export default function MenuDetail() {
         <div className="qr-backdrop" onClick={() => setShowQR(false)}>
           <div className="qr-modal" onClick={(e) => e.stopPropagation()}>
             <h2 className="qr-modal-title">{menu.name}</h2>
-            <QRCodeSVG
-              value={`${window.location.origin}/share/${menu.share_token}`}
-              size={220}
-              className="qr-code"
-              bgColor="transparent"
-            />
+            <div ref={qrContainerRef}>
+              <QRCodeCanvas
+                value={`${window.location.origin}/share/${menu.share_token}`}
+                size={220}
+                className="qr-code"
+              />
+            </div>
             <p className="qr-modal-hint">Scan to view the menu</p>
             <div className="qr-modal-actions">
-              <Button variant="primary" size="sm" onClick={() => window.print()}>Print</Button>
+              <Button variant="primary" size="sm" onClick={handlePrintQR}>Print</Button>
               <Button variant="ghost" size="sm" onClick={() => setShowQR(false)}>Close</Button>
             </div>
           </div>
