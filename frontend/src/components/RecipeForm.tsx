@@ -213,12 +213,11 @@ export default function RecipeForm() {
                     ))}
                   </select>
                   <input
-                    type="number"
-                    step="0.25"
-                    min="0.01"
+                    type="text"
+                    inputMode="decimal"
                     value={row.amount || ''}
                     onChange={(e) => updateRow(i, 'amount', e.target.value)}
-                    placeholder="Qty"
+                    placeholder="0.5"
                     className={errors[`amount_${i}`] ? 'has-error' : ''}
                   />
                   <select

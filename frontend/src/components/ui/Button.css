@@ -38,6 +38,15 @@
   font-size: var(--text-base);
 }
 
+/* Icon-only square buttons */
+.btn-icon {
+  padding: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  min-height: unset;
+  flex-shrink: 0;
+}
+
 /* Variants */
 .btn-primary {
   background-color: var(--color-accent);
