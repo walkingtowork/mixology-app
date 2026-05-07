@@ -119,12 +119,6 @@ export default function MenuDetail() {
             {menu.is_active && <span className="menu-badge-active">Active</span>}
           </h1>
           <div className="menu-detail-actions">
-            <Button variant="secondary" size="sm" onClick={handleShare}>
-              {copied ? 'Copied!' : 'Share Link'}
-            </Button>
-            <Button variant="secondary" size="sm" onClick={() => setShowQR(true)}>
-              QR Code
-            </Button>
             <Button variant="primary" size="sm" onClick={() => setShowDrawer(true)}>
               + Add Drink
             </Button>
@@ -138,6 +132,16 @@ export default function MenuDetail() {
                 Publish & Activate
               </Button>
             )}
+            <Button variant="secondary" size="sm" className="btn-icon" onClick={handleShare} title={copied ? 'Copied!' : 'Copy share link'}>
+              {copied ? (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              ) : (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              )}
+            </Button>
+            <Button variant="secondary" size="sm" className="btn-icon" onClick={() => setShowQR(true)} title="Show QR code">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="6" y="6" width="1" height="1" fill="currentColor"/><rect x="17" y="6" width="1" height="1" fill="currentColor"/><rect x="6" y="17" width="1" height="1" fill="currentColor"/><path d="M14 14h1v1h-1zM19 14h1v1h-1zM14 19h1v1h-1zM19 19h1v1h-1zM17 17h1v1h-1z"/></svg>
+            </Button>
           </div>
         </div>
       </div>
