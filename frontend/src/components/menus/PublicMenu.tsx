@@ -4,6 +4,7 @@ import { fetchPublicMenu, createOrder, fetchOrders, cancelOrder } from '../../se
 import type { Menu, Order } from '../../types/cocktails';
 import GlassIcon from '../ui/GlassIcon';
 import LoadingSpinner from '../ui/LoadingSpinner';
+import { UmeDecoration, TacoDecoration } from './MenuDecorations';
 import './PublicMenu.css';
 
 const GUEST_NAME_KEY = 'barCart_guestName';
@@ -97,6 +98,8 @@ export default function PublicMenu() {
 
   return (
     <div className="public-menu">
+      <UmeDecoration />
+      <TacoDecoration />
       <div className="public-menu-header">
         <h1 className="public-menu-title">{menu.name}</h1>
         <button className="public-menu-my-orders-btn" onClick={openMyOrders}>

@@ -2,6 +2,14 @@
   max-width: 600px;
   margin: 0 auto;
   padding: var(--space-12) var(--space-8);
+  position: relative;
+  overflow: hidden;
+}
+
+.public-menu-header,
+.public-menu-list {
+  position: relative;
+  z-index: 1;
 }
 
 .public-menu-header {
