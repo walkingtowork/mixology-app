@@ -138,6 +138,20 @@ class MenuItem(models.Model):
         return f"{self.recipe.name} on {self.menu.name}"
 
 
+class Order(models.Model):
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name='orders')
+    menu = models.ForeignKey(Menu, on_delete=models.CASCADE, related_name='orders')
+    guest_name = models.CharField(max_length=100)
+    is_fulfilled = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"{self.guest_name} ordered {self.recipe.name}"
+
+
 class BuyListItem(models.Model):
     ingredient = models.OneToOneField(
         Ingredient,

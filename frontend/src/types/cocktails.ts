@@ -68,6 +68,15 @@ export interface Menu {
   item_count: number;
 }
 
+export interface Order {
+  id: number;
+  recipe: Recipe;
+  menu_id: number;
+  guest_name: string;
+  is_fulfilled: boolean;
+  created_at: string;
+}
+
 export interface BuyListItem {
   id: number;
   ingredient: Ingredient;

@@ -14,11 +14,12 @@ class CacheReadsMixin:
             patch_cache_control(response, max_age=60, stale_while_revalidate=300, public=True)
         return response
 
-from .models import Ingredient, Recipe, IngredientCategory, RecipeIngredient, Menu, MenuItem, BuyListItem
+from django.utils import timezone
+from .models import Ingredient, Recipe, IngredientCategory, RecipeIngredient, Menu, MenuItem, BuyListItem, Order
 from .serializers import (
     IngredientSerializer, RecipeSerializer, IngredientCategorySerializer,
     MenuSerializer, MenuListSerializer, MenuItemSerializer,
-    BuyListItemSerializer,
+    BuyListItemSerializer, OrderSerializer,
 )
 
 
@@ -170,6 +171,32 @@ class PublicMenuView(generics.RetrieveAPIView):
     permission_classes = [AllowAny]
     authentication_classes = []
     lookup_field = 'share_token'
+
+
+class OrderViewSet(viewsets.ModelViewSet):
+    queryset = Order.objects.select_related('recipe').prefetch_related(
+        'recipe__recipe_ingredients__ingredient'
+    ).all()
+    serializer_class = OrderSerializer
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        today = self.request.query_params.get('today')
+        fulfilled = self.request.query_params.get('fulfilled')
+        menu_id = self.request.query_params.get('menu_id')
+        guest_name = self.request.query_params.get('guest_name')
+        if today == 'true':
+            queryset = queryset.filter(created_at__date=timezone.now().date())
+        if fulfilled is not None:
+            queryset = queryset.filter(is_fulfilled=fulfilled.lower() == 'true')
+        if menu_id:
+            queryset = queryset.filter(menu_id=menu_id)
+        if guest_name:
+            queryset = queryset.filter(guest_name=guest_name)
+        return queryset
 
 
 class BuyListViewSet(viewsets.ModelViewSet):

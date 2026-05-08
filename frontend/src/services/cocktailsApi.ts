@@ -1,4 +1,4 @@
-import type { Ingredient, Recipe, IngredientCategory, Menu, BuyListItem, StockLevel } from '../types/cocktails';
+import type { Ingredient, Recipe, IngredientCategory, Menu, BuyListItem, StockLevel, Order } from '../types/cocktails';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
@@ -600,5 +600,53 @@ export async function updateBuyListItem(id: number, notes: string): Promise<BuyL
   });
   if (!response.ok) throw new Error(`Failed to update buy list item: ${response.status}`);
   return response.json();
+}
+
+// ── Orders ─────────────────────────────────────────────────────────────────
+
+export async function createOrder(menuId: number, recipeId: number, guestName: string): Promise<Order> {
+  const res = await fetch(`${API_BASE_URL}/api/orders/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ recipe_id: recipeId, menu_id: menuId, guest_name: guestName }),
+  });
+  if (!res.ok) throw new Error('Failed to place order');
+  return res.json();
+}
+
+export async function fetchOrders(params?: {
+  today?: boolean;
+  fulfilled?: boolean;
+  menu_id?: number;
+  guest_name?: string;
+}): Promise<Order[]> {
+  const qs = new URLSearchParams();
+  if (params?.today) qs.set('today', 'true');
+  if (params?.fulfilled !== undefined) qs.set('fulfilled', String(params.fulfilled));
+  if (params?.menu_id !== undefined) qs.set('menu_id', String(params.menu_id));
+  if (params?.guest_name) qs.set('guest_name', params.guest_name);
+  const res = await fetch(`${API_BASE_URL}/api/orders/?${qs}`, {
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!res.ok) throw new Error('Failed to fetch orders');
+  return res.json();
+}
+
+export async function fulfillOrder(id: number): Promise<Order> {
+  const res = await fetch(`${API_BASE_URL}/api/orders/${id}/`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ is_fulfilled: true }),
+  });
+  if (!res.ok) throw new Error('Failed to fulfill order');
+  return res.json();
+}
+
+export async function cancelOrder(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/api/orders/${id}/`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!res.ok) throw new Error('Failed to cancel order');
 }
 

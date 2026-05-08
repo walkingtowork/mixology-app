@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Ingredient, Recipe, RecipeIngredient, IngredientCategory, Menu, MenuItem, BuyListItem
+from .models import Ingredient, Recipe, RecipeIngredient, IngredientCategory, Menu, MenuItem, BuyListItem, Order
 
 
 class IngredientCategorySerializer(serializers.ModelSerializer):
@@ -136,6 +136,24 @@ class MenuListSerializer(serializers.ModelSerializer):
 
     def get_item_count(self, obj):
         return obj.items.count()
+
+
+class OrderSerializer(serializers.ModelSerializer):
+    recipe = RecipeSerializer(read_only=True)
+    recipe_id = serializers.PrimaryKeyRelatedField(
+        queryset=Recipe.objects.all(),
+        source='recipe',
+        write_only=True,
+    )
+    menu_id = serializers.PrimaryKeyRelatedField(
+        queryset=Menu.objects.all(),
+        source='menu',
+    )
+
+    class Meta:
+        model = Order
+        fields = ['id', 'recipe', 'recipe_id', 'menu_id', 'guest_name', 'is_fulfilled', 'created_at']
+        read_only_fields = ['id', 'created_at']
 
 
 class BuyListItemSerializer(serializers.ModelSerializer):

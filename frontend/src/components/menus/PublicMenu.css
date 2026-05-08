@@ -4,11 +4,37 @@
   padding: var(--space-12) var(--space-8);
 }
 
+.public-menu-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
+}
+
 .public-menu-title {
   font-family: var(--font-display);
   font-size: var(--text-4xl);
   font-weight: 700;
-  margin-bottom: var(--space-8);
+  margin: 0;
+}
+
+.public-menu-my-orders-btn {
+  flex-shrink: 0;
+  background: none;
+  border: 1.5px solid var(--color-border-strong);
+  border-radius: var(--radius-full);
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.public-menu-my-orders-btn:hover {
+  background: var(--color-surface-alt);
 }
 
 .public-menu-list {
@@ -79,13 +105,250 @@
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
   font-style: italic;
-  margin: 0;
+  margin: 0 0 var(--space-3) 0;
+}
+
+.public-menu-order-btn {
+  margin-top: var(--space-2);
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-5);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s, background-color 0.15s;
+  min-width: 80px;
+}
+
+.public-menu-order-btn:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.public-menu-order-btn.ordered,
+.public-menu-order-btn:disabled {
+  background: var(--color-text-disabled);
+  cursor: default;
 }
 
 .public-menu-error {
   text-align: center;
   padding: var(--space-16);
   color: var(--color-text-secondary);
+}
+
+/* ── Name modal ─────────────────────────────────────────────────── */
+
+.pm-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+}
+
+.pm-modal {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--space-8);
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.pm-modal-title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  margin: 0;
+}
+
+.pm-modal-hint {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.pm-modal-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--space-3) var(--space-3);
+  border: 1.5px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  outline: none;
+}
+
+.pm-modal-input:focus {
+  border-color: var(--color-primary);
+}
+
+.pm-modal-actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.pm-modal-submit {
+  flex: 1;
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  font-size: var(--text-base);
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.pm-modal-submit:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.pm-modal-submit:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.pm-modal-cancel {
+  background: none;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+/* ── My Orders drawer ───────────────────────────────────────────── */
+
+.pm-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 200;
+}
+
+.pm-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(360px, 100vw);
+  background: var(--color-surface);
+  z-index: 201;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
+  overflow-y: auto;
+}
+
+.pm-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-5) var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+  position: sticky;
+  top: 0;
+  background: var(--color-surface);
+}
+
+.pm-drawer-title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  margin: 0;
+}
+
+.pm-drawer-close {
+  background: none;
+  border: none;
+  font-size: var(--text-lg);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+.pm-drawer-close:hover {
+  background: var(--color-surface-alt);
+}
+
+.pm-drawer-empty {
+  padding: var(--space-8) var(--space-6);
+  color: var(--color-text-secondary);
+  text-align: center;
+  font-size: var(--text-sm);
+}
+
+.pm-drawer-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.pm-drawer-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.pm-drawer-item:last-child {
+  border-bottom: none;
+}
+
+.pm-drawer-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pm-drawer-item-name {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.pm-drawer-item-time {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.pm-drawer-served {
+  font-size: var(--text-sm);
+  color: var(--color-success, #16a34a);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.pm-drawer-cancel-btn {
+  flex-shrink: 0;
+  background: none;
+  border: 1.5px solid var(--color-danger);
+  border-radius: var(--radius-md);
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-danger);
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.pm-drawer-cancel-btn:hover {
+  background: var(--color-danger-light);
 }
 
 @media (max-width: 640px) {

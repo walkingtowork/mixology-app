@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Routes, Route, NavLink, Link } from 'react-router-dom';
 import IngredientList from './components/IngredientList';
 import IngredientDetail from './components/IngredientDetail';
@@ -10,6 +11,8 @@ import MenuList from './components/menus/MenuList';
 import MenuForm from './components/menus/MenuForm';
 import MenuDetail from './components/menus/MenuDetail';
 import PublicMenu from './components/menus/PublicMenu';
+import OrdersPage from './components/orders/OrdersPage';
+import { fetchOrders } from './services/cocktailsApi';
 import './App.css';
 
 const RecipeDetailWrapper = () => <RecipeDetail />;
@@ -17,6 +20,14 @@ const RecipeFormWrapper = () => <RecipeForm />;
 const IngredientDetailWrapper = () => <IngredientDetail />;
 
 function App() {
+  const [hasPendingOrders, setHasPendingOrders] = useState(false);
+
+  useEffect(() => {
+    fetchOrders({ today: true, fulfilled: false })
+      .then(orders => setHasPendingOrders(orders.length > 0))
+      .catch(() => {});
+  }, []);
+
   return (
     <Routes>
       {/* Public share route — no nav */}
@@ -34,6 +45,9 @@ function App() {
                 <NavLink to="/ingredients" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Ingredients</NavLink>
                 <NavLink to="/categories" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Categories</NavLink>
                 <NavLink to="/menus" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Menus</NavLink>
+                {hasPendingOrders && (
+                  <NavLink to="/orders" className={({ isActive }) => `nav-link nav-link--orders${isActive ? ' active' : ''}`}>Orders</NavLink>
+                )}
                 <Link to="/recipes/new" className="nav-action">+ New Recipe</Link>
               </div>
             </nav>
@@ -51,6 +65,7 @@ function App() {
                 <Route path="/menus" element={<MenuList />} />
                 <Route path="/menus/new" element={<MenuForm />} />
                 <Route path="/menus/:id" element={<MenuDetail />} />
+                <Route path="/orders" element={<OrdersPage />} />
               </Routes>
             </main>
 
@@ -59,6 +74,9 @@ function App() {
               <NavLink to="/ingredients" className={({ isActive }) => `bottom-nav-item${isActive ? ' active' : ''}`}>Ingred.</NavLink>
               <NavLink to="/categories" className={({ isActive }) => `bottom-nav-item${isActive ? ' active' : ''}`}>Categs.</NavLink>
               <NavLink to="/menus" className={({ isActive }) => `bottom-nav-item${isActive ? ' active' : ''}`}>Menus</NavLink>
+              {hasPendingOrders && (
+                <NavLink to="/orders" className={({ isActive }) => `bottom-nav-item${isActive ? ' active' : ''}`}>Orders</NavLink>
+              )}
               <Link to="/recipes/new" className="bottom-nav-item bottom-nav-new">+ New</Link>
             </nav>
           </div>
