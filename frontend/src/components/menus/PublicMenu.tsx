@@ -122,9 +122,6 @@ export default function PublicMenu() {
               {item.recipe.description && (
                 <p className="public-menu-description">{item.recipe.description}</p>
               )}
-              {item.recipe.garnish && (
-                <p className="public-menu-garnish">Garnish: {item.recipe.garnish}</p>
-              )}
               <button
                 className={`public-menu-order-btn${lockedRecipes.has(item.recipe.id) ? ' ordered' : ''}`}
                 onClick={() => handleOrderClick(item.recipe.id)}

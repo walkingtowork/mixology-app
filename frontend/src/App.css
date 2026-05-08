@@ -85,6 +85,27 @@
   color: #fff;
 }
 
+.nav-orders {
+  margin-left: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background-color: var(--color-accent-light);
+  color: var(--color-accent);
+  text-decoration: none;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  border: 1.5px solid #FCD34D;
+  white-space: nowrap;
+  transition: background-color 0.15s;
+}
+
+.nav-orders:hover,
+.nav-orders.active {
+  background-color: #FDE68A;
+  text-decoration: none;
+  color: var(--color-accent);
+}
+
 /* ── Bottom tab bar — hidden on desktop ──────────────────────── */
 .bottom-nav {
   display: none;

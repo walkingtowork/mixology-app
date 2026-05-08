@@ -45,11 +45,11 @@ function App() {
                 <NavLink to="/ingredients" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Ingredients</NavLink>
                 <NavLink to="/categories" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Categories</NavLink>
                 <NavLink to="/menus" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Menus</NavLink>
-                {hasPendingOrders && (
-                  <NavLink to="/orders" className={({ isActive }) => `nav-link nav-link--orders${isActive ? ' active' : ''}`}>Orders</NavLink>
-                )}
                 <Link to="/recipes/new" className="nav-action">+ New Recipe</Link>
               </div>
+              {hasPendingOrders && (
+                <NavLink to="/orders" className={({ isActive }) => `nav-orders${isActive ? ' active' : ''}`}>Orders</NavLink>
+              )}
             </nav>
 
             <main>
