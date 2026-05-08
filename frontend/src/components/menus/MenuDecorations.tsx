@@ -26,7 +26,7 @@ export function UmeDecoration() {
   return (
     <svg
       width="220" height="220" viewBox="0 0 220 220"
-      style={{ position: 'absolute', top: 0, right: 0, pointerEvents: 'none', zIndex: 0 }}
+      style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', zIndex: 0, opacity: 0.5, transform: 'scaleX(-1)' }}
       aria-hidden="true"
     >
       {/* Main branch from top-right, cascading down-left */}
@@ -60,7 +60,7 @@ export function TacoDecoration() {
   return (
     <svg
       width="210" height="210" viewBox="0 0 210 210"
-      style={{ position: 'absolute', bottom: 0, left: 0, pointerEvents: 'none', zIndex: 0 }}
+      style={{ position: 'absolute', bottom: 0, right: 0, pointerEvents: 'none', zIndex: 0, opacity: 0.5, transform: 'scaleX(-1)' }}
       aria-hidden="true"
     >
       {/* Taco — centered around (80, 125), tilted slightly */}
