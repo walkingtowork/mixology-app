@@ -1,5 +1,18 @@
 export type Unit = 'oz' | 'ml' | 'tsp' | 'tbsp' | 'barspoon' | 'dash' | 'drops' | 'spritz' | 'rinse' | 'pinch';
 
+export type GlassType = 'rocks' | 'old_fashioned' | 'martini' | 'coupe' | 'champagne_flute' | 'collins' | 'shot' | 'glencairn';
+
+export const GLASS_OPTIONS: { value: GlassType; label: string }[] = [
+  { value: 'rocks', label: 'Rocks' },
+  { value: 'old_fashioned', label: 'Old Fashioned' },
+  { value: 'martini', label: 'Martini' },
+  { value: 'coupe', label: 'Coupe' },
+  { value: 'champagne_flute', label: 'Champagne Flute' },
+  { value: 'collins', label: 'Collins' },
+  { value: 'shot', label: 'Shot' },
+  { value: 'glencairn', label: 'Glencairn' },
+];
+
 export type StockLevel = 0 | 25 | 50 | 75 | 100;
 
 export interface IngredientCategory {
@@ -28,8 +41,10 @@ export interface RecipeIngredient {
 export interface Recipe {
   id: number;
   name: string;
+  description: string | null;
   notes: string | null;
   garnish: string | null;
+  glass: GlassType | null;
   source_url: string | null;
   ingredients: RecipeIngredient[];
 }

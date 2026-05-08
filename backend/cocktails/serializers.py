@@ -62,7 +62,7 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Recipe
-        fields = ['id', 'name', 'notes', 'garnish', 'source_url', 'ingredients']
+        fields = ['id', 'name', 'description', 'notes', 'garnish', 'glass', 'source_url', 'ingredients']
 
     def create(self, validated_data):
         ingredients_data = validated_data.pop('recipe_ingredients', [])
@@ -79,8 +79,10 @@ class RecipeSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         ingredients_data = validated_data.pop('recipe_ingredients', None)
         instance.name = validated_data.get('name', instance.name)
+        instance.description = validated_data.get('description', instance.description)
         instance.notes = validated_data.get('notes', instance.notes)
         instance.garnish = validated_data.get('garnish', instance.garnish)
+        instance.glass = validated_data.get('glass', instance.glass)
         instance.source_url = validated_data.get('source_url', instance.source_url)
         instance.save()
         if ingredients_data is not None:

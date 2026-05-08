@@ -535,3 +535,249 @@
   left: 23px;
   top: 36px;
 }
+
+/* Coupe Glass - alias of wine-glass shape, 50px × 50px */
+.coupe-glass {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  display: inline-block;
+}
+
+.coupe-glass .bowl {
+  position: absolute;
+  width: 20px;
+  height: 22px;
+  left: 15px;
+  top: 5px;
+  border: 1.5px solid #000;
+  border-radius: 0 0 10px 10px;
+  border-top: none;
+  background: linear-gradient(to right,
+    rgba(180, 83, 9, 0.14) 0%,
+    rgba(180, 83, 9, 0.07) 50%,
+    rgba(180, 83, 9, 0.14) 100%);
+  box-shadow:
+    inset 0 0 5px rgba(0, 0, 0, 0.2),
+    0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.coupe-glass .bowl::before {
+  content: '';
+  position: absolute;
+  left: -1.5px;
+  right: -1.5px;
+  height: 1.5px;
+  background: #000;
+}
+
+.coupe-glass .bowl::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 1px;
+  width: 6px;
+  height: 18px;
+  background: linear-gradient(to right,
+    rgba(255, 255, 255, 0.4) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 100%);
+  border-radius: 0 0 8px 8px;
+}
+
+.coupe-glass .stem {
+  position: absolute;
+  width: 2px;
+  height: 21px;
+  left: 24px;
+  top: 27px;
+  background: #000;
+}
+
+.coupe-glass .base {
+  position: absolute;
+  width: 14px;
+  height: 2px;
+  left: 18px;
+  top: 48px;
+  background: #000;
+  border-radius: 2px;
+}
+
+/* Old Fashioned Glass - 50px × 50px, slightly smaller, no ice, half-fill, cut lines */
+.old-fashioned-glass {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  display: inline-block;
+}
+
+.old-fashioned-glass .glass {
+  position: absolute;
+  width: 32px;
+  height: 33px;
+  left: 9px;
+  top: 10px;
+  border: 1.5px solid #000;
+  border-radius: 0 0 4px 4px;
+  border-top: none;
+  background:
+    repeating-linear-gradient(
+      to right,
+      transparent 0px,
+      transparent 9px,
+      rgba(0, 0, 0, 0.08) 9px,
+      rgba(0, 0, 0, 0.08) 10px
+    ),
+    linear-gradient(
+      to bottom,
+      transparent 0%,
+      transparent 50%,
+      rgba(180, 83, 9, 0.20) 50%,
+      rgba(180, 83, 9, 0.13) 100%
+    );
+  box-shadow:
+    inset 0 0 4px rgba(0, 0, 0, 0.15),
+    0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.old-fashioned-glass .glass::before {
+  content: '';
+  position: absolute;
+  left: -1.5px;
+  right: -1.5px;
+  height: 1.5px;
+  background: #000;
+}
+
+.old-fashioned-glass .glass::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 1px;
+  width: 7px;
+  height: 29px;
+  background: linear-gradient(to right,
+    rgba(255, 255, 255, 0.35) 0%,
+    rgba(255, 255, 255, 0.08) 50%,
+    transparent 100%);
+  border-radius: 0 0 3px 3px;
+}
+
+/* Shot Glass - 50px × 50px, short and straight */
+.shot-glass {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  display: inline-block;
+}
+
+.shot-glass .glass {
+  position: absolute;
+  width: 20px;
+  height: 22px;
+  left: 15px;
+  top: 21px;
+  background: linear-gradient(to right,
+    rgba(180, 83, 9, 0.14) 0%,
+    rgba(180, 83, 9, 0.07) 50%,
+    rgba(180, 83, 9, 0.14) 100%);
+  border: 1.5px solid #000;
+  border-radius: 0 0 2px 2px;
+  border-top: none;
+  box-shadow:
+    inset 0 0 4px rgba(0, 0, 0, 0.2),
+    0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.shot-glass .glass::before {
+  content: '';
+  position: absolute;
+  left: -1.5px;
+  right: -1.5px;
+  height: 1.5px;
+  background: #000;
+}
+
+.shot-glass .glass::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 1px;
+  width: 5px;
+  height: 18px;
+  background: linear-gradient(to right,
+    rgba(255, 255, 255, 0.4) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 100%);
+  border-radius: 0 0 2px 2px;
+}
+
+/* Glencairn Glass - 50px × 50px, wide rounded bowl + short neck + small base */
+.glencairn-glass {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  display: inline-block;
+}
+
+.glencairn-glass .bowl {
+  position: absolute;
+  width: 26px;
+  height: 22px;
+  left: 12px;
+  top: 6px;
+  border: 1.5px solid #000;
+  border-top: none;
+  border-radius: 0 0 13px 13px;
+  background: linear-gradient(to right,
+    rgba(180, 83, 9, 0.14) 0%,
+    rgba(180, 83, 9, 0.07) 50%,
+    rgba(180, 83, 9, 0.14) 100%);
+  box-shadow:
+    inset 0 0 5px rgba(0, 0, 0, 0.2),
+    0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.glencairn-glass .bowl::before {
+  content: '';
+  position: absolute;
+  left: -1.5px;
+  right: -1.5px;
+  height: 1.5px;
+  background: #000;
+}
+
+.glencairn-glass .bowl::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 1px;
+  width: 7px;
+  height: 18px;
+  background: linear-gradient(to right,
+    rgba(255, 255, 255, 0.4) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 100%);
+  border-radius: 0 0 10px 10px;
+}
+
+.glencairn-glass .neck {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  left: 20px;
+  top: 28px;
+  border-left: 1.5px solid #000;
+  border-right: 1.5px solid #000;
+}
+
+.glencairn-glass .base {
+  position: absolute;
+  width: 20px;
+  height: 3px;
+  left: 15px;
+  top: 38px;
+  background: #000;
+  border-radius: 2px;
+}

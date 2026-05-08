@@ -3,6 +3,17 @@ from django.db import models
 from django.core.validators import MinValueValidator
 
 
+GLASS_CHOICES = [
+    ('rocks', 'Rocks'),
+    ('old_fashioned', 'Old Fashioned'),
+    ('martini', 'Martini'),
+    ('coupe', 'Coupe'),
+    ('champagne_flute', 'Champagne Flute'),
+    ('collins', 'Collins'),
+    ('shot', 'Shot'),
+    ('glencairn', 'Glencairn'),
+]
+
 UNIT_CHOICES = [
     ('oz', 'oz'),
     ('ml', 'ml'),
@@ -61,8 +72,10 @@ class Ingredient(models.Model):
 
 class Recipe(models.Model):
     name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
     notes = models.TextField(blank=True)
     garnish = models.CharField(max_length=200, blank=True)
+    glass = models.CharField(max_length=20, choices=GLASS_CHOICES, blank=True)
     source_url = models.URLField(blank=True, null=True)
     ingredients = models.ManyToManyField(
         Ingredient,

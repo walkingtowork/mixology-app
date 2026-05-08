@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { fetchPublicMenu } from '../../services/cocktailsApi';
 import type { Menu } from '../../types/cocktails';
+import GlassIcon from '../ui/GlassIcon';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import './PublicMenu.css';
 
@@ -28,13 +29,30 @@ export default function PublicMenu() {
       <ul className="public-menu-list">
         {menu.items.map((item) => (
           <li key={item.id} className="public-menu-item">
-            <div className="public-menu-drink">{item.recipe.name}</div>
-            {item.recipe.notes && (
-              <p className="public-menu-notes">{item.recipe.notes}</p>
+            {item.recipe.glass && (
+              <div className="public-menu-glass">
+                <GlassIcon glass={item.recipe.glass} size={50} />
+              </div>
             )}
-            {item.recipe.garnish && (
-              <p className="public-menu-garnish">Garnish: {item.recipe.garnish}</p>
-            )}
+            <div className="public-menu-content">
+              <div className="public-menu-drink">{item.recipe.name}</div>
+              {item.recipe.ingredients.length > 0 && (
+                <ul className="public-menu-ingredients">
+                  {item.recipe.ingredients.map(ri => (
+                    <li key={ri.id} className="public-menu-ingredient">
+                      <span className="public-menu-amount">{ri.amount} {ri.unit}</span>
+                      {ri.ingredient.name}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {item.recipe.description && (
+                <p className="public-menu-description">{item.recipe.description}</p>
+              )}
+              {item.recipe.garnish && (
+                <p className="public-menu-garnish">Garnish: {item.recipe.garnish}</p>
+              )}
+            </div>
           </li>
         ))}
       </ul>

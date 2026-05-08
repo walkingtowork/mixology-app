@@ -203,8 +203,10 @@ export async function createRecipe(recipe: Omit<Recipe, 'id'>): Promise<Recipe> 
   // Transform the recipe data to match API expectations
   const recipeData = {
     name: recipe.name,
+    description: recipe.description || '',
     notes: recipe.notes || '',
     garnish: recipe.garnish || '',
+    glass: recipe.glass || '',
     ingredients: recipe.ingredients.map(ri => ({
       ingredient_id: ri.ingredient.id,
       amount: ri.amount,
@@ -245,8 +247,10 @@ export async function updateRecipe(id: number, recipe: Partial<Recipe>): Promise
   const recipeData: any = {};
   
   if (recipe.name !== undefined) recipeData.name = recipe.name;
+  if (recipe.description !== undefined) recipeData.description = recipe.description || '';
   if (recipe.notes !== undefined) recipeData.notes = recipe.notes || '';
   if (recipe.garnish !== undefined) recipeData.garnish = recipe.garnish || '';
+  if (recipe.glass !== undefined) recipeData.glass = recipe.glass || '';
   
   if (recipe.ingredients !== undefined) {
     recipeData.ingredients = recipe.ingredients.map(ri => ({

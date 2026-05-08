@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { fetchIngredients, createIngredient, createRecipe, updateRecipe, fetchRecipe } from '../services/cocktailsApi';
-import type { Ingredient, Recipe, Unit } from '../types/cocktails';
+import type { Ingredient, Recipe, Unit, GlassType } from '../types/cocktails';
+import { GLASS_OPTIONS } from '../types/cocktails';
 import Button from './ui/Button';
 import FormField from './ui/FormField';
 import LoadingSpinner from './ui/LoadingSpinner';
@@ -22,8 +23,10 @@ export default function RecipeForm() {
 
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
   const [notes, setNotes] = useState('');
   const [garnish, setGarnish] = useState('');
+  const [glass, setGlass] = useState<GlassType | ''>('');
   const [sourceUrl, setSourceUrl] = useState('');
   const [rows, setRows] = useState<IngredientRow[]>([{ ingredientId: 0, amount: 0, unit: 'oz' }]);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -42,8 +45,10 @@ export default function RecipeForm() {
       if (recipeId) {
         const recipe = await fetchRecipe(recipeId);
         setName(recipe.name);
+        setDescription(recipe.description || '');
         setNotes(recipe.notes || '');
         setGarnish(recipe.garnish || '');
+        setGlass((recipe.glass as GlassType | '') || '');
         setSourceUrl(recipe.source_url || '');
         setRows(recipe.ingredients.map((ri) => ({
           ingredientId: ri.ingredient.id,
@@ -106,8 +111,10 @@ export default function RecipeForm() {
     try {
       const recipeData: Omit<Recipe, 'id'> = {
         name: name.trim(),
+        description: description.trim() || null,
         notes: notes.trim() || null,
         garnish: garnish.trim() || null,
+        glass: glass || null,
         source_url: sourceUrl.trim() || null,
         ingredients: rows.map((r) => ({
           id: 0,
@@ -149,6 +156,30 @@ export default function RecipeForm() {
               onChange={(e) => setName(e.target.value)}
               autoComplete="off"
               autoFocus={!recipeId}
+            />
+          </FormField>
+
+          <FormField label="Glass" htmlFor="glass">
+            <select
+              id="glass"
+              value={glass}
+              onChange={(e) => setGlass(e.target.value as GlassType | '')}
+            >
+              <option value="">No glass specified</option>
+              {GLASS_OPTIONS.map(o => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </FormField>
+
+          <FormField label="Description" htmlFor="description">
+            <textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={2}
+              placeholder="Guest-facing description…"
+              autoComplete="off"
             />
           </FormField>
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { fetchRecipes, addMenuItem, createRecipe, fetchIngredients, createIngredient } from '../../services/cocktailsApi';
-import type { Recipe, Ingredient } from '../../types/cocktails';
+import type { Recipe, Ingredient, GlassType } from '../../types/cocktails';
+import { GLASS_OPTIONS } from '../../types/cocktails';
 import Button from '../ui/Button';
 import './RecipeDrawer.css';
 
@@ -99,8 +100,10 @@ export default function RecipeDrawer({ menuId, onClose, onAdded }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const [newName, setNewName] = useState('');
+  const [newDescription, setNewDescription] = useState('');
   const [newNotes, setNewNotes] = useState('');
   const [newGarnish, setNewGarnish] = useState('');
+  const [newGlass, setNewGlass] = useState<GlassType | ''>('');
   const [newRows, setNewRows] = useState<IngredientRow[]>([{ ...EMPTY_ROW }]);
 
   useEffect(() => {
@@ -164,8 +167,10 @@ export default function RecipeDrawer({ menuId, onClose, onAdded }: Props) {
     try {
       const recipe = await createRecipe({
         name: newName.trim(),
+        description: newDescription,
         notes: newNotes,
         garnish: newGarnish,
+        glass: newGlass || null,
         source_url: null,
         ingredients: newRows
           .filter((r) => r.ingredient_id && r.amount)
@@ -273,6 +278,31 @@ export default function RecipeDrawer({ menuId, onClose, onAdded }: Props) {
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder="Recipe name"
                   autoFocus
+                />
+              </div>
+
+              <div className="drawer-field">
+                <label className="form-label">Glass</label>
+                <select
+                  className="form-select"
+                  value={newGlass}
+                  onChange={(e) => setNewGlass(e.target.value as GlassType | '')}
+                >
+                  <option value="">No glass specified</option>
+                  {GLASS_OPTIONS.map(o => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="drawer-field">
+                <label className="form-label">Description</label>
+                <textarea
+                  className="form-input"
+                  rows={2}
+                  value={newDescription}
+                  onChange={(e) => setNewDescription(e.target.value)}
+                  placeholder="Guest-facing description…"
                 />
               </div>
 

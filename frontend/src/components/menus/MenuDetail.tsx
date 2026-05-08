@@ -1,12 +1,35 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { QRCodeCanvas } from 'qrcode.react';
-import { fetchMenu, removeMenuItem, activateMenu, fetchMenus } from '../../services/cocktailsApi';
-import type { Menu, MenuItem } from '../../types/cocktails';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import {
+  fetchMenu,
+  removeMenuItem,
+  activateMenu,
+  fetchMenus,
+  reorderMenuItems,
+} from '../../services/cocktailsApi';
+import type { Menu, MenuItem, Recipe } from '../../types/cocktails';
 import Button from '../ui/Button';
+import GlassIcon from '../ui/GlassIcon';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import ConfirmModal from '../ui/ConfirmModal';
 import RecipeDrawer from './RecipeDrawer';
+import EditRecipeDrawer from './EditRecipeDrawer';
 import './MenuDetail.css';
 
 function stockClass(level: number) {
@@ -21,6 +44,117 @@ function stockLabel(level: number) {
   return '';
 }
 
+interface SortableItemProps {
+  item: MenuItem;
+  expanded: boolean;
+  onToggle: () => void;
+  onRemove: () => void;
+  onEdit: () => void;
+}
+
+function SortableMenuItem({ item, expanded, onToggle, onRemove, onEdit }: SortableItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const badIngredients = item.recipe.ingredients.filter(ri => ri.ingredient.stock_level <= 25);
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`menu-item-card ${badIngredients.length > 0 ? 'menu-item-card--warn' : ''} ${expanded ? 'menu-item-card--expanded' : ''}`}
+    >
+      {/* Drag handle */}
+      <button
+        className="menu-item-drag-handle"
+        {...attributes}
+        {...listeners}
+        aria-label="Drag to reorder"
+        tabIndex={0}
+      >
+        <svg width="14" height="20" viewBox="0 0 10 16" fill="currentColor">
+          <circle cx="3" cy="2" r="1.5"/>
+          <circle cx="7" cy="2" r="1.5"/>
+          <circle cx="3" cy="8" r="1.5"/>
+          <circle cx="7" cy="8" r="1.5"/>
+          <circle cx="3" cy="14" r="1.5"/>
+          <circle cx="7" cy="14" r="1.5"/>
+        </svg>
+      </button>
+
+      {/* Clickable card body */}
+      <div className="menu-item-body" onClick={onToggle} role="button" tabIndex={0} onKeyDown={e => e.key === 'Enter' && onToggle()}>
+        <div className="menu-item-collapsed">
+          <div className="menu-item-name">{item.recipe.name}</div>
+          <div className="menu-item-ingredients">
+            {item.recipe.ingredients.map(ri => (
+              <span
+                key={ri.id}
+                className={`menu-item-chip ${stockClass(ri.ingredient.stock_level)}`}
+                title={stockLabel(ri.ingredient.stock_level) || undefined}
+              >
+                {ri.ingredient.name}
+                {stockClass(ri.ingredient.stock_level) && (
+                  <span className="menu-item-chip-warn">
+                    {ri.ingredient.stock_level === 0 ? '✕' : '!'}
+                  </span>
+                )}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {expanded && (
+          <div className="menu-item-details" onClick={e => e.stopPropagation()}>
+            {item.recipe.description && (
+              <p className="menu-item-detail-description">{item.recipe.description}</p>
+            )}
+            <table className="menu-item-detail-ingredients">
+              <tbody>
+                {item.recipe.ingredients.map(ri => (
+                  <tr key={ri.id}>
+                    <td className="menu-item-detail-amount">{ri.amount} {ri.unit}</td>
+                    <td className={`menu-item-detail-ing ${stockClass(ri.ingredient.stock_level)}`}>
+                      {ri.ingredient.name}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {item.recipe.garnish && (
+              <p className="menu-item-detail-meta"><span>Garnish:</span> {item.recipe.garnish}</p>
+            )}
+            {item.recipe.notes && (
+              <p className="menu-item-detail-meta menu-item-detail-notes"><span>Notes:</span> {item.recipe.notes}</p>
+            )}
+            <div className="menu-item-detail-actions">
+              <Button variant="secondary" size="sm" onClick={onEdit}>Edit Recipe</Button>
+              <Button variant="ghost" size="sm" onClick={onRemove}>Remove from menu</Button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Glass icon — right side */}
+      <div className="menu-item-glass">
+        <GlassIcon glass={item.recipe.glass} size={40} />
+      </div>
+    </div>
+  );
+}
+
 export default function MenuDetail() {
   const { id } = useParams<{ id: string }>();
   const menuId = Number(id);
@@ -28,6 +162,8 @@ export default function MenuDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showDrawer, setShowDrawer] = useState(false);
+  const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
+  const [expandedItemId, setExpandedItemId] = useState<number | null>(null);
   const [activateTarget, setActivateTarget] = useState(false);
   const [hasOtherActive, setHasOtherActive] = useState(false);
   const [activating, setActivating] = useState(false);
@@ -35,11 +171,15 @@ export default function MenuDetail() {
   const [showQR, setShowQR] = useState(false);
   const qrContainerRef = useRef<HTMLDivElement>(null);
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
+
   useEffect(() => {
     Promise.all([fetchMenu(menuId), fetchMenus()])
       .then(([m, all]) => {
         setMenu(m);
-        setHasOtherActive(all.some((x) => x.is_active && x.id !== menuId));
+        setHasOtherActive(all.some(x => x.is_active && x.id !== menuId));
       })
       .catch(() => setError('Failed to load menu.'))
       .finally(() => setLoading(false));
@@ -48,7 +188,8 @@ export default function MenuDetail() {
   const handleRemove = async (item: MenuItem) => {
     try {
       await removeMenuItem(item.id);
-      setMenu((prev) => prev ? { ...prev, items: prev.items.filter((i) => i.id !== item.id) } : prev);
+      setMenu(prev => prev ? { ...prev, items: prev.items.filter(i => i.id !== item.id) } : prev);
+      if (expandedItemId === item.id) setExpandedItemId(null);
     } catch {
       setError('Failed to remove drink.');
     }
@@ -66,6 +207,39 @@ export default function MenuDetail() {
       setActivating(false);
       setActivateTarget(false);
     }
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !menu) return;
+
+    const oldIndex = menu.items.findIndex(i => i.id === active.id);
+    const newIndex = menu.items.findIndex(i => i.id === over.id);
+    const reordered = arrayMove(menu.items, oldIndex, newIndex).map((item, idx) => ({
+      ...item,
+      order: idx,
+    }));
+    setMenu({ ...menu, items: reordered });
+
+    try {
+      await reorderMenuItems(menuId, reordered.map(i => ({ id: i.id, order: i.order })));
+    } catch {
+      setError('Failed to save new order.');
+      const original = await fetchMenu(menuId);
+      setMenu(original);
+    }
+  };
+
+  const handleRecipeSaved = (updatedRecipe: Recipe) => {
+    setMenu(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        items: prev.items.map(item =>
+          item.recipe.id === updatedRecipe.id ? { ...item, recipe: updatedRecipe } : item
+        ),
+      };
+    });
   };
 
   const handlePrintQR = () => {
@@ -105,8 +279,8 @@ export default function MenuDetail() {
   if (error && !menu) return <p className="menu-detail-error">{error}</p>;
   if (!menu) return null;
 
-  const lowStockItems = menu.items.filter((item) =>
-    item.recipe.ingredients.some((ri) => ri.ingredient.stock_level <= 25)
+  const lowStockItems = menu.items.filter(item =>
+    item.recipe.ingredients.some(ri => ri.ingredient.stock_level <= 25)
   );
 
   return (
@@ -160,33 +334,20 @@ export default function MenuDetail() {
             <p>No drinks yet. Add some to get started!</p>
           </div>
         ) : (
-          menu.items.map((item) => {
-            const badIngredients = item.recipe.ingredients.filter((ri) => ri.ingredient.stock_level <= 25);
-            return (
-              <div key={item.id} className={`menu-item-card ${badIngredients.length > 0 ? 'menu-item-card--warn' : ''}`}>
-                <div className="menu-item-body">
-                  <div className="menu-item-name">{item.recipe.name}</div>
-                  <div className="menu-item-ingredients">
-                    {item.recipe.ingredients.map((ri) => (
-                      <span
-                        key={ri.id}
-                        className={`menu-item-chip ${stockClass(ri.ingredient.stock_level)}`}
-                        title={stockLabel(ri.ingredient.stock_level) || undefined}
-                      >
-                        {ri.ingredient.name}
-                        {stockClass(ri.ingredient.stock_level) && (
-                          <span className="menu-item-chip-warn">
-                            {ri.ingredient.stock_level === 0 ? '✕' : '!'}
-                          </span>
-                        )}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                <Button variant="ghost" size="sm" onClick={() => handleRemove(item)}>Remove</Button>
-              </div>
-            );
-          })
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={menu.items.map(i => i.id)} strategy={verticalListSortingStrategy}>
+              {menu.items.map(item => (
+                <SortableMenuItem
+                  key={item.id}
+                  item={item}
+                  expanded={expandedItemId === item.id}
+                  onToggle={() => setExpandedItemId(prev => prev === item.id ? null : item.id)}
+                  onRemove={() => handleRemove(item)}
+                  onEdit={() => setEditingRecipe(item.recipe)}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
         )}
       </div>
 
@@ -194,13 +355,21 @@ export default function MenuDetail() {
         <RecipeDrawer
           menuId={menuId}
           onClose={() => setShowDrawer(false)}
-          onAdded={(updated) => setMenu(updated)}
+          onAdded={updated => setMenu(updated)}
+        />
+      )}
+
+      {editingRecipe && (
+        <EditRecipeDrawer
+          recipe={editingRecipe}
+          onClose={() => setEditingRecipe(null)}
+          onSaved={handleRecipeSaved}
         />
       )}
 
       {showQR && menu && (
         <div className="qr-backdrop" onClick={() => setShowQR(false)}>
-          <div className="qr-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="qr-modal" onClick={e => e.stopPropagation()}>
             <h2 className="qr-modal-title">{menu.name}</h2>
             <div ref={qrContainerRef}>
               <QRCodeCanvas
