@@ -38,9 +38,9 @@
 }
 
 .orders-history-toggle.active {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-  background: rgba(var(--color-primary-rgb, 180, 83, 9), 0.06);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  background: var(--color-accent-light);
 }
 
 .orders-history-toggle:hover {
@@ -162,7 +162,7 @@
 }
 
 .order-card-serve-btn {
-  background: var(--color-primary);
+  background: var(--color-accent);
   color: #fff;
   border: none;
   border-radius: var(--radius-md);
