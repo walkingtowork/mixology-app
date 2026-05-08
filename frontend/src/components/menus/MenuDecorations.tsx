@@ -26,7 +26,7 @@ export function UmeDecoration() {
   return (
     <svg
       width="220" height="220" viewBox="0 0 220 220"
-      style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', zIndex: 0, opacity: 0.5 }}
+      style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', zIndex: 0, opacity: 0.3 }}
       aria-hidden="true"
     >
       {/* Main branch from top-right, cascading down-left */}
@@ -60,7 +60,7 @@ export function TacoDecoration() {
   return (
     <svg
       width="210" height="210" viewBox="0 0 210 210"
-      style={{ position: 'absolute', bottom: 0, right: 0, pointerEvents: 'none', zIndex: 0, opacity: 0.5, transform: 'scaleX(-1)' }}
+      style={{ position: 'absolute', bottom: 0, right: 0, pointerEvents: 'none', zIndex: 0, opacity: 0.3 }}
       aria-hidden="true"
     >
       {/* Taco — centered around (80, 125), tilted slightly */}
@@ -70,10 +70,10 @@ export function TacoDecoration() {
           fill="#86EFAC" />
         {/* Avocado accent */}
         <ellipse cx="-18" cy="-20" rx="7" ry="9" fill="#4ADE80" opacity={0.7} />
-        <ellipse cx="-18" cy="-20" rx="3" ry="4" fill="#92400E" opacity={0.5} />
+        <ellipse cx="-18" cy="-20" rx="3" ry="4" fill="#4A1800" opacity={0.5} />
         {/* Meat */}
         <path d="M -44 -6 C -30 -18 -14 -12 0 -16 C 14 -12 30 -18 44 -6 L 40 12 C 26 6 12 10 0 7 C -12 10 -26 6 -40 12 Z"
-          fill="#92400E" />
+          fill="#4A1800" />
         {/* Cheese drizzle */}
         <path d="M -28 -4 C -18 -10 -6 -7 6 -9 C 18 -7 27 -11 36 -6"
           stroke="#FCD34D" strokeWidth="3" fill="none" strokeLinecap="round" />
@@ -105,7 +105,7 @@ export function TacoDecoration() {
       {[
         [32, 168, 2.2, '#F59E0B', 0.5],
         [50, 178, 1.8, '#D97706', 0.45],
-        [18, 182, 1.6, '#92400E', 0.4],
+        [18, 182, 1.6, '#4A1800', 0.4],
         [62, 162, 1.5, '#F59E0B', 0.4],
         [130, 155, 1.8, '#FCD34D', 0.35],
       ].map(([x, y, r, fill, opacity], i) => (
