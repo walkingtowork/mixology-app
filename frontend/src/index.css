@@ -14,7 +14,8 @@
   --color-text-secondary: #78716C;
   --color-text-disabled:  #A8A29E;
 
-  /* Accent (amber) */
+  /* Primary / Accent (amber) */
+  --color-primary:       #B45309;
   --color-accent:        #B45309;
   --color-accent-hover:  #92400E;
   --color-accent-light:  #FEF3C7;
