@@ -96,7 +96,7 @@
 
 .public-menu-order-btn {
   margin-top: var(--space-2);
-  background: var(--color-primary);
+  background: var(--color-accent);
   color: #fff;
   border: none;
   border-radius: var(--radius-md);
@@ -104,12 +104,12 @@
   font-size: var(--text-sm);
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.15s, background-color 0.15s;
+  transition: background-color 0.15s;
   min-width: 80px;
 }
 
 .public-menu-order-btn:hover:not(:disabled) {
-  opacity: 0.85;
+  background: var(--color-accent-hover);
 }
 
 .public-menu-order-btn.ordered,
@@ -185,7 +185,7 @@
 
 .pm-modal-submit {
   flex: 1;
-  background: var(--color-primary);
+  background: var(--color-accent);
   color: #fff;
   border: none;
   border-radius: var(--radius-md);
