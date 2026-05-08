@@ -115,14 +115,9 @@ export default function PublicMenu() {
             <div className="public-menu-content">
               <div className="public-menu-drink">{item.recipe.name}</div>
               {item.recipe.ingredients.length > 0 && (
-                <ul className="public-menu-ingredients">
-                  {item.recipe.ingredients.map(ri => (
-                    <li key={ri.id} className="public-menu-ingredient">
-                      <span className="public-menu-amount">{ri.amount} {ri.unit}</span>
-                      {ri.ingredient.name}
-                    </li>
-                  ))}
-                </ul>
+                <p className="public-menu-ingredients">
+                  {item.recipe.ingredients.map(ri => ri.ingredient.name).join(', ')}
+                </p>
               )}
               {item.recipe.description && (
                 <p className="public-menu-description">{item.recipe.description}</p>

@@ -76,23 +76,9 @@
 }
 
 .public-menu-ingredients {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 var(--space-2) 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.public-menu-ingredient {
   font-size: var(--text-sm);
-  color: var(--color-text-primary);
-}
-
-.public-menu-amount {
   color: var(--color-text-secondary);
-  margin-right: var(--space-2);
-  font-variant-numeric: tabular-nums;
+  margin: 0 0 var(--space-2) 0;
 }
 
 .public-menu-description {
