@@ -100,6 +100,7 @@
   align-self: center;
   border-radius: var(--radius-sm);
   transition: color 0.15s, background-color 0.15s;
+  touch-action: none;
 }
 
 .menu-item-drag-handle:hover {
