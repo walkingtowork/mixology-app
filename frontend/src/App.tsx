@@ -40,6 +40,9 @@ function App() {
           <div className="app">
             <nav className="app-nav">
               <Link to="/" className="nav-wordmark">The Bar Cart</Link>
+              {hasPendingOrders && (
+                <NavLink to="/orders" className={({ isActive }) => `nav-orders${isActive ? ' active' : ''}`}>Orders</NavLink>
+              )}
               <div className="nav-links">
                 <NavLink to="/recipes" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Recipes</NavLink>
                 <NavLink to="/ingredients" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Ingredients</NavLink>
@@ -47,9 +50,6 @@ function App() {
                 <NavLink to="/menus" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Menus</NavLink>
                 <Link to="/recipes/new" className="nav-action">+ New Recipe</Link>
               </div>
-              {hasPendingOrders && (
-                <NavLink to="/orders" className={({ isActive }) => `nav-orders${isActive ? ' active' : ''}`}>Orders</NavLink>
-              )}
             </nav>
 
             <main>

@@ -86,7 +86,6 @@
 }
 
 .nav-orders {
-  margin-left: var(--space-2);
   padding: var(--space-2) var(--space-4);
   background-color: var(--color-accent-light);
   color: var(--color-accent);
