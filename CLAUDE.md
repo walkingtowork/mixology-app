@@ -50,3 +50,10 @@ When a category is created, a generic ingredient is auto-created for it (e.g., c
 - The `RecipeForm` component handles both create and edit via the same route wrapper
 - Inline styles are used throughout `App.tsx` nav; component-level CSS is minimal
 - API base URL is set via `VITE_API_BASE_URL` env var (defaults to `http://localhost:8000`)
+
+## Project Context
+
+`PROJECT_CONTEXT.md` records decisions, plans, and environment details that aren't
+derivable from the code: deployment setup (Railway + Vercel), agreed Menus feature
+decisions, the menu decoration plan, the color system cleanup, and the next features
+to build. Read it before working on menus, theming, or deployment.
