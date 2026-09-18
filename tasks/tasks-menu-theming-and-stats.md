@@ -54,9 +54,9 @@ after completing an entire parent task.
 Decided in conversation on 2026-09-18 — do not re-litigate these while implementing.
 
 1. **Decorations default to `none`**, not to the current ume/taco pair. New menus start
-   undecorated and opt in. Note this means existing menus render undecorated after the
-   migration until someone picks art for them — acceptable, since the only real menu in
-   use is being re-themed for fall anyway.
+   undecorated and opt in. Existing menus are **backfilled to `ume`/`taco` by a data
+   migration**, so already-published share links keep the artwork they have today — the
+   `none` default applies only to menus created from here on.
 2. **Positioning belongs to the slot, not the SVG.** Today each SVG hardcodes its own
    corner and opacity (`MenuDecorations.tsx:30` and `:63`). Any decoration must be usable
    in either slot, so the wrapper owns `position`, corner, opacity and `aria-hidden`.
@@ -80,32 +80,36 @@ Decided in conversation on 2026-09-18 — do not re-litigate these while impleme
         `feature/menu-theme-decorations` branch exists with a zero-line diff against `main`;
         it is stale and was avoided to prevent confusion.
 
-- [ ] 1.0 Add decoration fields to the Menu model and API
-  - [ ] 1.1 Add `DECORATION_CHOICES` to `backend/cocktails/models.py` with `none`, the two
+- [x] 1.0 Add decoration fields to the Menu model and API
+  - [x] 1.1 Add `DECORATION_CHOICES` to `backend/cocktails/models.py` with `none`, the two
         existing entries (`ume`, `taco`), and the fall additions (`maple`, `acorn`,
         `pumpkin`, `wheat`)
-  - [ ] 1.2 Add `top_decoration` and `bottom_decoration` CharFields to `Menu`, both
+  - [x] 1.2 Add `top_decoration` and `bottom_decoration` CharFields to `Menu`, both
         `max_length=32`, `choices=DECORATION_CHOICES`, `default='none'`
-  - [ ] 1.3 Generate and apply the migration
-  - [ ] 1.4 Add both fields to `MenuSerializer.Meta.fields` (they must be writable — unlike
+  - [x] 1.3 Generate and apply the migration
+  - [x] 1.4 Add both fields to `MenuSerializer.Meta.fields` (they must be writable — unlike
         `is_active`, which is deliberately read-only)
-  - [ ] 1.5 Widen the `updateMenu()` data param in `cocktailsApi.ts` and add both fields to
+  - [x] 1.5 Widen the `updateMenu()` data param in `cocktailsApi.ts` and add both fields to
         the `Menu` type plus a `DecorationKey` union in `types/cocktails.ts`
-  - [ ] 1.6 Confirm `GET /api/menus/:id/` returns the new fields
+  - [x] 1.6 Confirm `GET /api/menus/:id/` returns the new fields
+  - [x] 1.7 Add a **data migration backfilling existing menus to `ume`/`taco`**
+        (`0009_set_existing_menus_ume_taco.py`), so already-published share links keep
+        their artwork even though the field default is `none`. Follows the existing
+        `0005_set_existing_ingredients_stock_75.py` pattern and is reversible.
 
-- [ ] 2.0 Refactor decorations into a registry + slot (no visual change yet)
-  - [ ] 2.1 Remove the inline `position`/`top`/`left`/`bottom`/`right`/`opacity`/`zIndex`
+- [x] 2.0 Refactor decorations into a registry + slot (no visual change yet)
+  - [x] 2.1 Remove the inline `position`/`top`/`left`/`bottom`/`right`/`opacity`/`zIndex`
         styles from `UmeDecoration` and `TacoDecoration`, leaving pure `viewBox` drawings
-  - [ ] 2.2 Add the `DECORATIONS` registry mapping each `DecorationKey` to `{ label, Component }`,
+  - [x] 2.2 Add the `DECORATIONS` registry mapping each `DecorationKey` to `{ label, Component }`,
         with `none` mapping to a null component
-  - [ ] 2.3 Add `DecorationSlot({ position, name })` owning absolute positioning
+  - [x] 2.3 Add `DecorationSlot({ position, name })` owning absolute positioning
         (top → top-left, bottom → bottom-right), `opacity: 0.3`, `pointerEvents: none`,
         `zIndex: 0`, `aria-hidden`
-  - [ ] 2.4 Make unknown/missing keys render nothing rather than crash — a key removed from
+  - [x] 2.4 Make unknown/missing keys render nothing rather than crash — a key removed from
         the registry later will still be sitting in the database
-  - [ ] 2.5 Wire `PublicMenu.tsx` to render two slots from `menu.top_decoration` /
+  - [x] 2.5 Wire `PublicMenu.tsx` to render two slots from `menu.top_decoration` /
         `menu.bottom_decoration`, replacing the hardcoded imports
-  - [ ] 2.6 Verify: a menu with `ume`/`taco` set renders pixel-identically to before the refactor
+  - [x] 2.6 Verify: a menu with `ume`/`taco` set renders pixel-identically to before the refactor
 
 - [ ] 3.0 Draw the fall decoration SVGs
   - [ ] 3.1 Maple/oak leaf branch for the top slot, echoing the existing branch composition

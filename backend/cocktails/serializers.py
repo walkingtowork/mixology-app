@@ -118,7 +118,8 @@ class MenuSerializer(serializers.ModelSerializer):
         model = Menu
         fields = [
             'id', 'name', 'is_active', 'is_published', 'share_token',
-            'theme_notes', 'created_at', 'updated_at', 'items', 'item_count',
+            'theme_notes', 'top_decoration', 'bottom_decoration',
+            'created_at', 'updated_at', 'items', 'item_count',
         ]
         read_only_fields = ['share_token', 'created_at', 'updated_at', 'is_active']
 
@@ -131,7 +132,11 @@ class MenuListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Menu
-        fields = ['id', 'name', 'is_active', 'is_published', 'share_token', 'created_at', 'updated_at', 'item_count']
+        fields = [
+            'id', 'name', 'is_active', 'is_published', 'share_token',
+            'top_decoration', 'bottom_decoration',
+            'created_at', 'updated_at', 'item_count',
+        ]
         read_only_fields = ['share_token', 'created_at', 'updated_at']
 
     def get_item_count(self, obj):

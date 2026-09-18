@@ -55,6 +55,15 @@ export interface MenuItem {
   order: number;
 }
 
+export type DecorationKey =
+  | 'none'
+  | 'ume'
+  | 'taco'
+  | 'maple'
+  | 'acorn'
+  | 'pumpkin'
+  | 'wheat';
+
 export interface Menu {
   id: number;
   name: string;
@@ -62,6 +71,8 @@ export interface Menu {
   is_published: boolean;
   share_token: string;
   theme_notes: string;
+  top_decoration: DecorationKey;
+  bottom_decoration: DecorationKey;
   created_at: string;
   updated_at: string;
   items: MenuItem[];

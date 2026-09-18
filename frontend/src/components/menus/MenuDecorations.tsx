@@ -1,3 +1,21 @@
+import type { ComponentType } from 'react';
+import type { DecorationKey } from '../../types/cocktails';
+
+/**
+ * Decoration artwork for the public menu page.
+ *
+ * Each `*Art` component is a plain <svg> with no positioning of its own — placement,
+ * corner and opacity belong to `DecorationSlot` so the same drawing can be used in a
+ * slot, a picker thumbnail, or anywhere else. Every Art component takes an optional
+ * `size` so it can be scaled down for pickers.
+ *
+ * Note that artwork is *composed* for a corner even though placement is generic: the
+ * ume branch bleeds in from off-canvas top-right, so it reads best in the top slot.
+ * Art is never auto-flipped between slots — mirroring was tried and reverted (7c62399).
+ */
+
+type ArtProps = { size?: number };
+
 const BRANCH = '#5C3A2E';
 const PETAL = '#F9A8D4';
 const PETAL_DARK = '#F472B6';
@@ -22,13 +40,9 @@ function Blossom({ x, y, r = 11, angle = 0 }: { x: number; y: number; r?: number
   );
 }
 
-export function UmeDecoration() {
+export function UmeArt({ size = 220 }: ArtProps) {
   return (
-    <svg
-      width="220" height="220" viewBox="0 0 220 220"
-      style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', zIndex: 0, opacity: 0.3 }}
-      aria-hidden="true"
-    >
+    <svg width={size} height={size} viewBox="0 0 220 220" aria-hidden="true">
       {/* Main branch from top-right, cascading down-left */}
       <path d="M 228 -5 C 200 18 172 32 148 62 C 128 84 105 92 78 118 C 58 135 38 158 12 198"
         stroke={BRANCH} strokeWidth="3.5" fill="none" strokeLinecap="round" />
@@ -56,13 +70,9 @@ export function UmeDecoration() {
   );
 }
 
-export function TacoDecoration() {
+export function TacoArt({ size = 210 }: ArtProps) {
   return (
-    <svg
-      width="210" height="210" viewBox="0 0 210 210"
-      style={{ position: 'absolute', bottom: 0, right: 0, pointerEvents: 'none', zIndex: 0, opacity: 0.3 }}
-      aria-hidden="true"
-    >
+    <svg width={size} height={size} viewBox="0 0 210 210" aria-hidden="true">
       {/* Taco — centered around (80, 125), tilted slightly */}
       <g transform="translate(80, 125) rotate(-18)">
         {/* Lettuce (back layer) */}
@@ -113,5 +123,59 @@ export function TacoDecoration() {
           fill={fill as string} opacity={opacity as number} />
       ))}
     </svg>
+  );
+}
+
+type DecorationEntry = {
+  label: string;
+  /** null means "draw nothing" — used by `none`. */
+  Art: ComponentType<ArtProps> | null;
+  /** Which slot the artwork was composed for. Advisory only; either slot is allowed. */
+  composedFor?: 'top' | 'bottom';
+};
+
+/**
+ * Every selectable decoration. Keys must stay in sync with DECORATION_CHOICES in
+ * backend/cocktails/models.py — a menu row can hold any key this map once had.
+ */
+export const DECORATIONS: Record<DecorationKey, DecorationEntry> = {
+  none: { label: 'None', Art: null },
+  ume: { label: 'Ume Blossom Branch', Art: UmeArt, composedFor: 'top' },
+  taco: { label: 'Taco', Art: TacoArt, composedFor: 'bottom' },
+  // Fall set — artwork still to be drawn (task 3.0).
+  maple: { label: 'Maple Branch', Art: null, composedFor: 'top' },
+  acorn: { label: 'Acorns & Oak', Art: null, composedFor: 'bottom' },
+  pumpkin: { label: 'Pumpkins', Art: null, composedFor: 'bottom' },
+  wheat: { label: 'Wheat & Dried Grass', Art: null, composedFor: 'bottom' },
+};
+
+/** Decoration keys in the order they should appear in a picker. */
+export const DECORATION_KEYS = Object.keys(DECORATIONS) as DecorationKey[];
+
+/**
+ * Renders one decoration pinned to a corner of the public menu.
+ *
+ * Top slot sits top-left, bottom slot sits bottom-right — matching the layout the
+ * hardcoded ume/taco pair established. Unknown or artless keys render nothing: a key
+ * dropped from this map later will still be sitting in the database.
+ */
+export function DecorationSlot({ position, name }: { position: 'top' | 'bottom'; name: DecorationKey }) {
+  const Art = DECORATIONS[name]?.Art;
+  if (!Art) return null;
+
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        position: 'absolute',
+        ...(position === 'top' ? { top: 0, left: 0 } : { bottom: 0, right: 0 }),
+        lineHeight: 0,
+        pointerEvents: 'none',
+        zIndex: 0,
+        opacity: 0.3,
+      }}
+    >
+      <Art />
+    </div>
   );
 }

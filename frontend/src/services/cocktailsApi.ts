@@ -1,4 +1,4 @@
-import type { Ingredient, Recipe, IngredientCategory, Menu, BuyListItem, StockLevel, Order } from '../types/cocktails';
+import type { Ingredient, Recipe, IngredientCategory, Menu, BuyListItem, StockLevel, Order, DecorationKey } from '../types/cocktails';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
@@ -506,7 +506,16 @@ export async function createMenu(name: string): Promise<Menu> {
   return response.json();
 }
 
-export async function updateMenu(id: number, data: { name?: string; theme_notes?: string; is_published?: boolean }): Promise<Menu> {
+export async function updateMenu(
+  id: number,
+  data: {
+    name?: string;
+    theme_notes?: string;
+    is_published?: boolean;
+    top_decoration?: DecorationKey;
+    bottom_decoration?: DecorationKey;
+  },
+): Promise<Menu> {
   const response = await fetch(`${API_BASE_URL}/api/menus/${id}/`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },

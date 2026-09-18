@@ -14,6 +14,16 @@ GLASS_CHOICES = [
     ('glencairn', 'Glencairn'),
 ]
 
+DECORATION_CHOICES = [
+    ('none', 'None'),
+    ('ume', 'Ume Blossom Branch'),
+    ('taco', 'Taco'),
+    ('maple', 'Maple Branch'),
+    ('acorn', 'Acorns & Oak'),
+    ('pumpkin', 'Pumpkins'),
+    ('wheat', 'Wheat & Dried Grass'),
+]
+
 UNIT_CHOICES = [
     ('oz', 'oz'),
     ('ml', 'ml'),
@@ -110,6 +120,12 @@ class Menu(models.Model):
     is_published = models.BooleanField(default=False)
     share_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     theme_notes = models.TextField(blank=True)
+    top_decoration = models.CharField(
+        max_length=32, choices=DECORATION_CHOICES, default='none'
+    )
+    bottom_decoration = models.CharField(
+        max_length=32, choices=DECORATION_CHOICES, default='none'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
