@@ -4,7 +4,7 @@ Decisions, plans, and environment details for the mixology app ("The Bar Cart") 
 aren't derivable from the code or git history. Companion to `PROJECT_REFERENCE.md`
 (what exists) and `backlog.md` (what's queued) — this file captures *why* and *what's agreed*.
 
-Last updated: 2026-09-02
+Last updated: 2026-09-18
 
 ---
 
@@ -50,24 +50,45 @@ Motivation: plan drink menus, track ingredient stock, and share menus with frien
 - `Ingredient` stock level: enum `0/25/50/75/100`; existing rows default to 75, new rows to 100
 - Stock UI: vertical bottle-shaped CSS art, amber fill from the bottom, 5 clickable segments
 - `IngredientDetail` page gets a "Used in…" recipes section
-- `Menu` model carries a theming placeholder field (`TextField`, `blank=True`) — styled later
+- `Menu` model carries a theming placeholder field (`theme_notes`, `TextField`, `blank=True`)
+  — superseded by the structured decoration fields below; still unused by any UI
 - Menus appear in the main nav (top + bottom) but **not** in the homepage stat cards
 
 ---
 
 ## Menu decoration system
 
-Decorations are currently hardcoded in `frontend/src/components/menus/PublicMenu.tsx`
+**Status: in progress** on `feature/menu-theming-and-stats`. Full task breakdown in
+`tasks/tasks-menu-theming-and-stats.md`.
+
+Decorations were hardcoded in `frontend/src/components/menus/PublicMenu.tsx`
 (`UmeDecoration` top-left, `TacoDecoration` bottom-right), with the SVG components in
 `frontend/src/components/menus/MenuDecorations.tsx`. The `theme_notes` field on `Menu` is
-free text and is not used for decoration selection.
+free text and is *not* used for decoration selection — it remains unused by any UI.
 
-**Why it needs to change:** each menu needs its own theme; the current "Umeshu & Tacos"
-decorations won't suit future menus.
+**Why it needs to change:** each menu needs its own theme; the "Umeshu & Tacos"
+decorations don't suit future menus.
 
-**Plan:** add structured `top_decoration` / `bottom_decoration` `CharField` choices to the
-`Menu` model, expose them in the serializer and `MenuForm` picker, then conditionally render
-the matching SVG component in `PublicMenu`. Grow the SVG component list over time.
+**Agreed plan:** structured `top_decoration` / `bottom_decoration` `CharField` choices on
+the `Menu` model, exposed in the serializer and a thumbnail picker in `MenuForm`, rendered
+through a registry in `PublicMenu`. Decided 2026-09-18:
+
+- Both fields **default to `none`** — new menus start undecorated and opt in
+- Positioning, corner and opacity move **out of each SVG and into a `DecorationSlot`
+  wrapper**, so any decoration can occupy either slot (today each SVG hardcodes its own
+  corner at `MenuDecorations.tsx:30` and `:63`)
+- Unknown keys must render nothing rather than crash — a key dropped from the registry
+  later will still be sitting in the database
+- First new set is a fall theme (maple branch + acorn/gourd cluster) for the
+  2026-09-20 party
+
+**Blocker this uncovered:** there is no menu edit UI at all. `updateMenu()` exists in
+`cocktailsApi.ts` but nothing calls it — you cannot rename a menu or change its theme
+after creation. The decoration work therefore includes teaching `MenuForm` to handle
+create *and* edit through one route wrapper, matching the `RecipeForm` pattern.
+
+**Deferred:** whether menu theming should use full **background images** rather than
+corner SVG art. Worth considering later; see `backlog.md`.
 
 ---
 
@@ -86,24 +107,62 @@ variables to confirm the right semantic token is used.
 
 ---
 
+## Menu order stats
+
+**Status: planned**, not started. Full task breakdown in
+`tasks/tasks-menu-theming-and-stats.md`.
+
+An admin-only, per-menu page answering "what actually got drunk." Not visible to guests.
+Decided 2026-09-18:
+
+- Lives at **`/menus/:id/stats`** — its own page per menu, not a modal and not inline on
+  `MenuDetail` (the planning screen, which should stay free of pre-party zeros). The
+  existing `/menus` list is already the "all menus" view, so no new list screen is needed
+- Counts are **all-time per menu** — no per-night grouping, no date filter
+- Shows headline tiles (total drinks, unique guests, top drink), a ranked by-drink bar
+  chart, an explicit **"nobody ordered"** section, and a **by-guest** breakdown
+- Must be **reachable on mobile** — the host checks it behind the bar during ordering
+  lulls. Mirror the Orders badge treatment from `525bf73`
+- **No chart library**; a bar is a div with a percentage width
+
+Two things the aggregation has to get right, both easy to miss:
+
+- Zero-order menu items must still appear, so the query starts from `menu.items` and
+  left-joins counts — aggregating over `Order` alone can only return drinks somebody ordered
+- Orders outlive menu membership: pull a drink off a menu after the party and its orders
+  still exist and still point at that menu. Flag those `on_menu: false` or the totals
+  won't reconcile
+
+Note `cancelOrder` hard-deletes, so cancelled drinks leave no trace — there is no
+"cancelled" figure to report.
+
+---
+
 ## Next features to build
 
-1. **Public menu page visual polish** (next up)
-   - `/share/:token` currently shows a minimal list of drink names, notes, and garnish
-   - Wanted: theming, imagery, and general polish so it feels guest-worthy
-   - No specific design decisions yet — discuss before building
+1. **Menu theming via decoration selector** (in progress — deadline 2026-09-20)
+   - See "Menu decoration system" above
 
-2. **Drink ordering via the public menu page** (after polish)
-   - Guests order drinks directly from the share page
-   - Host needs a dashboard/queue in the main app for incoming orders
-   - Possibly a "last call" or cutoff mechanism
+2. **Menu order stats** (planned, no deadline)
+   - See "Menu order stats" above. Orders accumulate in the DB regardless, so this is
+     just as useful built after a party against real data
+
+3. **Last call / ordering cutoff** for the public menu
+   - The one piece of the original ordering plan that was never built
    - No design decisions yet
 
-3. **Non-alcoholic / N/A menu options** (revisit once Menus is stable)
+4. **Non-alcoholic / N/A menu options** (revisit once Menus is stable)
    - Options considered: a separate N/A menu type, or tagging recipes as N/A
    - No decision made yet
 
+5. **Buy list has no view.** You can add ingredients to it from `IngredientDetail`, and the
+   API is complete, but there is no route or page that shows the list. Easy win.
+
 Bring these up proactively when working on menus, recipe features, or the public menu page.
+
+**Shipped since this file was last updated** (was listed here as "to build"):
+guest drink ordering + the bartender Orders view (`82483ae`), and the first pass of public
+menu visual polish — SVG decorations, QR code modal, drag-and-drop menu planning.
 
 ---
 
