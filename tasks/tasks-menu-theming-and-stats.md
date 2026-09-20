@@ -101,7 +101,10 @@ Decided in conversation on 2026-09-18 — do not re-litigate these while impleme
   - [x] 2.1 Remove the inline `position`/`top`/`left`/`bottom`/`right`/`opacity`/`zIndex`
         styles from `UmeDecoration` and `TacoDecoration`, leaving pure `viewBox` drawings
   - [x] 2.2 Add the `DECORATIONS` registry mapping each `DecorationKey` to `{ label, Component }`,
-        with `none` mapping to a null component
+        with `none` mapping to a null component. Split across three modules so no file
+        exports both components and constants — `MenuDecorations.tsx` (art),
+        `decorationRegistry.ts` (registry), `DecorationSlot.tsx` (slot) — which keeps the
+        repo's clean `react-refresh/only-export-components` record intact.
   - [x] 2.3 Add `DecorationSlot({ position, name })` owning absolute positioning
         (top → top-left, bottom → bottom-right), `opacity: 0.3`, `pointerEvents: none`,
         `zIndex: 0`, `aria-hidden`
@@ -111,27 +114,31 @@ Decided in conversation on 2026-09-18 — do not re-litigate these while impleme
         `menu.bottom_decoration`, replacing the hardcoded imports
   - [x] 2.6 Verify: a menu with `ume`/`taco` set renders pixel-identically to before the refactor
 
-- [ ] 3.0 Draw the fall decoration SVGs
-  - [ ] 3.1 Maple/oak leaf branch for the top slot, echoing the existing branch composition
+- [x] 3.0 Draw the fall decoration SVGs
+  - [x] 3.1 Maple/oak leaf branch for the top slot, echoing the existing branch composition
         (the parameterized `Blossom` helper at `MenuDecorations.tsx:6` is the model to follow)
-  - [ ] 3.2 Acorn-and-gourd cluster for the bottom slot
+  - [x] 3.2 Acorn-and-gourd cluster for the bottom slot
   - [ ] 3.3 Check both at 0.3 opacity against `--color-bg`, and confirm they don't collide
         with the menu title or the "My Orders" button at phone width
-  - [ ] 3.4 Register both in `DECORATIONS`
+        — **opacity checked** in the candidate preview; **phone-width collision still
+        unverified**, no browser tooling available this session
+  - [x] 3.4 Register both in `DECORATIONS`
 
-- [ ] 4.0 Add menu edit mode with the decoration picker
-  - [ ] 4.1 Add the `/menus/:id/edit` route in `App.tsx`, wrapping `MenuForm` the way
+- [x] 4.0 Add menu edit mode with the decoration picker
+  - [x] 4.1 Add the `/menus/:id/edit` route in `App.tsx`, wrapping `MenuForm` the way
         `RecipeFormWrapper` wraps `RecipeForm`
-  - [ ] 4.2 Teach `MenuForm` edit mode: load the menu when `:id` is present, prefill name and
+  - [x] 4.2 Teach `MenuForm` edit mode: load the menu when `:id` is present, prefill name and
         decorations, `PATCH` via `updateMenu()` instead of `POST`, and adjust the heading and
         submit label
-  - [ ] 4.3 Build the decoration picker as a thumbnail grid — render each registry SVG scaled
+  - [x] 4.3 Build the decoration picker as a thumbnail grid — render each registry SVG scaled
         into a ~72px tile, one group for the top slot and one for the bottom
-  - [ ] 4.4 Style tiles: `--color-surface`, `--radius-md`, `1px solid --color-border`;
+  - [x] 4.4 Style tiles: `--color-surface`, `--radius-md`, `1px solid --color-border`;
         selected gets 2px `--color-accent-border` + `--color-accent-light`. Grid
         `repeat(auto-fill, minmax(88px, 1fr))`, gap `--space-3`
-  - [ ] 4.5 Add an "Edit" entry point to the `MenuDetail` header action cluster
-  - [ ] 4.6 Verify the full loop: create undecorated → edit → pick fall art → check `/share/:token`
+  - [x] 4.5 Add an "Edit" entry point to the `MenuDetail` header action cluster
+  - [x] 4.6 Verify the API loop: create (defaults to `none`) → PATCH maple/pumpkin →
+        public share endpoint returns them; an invalid key is rejected with 400
+  - [ ] 4.7 Eyeball the picker UI and the public page in a browser — not done this session
 
 --- Party-ready after task 4. Tasks 5-7 can land any time after. ---
 

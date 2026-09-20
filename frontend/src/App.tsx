@@ -65,6 +65,7 @@ function App() {
                 <Route path="/menus" element={<MenuList />} />
                 <Route path="/menus/new" element={<MenuForm />} />
                 <Route path="/menus/:id" element={<MenuDetail />} />
+                <Route path="/menus/:id/edit" element={<MenuForm />} />
                 <Route path="/orders" element={<OrdersPage />} />
               </Routes>
             </main>

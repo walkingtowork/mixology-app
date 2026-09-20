@@ -496,11 +496,14 @@ export async function fetchPublicMenu(shareToken: string): Promise<Menu> {
   return response.json();
 }
 
-export async function createMenu(name: string): Promise<Menu> {
+export async function createMenu(
+  name: string,
+  decorations?: { top_decoration?: DecorationKey; bottom_decoration?: DecorationKey },
+): Promise<Menu> {
   const response = await fetch(`${API_BASE_URL}/api/menus/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ name, ...decorations }),
   });
   if (!response.ok) throw new Error(`Failed to create menu: ${response.status}`);
   return response.json();

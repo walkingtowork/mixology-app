@@ -4,7 +4,7 @@ import { fetchPublicMenu, createOrder, fetchOrders, cancelOrder } from '../../se
 import type { Menu, Order } from '../../types/cocktails';
 import GlassIcon from '../ui/GlassIcon';
 import LoadingSpinner from '../ui/LoadingSpinner';
-import { DecorationSlot } from './MenuDecorations';
+import { DecorationSlot } from './DecorationSlot';
 import './PublicMenu.css';
 
 const GUEST_NAME_KEY = 'barCart_guestName';

@@ -1,5 +1,3 @@
-import type { ComponentType } from 'react';
-import type { DecorationKey } from '../../types/cocktails';
 
 /**
  * Decoration artwork for the public menu page.
@@ -126,56 +124,105 @@ export function TacoArt({ size = 210 }: ArtProps) {
   );
 }
 
-type DecorationEntry = {
-  label: string;
-  /** null means "draw nothing" — used by `none`. */
-  Art: ComponentType<ArtProps> | null;
-  /** Which slot the artwork was composed for. Advisory only; either slot is allowed. */
-  composedFor?: 'top' | 'bottom';
+/** Unit maple leaf, radius 1, centred on its blade with the stem pointing down. */
+const MAPLE_PATH =
+  'M0,-1 L.18,-.56 L.47,-.68 L.37,-.31 L.8,-.39 L.58,-.05 L.98,.15 L.55,.29 ' +
+  'L.65,.57 L.25,.45 L.19,.9 L.07,.58 L.07,1.06 L-.07,1.06 L-.07,.58 L-.19,.9 ' +
+  'L-.25,.45 L-.65,.57 L-.55,.29 L-.98,.15 L-.58,-.05 L-.8,-.39 L-.37,-.31 ' +
+  'L-.47,-.68 L-.18,-.56 Z';
+
+/** Unit oak leaf, radius 1 — used for the fallen leaf in the pumpkin cluster. */
+const OAK_PATH =
+  'M0,-1 C.3,-.95 .28,-.75 .45,-.72 C.62,-.7 .6,-.45 .42,-.38 C.6,-.3 .66,-.05 .44,.02 ' +
+  'C.64,.12 .6,.4 .38,.42 C.5,.6 .3,.8 .12,.66 L.08,1.05 L-.08,1.05 L-.12,.66 ' +
+  'C-.3,.8 -.5,.6 -.38,.42 C-.6,.4 -.64,.12 -.44,.02 C-.66,-.05 -.6,-.3 -.42,-.38 ' +
+  'C-.6,-.45 -.62,-.7 -.45,-.72 C-.28,-.75 -.3,-.95 0,-1 Z';
+
+type LeafProps = {
+  x: number;
+  y: number;
+  r: number;
+  angle?: number;
+  fill: string;
+  opacity?: number;
 };
 
-/**
- * Every selectable decoration. Keys must stay in sync with DECORATION_CHOICES in
- * backend/cocktails/models.py — a menu row can hold any key this map once had.
- */
-export const DECORATIONS: Record<DecorationKey, DecorationEntry> = {
-  none: { label: 'None', Art: null },
-  ume: { label: 'Ume Blossom Branch', Art: UmeArt, composedFor: 'top' },
-  taco: { label: 'Taco', Art: TacoArt, composedFor: 'bottom' },
-  // Fall set — artwork still to be drawn (task 3.0).
-  maple: { label: 'Maple Branch', Art: null, composedFor: 'top' },
-  acorn: { label: 'Acorns & Oak', Art: null, composedFor: 'bottom' },
-  pumpkin: { label: 'Pumpkins', Art: null, composedFor: 'bottom' },
-  wheat: { label: 'Wheat & Dried Grass', Art: null, composedFor: 'bottom' },
-};
-
-/** Decoration keys in the order they should appear in a picker. */
-export const DECORATION_KEYS = Object.keys(DECORATIONS) as DecorationKey[];
-
-/**
- * Renders one decoration pinned to a corner of the public menu.
- *
- * Top slot sits top-left, bottom slot sits bottom-right — matching the layout the
- * hardcoded ume/taco pair established. Unknown or artless keys render nothing: a key
- * dropped from this map later will still be sitting in the database.
- */
-export function DecorationSlot({ position, name }: { position: 'top' | 'bottom'; name: DecorationKey }) {
-  const Art = DECORATIONS[name]?.Art;
-  if (!Art) return null;
-
+function Leaf({ d, x, y, r, angle = 0, fill, opacity = 1 }: LeafProps & { d: string }) {
   return (
-    <div
-      aria-hidden="true"
-      style={{
-        position: 'absolute',
-        ...(position === 'top' ? { top: 0, left: 0 } : { bottom: 0, right: 0 }),
-        lineHeight: 0,
-        pointerEvents: 'none',
-        zIndex: 0,
-        opacity: 0.3,
-      }}
-    >
-      <Art />
-    </div>
+    <path
+      d={d}
+      transform={`translate(${x},${y}) rotate(${angle}) scale(${r})`}
+      fill={fill}
+      opacity={opacity}
+    />
+  );
+}
+
+const MapleLeaf = (props: LeafProps) => <Leaf d={MAPLE_PATH} {...props} />;
+const OakLeaf = (props: LeafProps) => <Leaf d={OAK_PATH} {...props} />;
+
+/**
+ * One pumpkin, built from overlapping ellipses so the outer pair reads as ribs.
+ * Drawn darkest-outward-first; `r` is roughly half the pumpkin's width.
+ */
+function Pumpkin({
+  x, y, r, outer, mid, core, stem = '#4D7C0F',
+}: {
+  x: number; y: number; r: number; outer: string; mid: string; core: string; stem?: string;
+}) {
+  return (
+    <g transform={`translate(${x},${y}) scale(${r})`}>
+      <path d="M0,-.92 C.04,-1.16 .26,-1.3 .44,-1.18"
+        stroke={stem} strokeWidth={0.14} fill="none" strokeLinecap="round" />
+      <ellipse cx={-0.6} cy={0} rx={0.4} ry={0.86} fill={outer} />
+      <ellipse cx={0.6} cy={0} rx={0.4} ry={0.86} fill={outer} />
+      <ellipse cx={-0.31} cy={0} rx={0.48} ry={0.95} fill={mid} />
+      <ellipse cx={0.31} cy={0} rx={0.48} ry={0.95} fill={mid} />
+      <ellipse cx={0} cy={0} rx={0.53} ry={1} fill={core} />
+    </g>
+  );
+}
+
+export function MapleArt({ size = 220 }: ArtProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 220 220" aria-hidden="true">
+      {/* Main branch entering off-canvas top-right, cascading down-left —
+          deliberately echoing the ume composition it replaces. */}
+      <path d="M 228 -5 C 200 20 170 34 146 64 C 126 86 104 94 76 120 C 56 137 36 160 10 200"
+        stroke={BRANCH} strokeWidth="3.5" fill="none" strokeLinecap="round" />
+      <path d="M 146 64 C 162 46 181 38 204 26"
+        stroke={BRANCH} strokeWidth="2.2" fill="none" strokeLinecap="round" />
+      <path d="M 101 96 C 120 80 136 76 150 68"
+        stroke={BRANCH} strokeWidth="1.6" fill="none" strokeLinecap="round" />
+      <path d="M 76 120 C 92 107 106 104 116 99"
+        stroke={BRANCH} strokeWidth="1.4" fill="none" strokeLinecap="round" />
+
+      <MapleLeaf x={150} y={58} r={21} angle={24} fill="#C2410C" />
+      <MapleLeaf x={201} y={24} r={15} angle={-14} fill="#EA580C" />
+      <MapleLeaf x={99} y={98} r={18} angle={12} fill="#D97706" />
+      <MapleLeaf x={118} y={78} r={12} angle={-38} fill="#CA8A04" />
+      <MapleLeaf x={62} y={136} r={13} angle={40} fill="#C2410C" />
+      <MapleLeaf x={26} y={178} r={10} angle={-20} fill="#D97706" opacity={0.8} />
+      <MapleLeaf x={178} y={52} r={8} angle={52} fill="#CA8A04" opacity={0.75} />
+    </svg>
+  );
+}
+
+export function PumpkinArt({ size = 210 }: ArtProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 210 210" aria-hidden="true">
+      <Pumpkin x={74} y={148} r={40} outer="#C2410C" mid="#EA580C" core="#F97316" />
+      <Pumpkin x={140} y={170} r={26} outer="#C2410C" mid="#EA580C" core="#F97316" />
+      {/* Pale gourd, lighter so it reads as a different squash */}
+      <Pumpkin x={168} y={186} r={18} outer="#CA8A04" mid="#CA8A04" core="#FCD34D" />
+
+      <OakLeaf x={30} y={178} r={22} angle={-52} fill="#A16207" />
+
+      {/* Vine and tendril curl */}
+      <path d="M 20 150 C 34 140 30 126 42 120 C 54 114 50 100 62 96"
+        stroke="#4D7C0F" strokeWidth="2" fill="none" strokeLinecap="round" opacity={0.8} />
+      <path d="M 110 104 C 118 96 130 98 130 108 C 130 118 116 120 112 112"
+        stroke="#4D7C0F" strokeWidth="1.8" fill="none" strokeLinecap="round" opacity={0.7} />
+    </svg>
   );
 }
