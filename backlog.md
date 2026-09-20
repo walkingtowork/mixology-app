@@ -24,6 +24,13 @@ per-feature task breakdowns.
 - [ ] Add recipes for home-made ingredients
 - [ ] Think more about handling sugar cubes
 - [ ] Add tags to recipes (and ingredients?) Use the existing `tasks/prd-tags.md`, but review first
+- [ ] **Orders nav badge collides with the active nav link.** `.nav-orders` and
+      `.nav-link.active` use the identical pair — `--color-accent` text on
+      `--color-accent-light` — so when you're on any nav page it reads as two selected
+      items at once (`App.css:88` and `:62`). Needs a third colour for Orders, or a
+      different device entirely (outline, dot, count badge). Tied up with the
+      `--color-primary` / `--color-accent` cleanup in `PROJECT_CONTEXT.md`, since a real
+      primary colour would give Orders somewhere to go. Raised 2026-09-20.
 - [ ] **Buy list / shopping list view** — the model, API and "add to buy list" from
       `IngredientDetail` all exist, but there is no route or page that actually shows the
       list. Small, high-value gap.

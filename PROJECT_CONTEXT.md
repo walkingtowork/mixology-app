@@ -105,6 +105,11 @@ designed — only the amber family was built out.
 hue), reserve `--color-accent` for the amber highlight, and audit every usage of both
 variables to confirm the right semantic token is used.
 
+**A concrete symptom** (found 2026-09-20): the Orders nav badge and the active nav link are
+styled identically — `--color-accent` on `--color-accent-light` — so any nav page looks like
+it has two items selected. Only the amber family was ever built out, so there was no third
+colour to reach for. Fixing the palette properly gives Orders somewhere to go.
+
 ---
 
 ## Menu order stats
