@@ -4,7 +4,7 @@ Decisions, plans, and environment details for the mixology app ("The Bar Cart") 
 aren't derivable from the code or git history. Companion to `PROJECT_REFERENCE.md`
 (what exists) and `backlog.md` (what's queued) — this file captures *why* and *what's agreed*.
 
-Last updated: 2026-09-18
+Last updated: 2026-09-20
 
 ---
 
@@ -175,5 +175,19 @@ menu visual polish — SVG decorations, QR code modal, drag-and-drop menu planni
 
 - The `gh` CLI is not installed locally, so PRs have to be created via a URL. Suggest
   `brew install gh` followed by `gh auth login` next time a PR comes up.
+- **There is no CI.** No `.github/workflows` exists, and both Railway and Vercel auto-deploy
+  on push to `main`, so nothing catches a broken build or a failing test before it reaches
+  production. Run `manage.py check`, `manage.py makemigrations --check --dry-run`,
+  `manage.py test`, `npm run build` and `npx eslint .` before pushing.
+- **Lint has a standing baseline of 8 problems** (7 errors, 1 warning) — pre-existing
+  `no-explicit-any` and `set-state-in-effect` issues. Treat "still 8" as clean and anything
+  above it as newly introduced.
+- **Confirming a deploy landed:** for the frontend, read the bundle name from the root HTML,
+  then download it to a *file* and grep the file — capturing a ~370KB bundle into a shell
+  variable produced a truncated, confidently wrong "not deployed" reading once. Vercel's
+  bundle hash differs from a local build's, so hashes aren't comparable.
+- **`origin/01-23-demo_89bc1ee1_add_activity_feed_api` is deliberately kept.** It holds one
+  unmerged commit from 2026-01-23 adding `graphite-demo/server.js`, a file that exists
+  nowhere else in the repo. It survived the 2026-09-20 branch cleanup on purpose.
 - Preference is to plan before building — open a design discussion before implementing
   larger features.
