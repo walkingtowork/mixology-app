@@ -39,8 +39,12 @@ built after the party against real data.
 - `frontend/src/App.tsx` - New `/menus/:id/stats` route
 
 ### Notes
-- No frontend test framework is set up yet (still open in `backlog.md`), so these tasks
-  carry no test files. Verify by hand against a local menu with seeded orders.
+- **Testing:** there is no frontend test framework (still open in `backlog.md`). The
+  backend has 59 tests in `backend/cocktails/tests.py`, but they cover ingredients,
+  recipes and categories only — **no Menu, MenuItem, Order or BuyList coverage exists**.
+  The decoration fields therefore ship untested, consistent with the rest of the Menu
+  surface. The stats endpoint (task 5.0) is aggregation logic with several edge cases
+  and *should* get tests; see task 5.8.
 - Run the backend from `backend/` with the venv active; frontend from `frontend/`.
 
 ## Instructions for Completing Tasks
@@ -154,6 +158,10 @@ Decided in conversation on 2026-09-18 — do not re-litigate these while impleme
   - [ ] 5.6 Sort drinks by count descending, breaking ties alphabetically so ordering is
         stable between loads
   - [ ] 5.7 Add `fetchMenuStats(menuId)` to `cocktailsApi.ts` and the matching types
+  - [ ] 5.8 Add `MenuStatsAPITests` to `backend/cocktails/tests.py` — first Menu coverage in
+        the suite. Cover: zero-order menu items appear; orders for drinks removed from the
+        menu are flagged `on_menu: false` and still counted in the total; unique guest
+        counting; tie-break ordering; a menu with no orders at all.
 
 - [ ] 6.0 Build the stats page
   - [ ] 6.1 Extract `StatCard` from `.home-stat-card` (`HomePage.css:66`) into

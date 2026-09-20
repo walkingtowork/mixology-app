@@ -51,6 +51,9 @@ per-feature task breakdowns.
 Still entirely unstarted — there is no frontend test framework in the repo, which is why
 the current task lists carry no test files.
 
+- [ ] **Backend: no Menu test coverage.** The 59 tests in `backend/cocktails/tests.py`
+      cover ingredients, recipes and categories only. Menu, MenuItem, Order and BuyList —
+      including menu activation, share tokens and ordering — have no tests at all.
 - [ ] Set up frontend testing framework (Vitest + React Testing Library)
 - [ ] Add unit tests for routing functionality (route rendering, navigation, active states)
 - [ ] Add unit tests for React components (RecipeList, RecipeDetail, RecipeForm, etc.)
