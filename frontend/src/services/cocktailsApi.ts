@@ -1,4 +1,4 @@
-import type { Ingredient, Recipe, IngredientCategory, Menu, BuyListItem, StockLevel, Order, DecorationKey } from '../types/cocktails';
+import type { Ingredient, Recipe, IngredientCategory, Menu, BuyListItem, StockLevel, Order, DecorationKey, MenuStats } from '../types/cocktails';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
@@ -542,6 +542,12 @@ export async function activateMenu(id: number): Promise<Menu> {
     headers: { 'Content-Type': 'application/json' },
   });
   if (!response.ok) throw new Error(`Failed to activate menu: ${response.status}`);
+  return response.json();
+}
+
+export async function fetchMenuStats(menuId: number): Promise<MenuStats> {
+  const response = await fetch(`${API_BASE_URL}/api/menus/${menuId}/stats/`);
+  if (!response.ok) throw new Error(`Failed to fetch menu stats: ${response.status}`);
   return response.json();
 }
 

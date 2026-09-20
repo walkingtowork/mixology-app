@@ -2,7 +2,7 @@ from rest_framework import viewsets, filters, generics, status
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from django.db.models import Max
+from django.db.models import Count, Max, Min
 from django.utils.cache import patch_cache_control
 
 
@@ -129,6 +129,79 @@ class MenuViewSet(viewsets.ModelViewSet):
         menu.is_published = True
         menu.save()
         return Response(MenuSerializer(menu).data)
+
+    @action(detail=True, methods=['get'])
+    def stats(self, request, pk=None):
+        """All-time order counts for one menu.
+
+        Starts from the menu's own items so drinks nobody ordered still appear —
+        aggregating over Order alone can only ever return drinks somebody ordered.
+        Orders also outlive menu membership: pull a drink off a menu after a party
+        and its orders still exist and still point here, so those are folded back in
+        flagged `on_menu: False`, otherwise the totals wouldn't reconcile.
+
+        Guest names are self-entered and grouped exactly as typed, so two guests who
+        both type "Sam" count as one.
+        """
+        menu = self.get_object()
+        orders = Order.objects.filter(menu=menu)
+
+        counts = {
+            row['recipe_id']: row['count']
+            for row in orders.values('recipe_id').annotate(count=Count('id'))
+        }
+
+        names = {}
+        drinks = []
+        for item in menu.items.select_related('recipe'):
+            names[item.recipe_id] = item.recipe.name
+            drinks.append({
+                'recipe_id': item.recipe_id,
+                'name': item.recipe.name,
+                'count': counts.get(item.recipe_id, 0),
+                'on_menu': True,
+            })
+
+        for recipe in Recipe.objects.filter(id__in=set(counts) - set(names)):
+            names[recipe.id] = recipe.name
+            drinks.append({
+                'recipe_id': recipe.id,
+                'name': recipe.name,
+                'count': counts[recipe.id],
+                'on_menu': False,
+            })
+
+        # Count descending, then alphabetical so ties don't reshuffle between loads
+        drinks.sort(key=lambda d: (-d['count'], d['name']))
+
+        by_guest = {}
+        for row in orders.values('guest_name', 'recipe_id').annotate(count=Count('id')):
+            guest = by_guest.setdefault(
+                row['guest_name'],
+                {'name': row['guest_name'], 'count': 0, 'drinks': []},
+            )
+            guest['count'] += row['count']
+            guest['drinks'].append({
+                'name': names.get(row['recipe_id'], 'Unknown'),
+                'count': row['count'],
+            })
+
+        guests = sorted(by_guest.values(), key=lambda g: (-g['count'], g['name']))
+        for guest in guests:
+            guest['drinks'].sort(key=lambda d: (-d['count'], d['name']))
+
+        span = orders.aggregate(first=Min('created_at'), last=Max('created_at'))
+
+        return Response({
+            'menu_id': menu.id,
+            'menu_name': menu.name,
+            'total_orders': sum(counts.values()),
+            'unique_guests': len(by_guest),
+            'first_order_at': span['first'],
+            'last_order_at': span['last'],
+            'drinks': drinks,
+            'guests': guests,
+        })
 
     @action(detail=True, methods=['post'], url_path='add-item')
     def add_item(self, request, pk=None):

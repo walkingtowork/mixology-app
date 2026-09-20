@@ -146,19 +146,19 @@ Decided in conversation on 2026-09-18 — do not re-litigate these while impleme
 
 --- Party-ready after task 4. Tasks 5-7 can land any time after. ---
 
-- [ ] 5.0 Build the stats API endpoint
-  - [ ] 5.1 Add a `stats` action to `MenuViewSet` (detail, GET)
-  - [ ] 5.2 Aggregate order counts per recipe for the menu — start the query from `menu.items`
+- [x] 5.0 Build the stats API endpoint
+  - [x] 5.1 Add a `stats` action to `MenuViewSet` (detail, GET)
+  - [x] 5.2 Aggregate order counts per recipe for the menu — start the query from `menu.items`
         and left-join counts so that **drinks with zero orders still appear**; aggregating over
         `Order` alone can only ever return drinks somebody ordered
-  - [ ] 5.3 Handle orders whose recipe has since been removed from the menu — they still exist
+  - [x] 5.3 Handle orders whose recipe has since been removed from the menu — they still exist
         and still point at this menu. Flag them `on_menu: false` so the totals reconcile
-  - [ ] 5.4 Add `total_orders`, `unique_guests`, `first_order_at`, `last_order_at`
-  - [ ] 5.5 Add the per-guest breakdown: name, total count, and their per-drink counts
-  - [ ] 5.6 Sort drinks by count descending, breaking ties alphabetically so ordering is
+  - [x] 5.4 Add `total_orders`, `unique_guests`, `first_order_at`, `last_order_at`
+  - [x] 5.5 Add the per-guest breakdown: name, total count, and their per-drink counts
+  - [x] 5.6 Sort drinks by count descending, breaking ties alphabetically so ordering is
         stable between loads
-  - [ ] 5.7 Add `fetchMenuStats(menuId)` to `cocktailsApi.ts` and the matching types
-  - [ ] 5.8 Add `MenuStatsAPITests` to `backend/cocktails/tests.py` — first Menu coverage in
+  - [x] 5.7 Add `fetchMenuStats(menuId)` to `cocktailsApi.ts` and the matching types
+  - [x] 5.8 Add `MenuStatsAPITests` to `backend/cocktails/tests.py` — first Menu coverage in
         the suite. Cover: zero-order menu items appear; orders for drinks removed from the
         menu are flagged `on_menu: false` and still counted in the total; unique guest
         counting; tie-break ordering; a menu with no orders at all.

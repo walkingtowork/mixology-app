@@ -94,3 +94,28 @@ export interface BuyListItem {
   notes: string;
   added_at: string;
 }
+
+export interface DrinkStat {
+  recipe_id: number;
+  name: string;
+  count: number;
+  /** False for orders whose drink was removed from the menu after the fact. */
+  on_menu: boolean;
+}
+
+export interface GuestStat {
+  name: string;
+  count: number;
+  drinks: { name: string; count: number }[];
+}
+
+export interface MenuStats {
+  menu_id: number;
+  menu_name: string;
+  total_orders: number;
+  unique_guests: number;
+  first_order_at: string | null;
+  last_order_at: string | null;
+  drinks: DrinkStat[];
+  guests: GuestStat[];
+}

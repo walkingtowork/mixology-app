@@ -1,7 +1,10 @@
 from django.test import TestCase
 from rest_framework.test import APITestCase
 from rest_framework import status
-from .models import Ingredient, Recipe, RecipeIngredient, IngredientCategory
+from .models import (
+    Ingredient, Recipe, RecipeIngredient, IngredientCategory,
+    Menu, MenuItem, Order,
+)
 
 
 class IngredientAPITests(APITestCase):
@@ -918,3 +921,135 @@ class RecipeCategoryFilterTests(APITestCase):
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 0)
+
+
+class MenuStatsAPITests(APITestCase):
+    """Test cases for the per-menu order stats endpoint."""
+
+    def setUp(self):
+        self.menu = Menu.objects.create(name='Autumn Equinox')
+        self.negroni = Recipe.objects.create(name='Negroni')
+        self.martini = Recipe.objects.create(name='Espresso Martini')
+        self.highball = Recipe.objects.create(name='Highball')
+        for order, recipe in enumerate([self.negroni, self.martini, self.highball]):
+            MenuItem.objects.create(menu=self.menu, recipe=recipe, order=order)
+
+    def order(self, recipe, guest, times=1):
+        for _ in range(times):
+            Order.objects.create(menu=self.menu, recipe=recipe, guest_name=guest)
+
+    def get_stats(self):
+        response = self.client.get(f'/api/menus/{self.menu.id}/stats/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        return response.data
+
+    def test_counts_orders_per_drink(self):
+        self.order(self.martini, 'Alex', times=3)
+        self.order(self.negroni, 'Sam')
+
+        data = self.get_stats()
+
+        self.assertEqual(data['total_orders'], 4)
+        counts = {d['name']: d['count'] for d in data['drinks']}
+        self.assertEqual(counts['Espresso Martini'], 3)
+        self.assertEqual(counts['Negroni'], 1)
+
+    def test_drinks_nobody_ordered_still_appear(self):
+        """The whole point of starting from menu.items rather than Order."""
+        self.order(self.martini, 'Alex')
+
+        data = self.get_stats()
+
+        names = {d['name'] for d in data['drinks']}
+        self.assertIn('Highball', names)
+        zero = next(d for d in data['drinks'] if d['name'] == 'Highball')
+        self.assertEqual(zero['count'], 0)
+        self.assertTrue(zero['on_menu'])
+
+    def test_orders_survive_removal_from_menu(self):
+        """Orders outlive menu membership and must still reconcile with the total."""
+        self.order(self.negroni, 'Sam', times=2)
+        MenuItem.objects.filter(menu=self.menu, recipe=self.negroni).delete()
+
+        data = self.get_stats()
+
+        negroni = next(d for d in data['drinks'] if d['name'] == 'Negroni')
+        self.assertEqual(negroni['count'], 2)
+        self.assertFalse(negroni['on_menu'])
+        self.assertEqual(data['total_orders'], 2)
+
+    def test_counts_unique_guests(self):
+        self.order(self.martini, 'Alex', times=2)
+        self.order(self.negroni, 'Alex')
+        self.order(self.negroni, 'Sam')
+
+        data = self.get_stats()
+
+        self.assertEqual(data['unique_guests'], 2)
+        self.assertEqual(data['total_orders'], 4)
+
+    def test_guest_breakdown_lists_each_guests_drinks(self):
+        self.order(self.martini, 'Alex', times=2)
+        self.order(self.negroni, 'Alex')
+        self.order(self.highball, 'Sam')
+
+        data = self.get_stats()
+
+        alex = next(g for g in data['guests'] if g['name'] == 'Alex')
+        self.assertEqual(alex['count'], 3)
+        self.assertEqual(
+            [(d['name'], d['count']) for d in alex['drinks']],
+            [('Espresso Martini', 2), ('Negroni', 1)],
+        )
+
+    def test_guests_sorted_by_count_descending(self):
+        self.order(self.martini, 'Sam')
+        self.order(self.negroni, 'Alex', times=3)
+
+        data = self.get_stats()
+
+        self.assertEqual([g['name'] for g in data['guests']], ['Alex', 'Sam'])
+
+    def test_ties_break_alphabetically(self):
+        """Stable ordering between loads, rather than whatever the DB returns."""
+        self.order(self.negroni, 'Sam')
+        self.order(self.martini, 'Alex')
+        self.order(self.highball, 'Sam')
+
+        data = self.get_stats()
+
+        self.assertEqual(
+            [d['name'] for d in data['drinks']],
+            ['Espresso Martini', 'Highball', 'Negroni'],
+        )
+
+    def test_menu_with_no_orders(self):
+        data = self.get_stats()
+
+        self.assertEqual(data['total_orders'], 0)
+        self.assertEqual(data['unique_guests'], 0)
+        self.assertIsNone(data['first_order_at'])
+        self.assertIsNone(data['last_order_at'])
+        self.assertEqual(data['guests'], [])
+        self.assertEqual(len(data['drinks']), 3)
+        self.assertTrue(all(d['count'] == 0 for d in data['drinks']))
+
+    def test_reports_order_time_span(self):
+        self.order(self.martini, 'Alex', times=2)
+
+        data = self.get_stats()
+
+        self.assertIsNotNone(data['first_order_at'])
+        self.assertIsNotNone(data['last_order_at'])
+        self.assertLessEqual(data['first_order_at'], data['last_order_at'])
+
+    def test_orders_on_another_menu_are_excluded(self):
+        other = Menu.objects.create(name='Summer')
+        MenuItem.objects.create(menu=other, recipe=self.martini, order=0)
+        Order.objects.create(menu=other, recipe=self.martini, guest_name='Someone')
+        self.order(self.negroni, 'Alex')
+
+        data = self.get_stats()
+
+        self.assertEqual(data['total_orders'], 1)
+        self.assertEqual(data['unique_guests'], 1)
