@@ -1,6 +1,6 @@
 # Product Backlog
 
-Last reviewed: 2026-09-18. Status verified against the code, not just memory — several
+Last reviewed: 2026-09-20. Status verified against the code, not just memory — several
 items below had shipped long ago but were never checked off.
 
 See `PROJECT_CONTEXT.md` for the *why* behind agreed decisions, and `tasks/` for
