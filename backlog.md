@@ -41,6 +41,10 @@ per-feature task breakdowns.
       nudging guests toward distinct names. Guest names are self-entered and not unique, so
       two guests named "Sam" merge into one row in menu stats. Agreed to consider, not to
       implement yet.
+- [ ] **View recipes from the stats page** — drink names on `/menus/:id/stats` are plain
+      text. Consider linking them through to the recipe, or showing the recipe inline, so
+      you can go from "the Federation went 6 times" straight to how it's made. Raised
+      2026-09-20; no design decisions yet.
 - [ ] **Last call / ordering cutoff** for the public menu — the one piece of the original
       ordering plan that was never built.
 - [ ] **Non-alcoholic / N/A menu options** — either a separate N/A menu type or tagging

@@ -105,6 +105,16 @@
   flex-shrink: 0;
 }
 
+/* Icon-only sibling of the text buttons. Deliberately not .btn-icon, whose
+   fixed 2.5rem square would tower over the padding-sized .btn-sm buttons
+   beside it; the flex row's default stretch keeps the heights matched. */
+.menu-card-view {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: var(--space-2);
+}
+
 .menu-fab {
   display: none;
 }
