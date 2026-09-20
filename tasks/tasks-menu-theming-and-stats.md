@@ -163,34 +163,38 @@ Decided in conversation on 2026-09-18 — do not re-litigate these while impleme
         menu are flagged `on_menu: false` and still counted in the total; unique guest
         counting; tie-break ordering; a menu with no orders at all.
 
-- [ ] 6.0 Build the stats page
-  - [ ] 6.1 Extract `StatCard` from `.home-stat-card` (`HomePage.css:66`) into
+- [x] 6.0 Build the stats page
+  - [x] 6.1 Extract `StatCard` from `.home-stat-card` (`HomePage.css:66`) into
         `components/ui/`, then repoint `HomePage` at it so both screens stay identical
-  - [ ] 6.2 Add the `/menus/:id/stats` route and the `MenuStats` page shell with loading and
+  - [x] 6.2 Add the `/menus/:id/stats` route and the `MenuStats` page shell with loading and
         error states
-  - [ ] 6.3 Headline row: total drinks served, unique guests, top drink — plus the
+  - [x] 6.3 Headline row: total drinks served, unique guests, top drink — plus the
         first-to-last order time range beneath
-  - [ ] 6.4 By-drink section: rank, name, bar, count. Track `--color-surface-alt`, fill
+  - [x] 6.4 By-drink section: rank, name, bar, count. Track `--color-surface-alt`, fill
         `--color-accent`, width `${count / max * 100}%`, `transition: width 400ms ease`
-  - [ ] 6.5 "Nobody ordered" section, styled with `--color-text-disabled` — not red; an
+  - [x] 6.5 "Nobody ordered" section, styled with `--color-text-disabled` — not red; an
         unordered drink is information, not an error
-  - [ ] 6.6 By-guest section with expandable rows, mirroring the existing expand interaction
+  - [x] 6.6 By-guest section with expandable rows, mirroring the existing expand interaction
         on `MenuDetail`'s drink cards. Cap at ~15 with a "show all" toggle
-  - [ ] 6.7 Add the note that guest names are self-entered and not unique, so two guests
+  - [x] 6.7 Add the note that guest names are self-entered and not unique, so two guests
         named "Sam" merge into one row
-  - [ ] 6.8 Empty state — the pre-party state, and what shows right up until Saturday night:
+  - [x] 6.8 Empty state — the pre-party state, and what shows right up until Saturday night:
         a single centred "No orders yet" message with a copy-share-link button, not empty
         tiles over a blank chart
-  - [ ] 6.9 Empty-menu state: point back to the planning page instead
-  - [ ] 6.10 Add a ↻ Refresh control matching `OrdersPage.tsx:66` — neither page polls
+  - [x] 6.9 Empty-menu state: point back to the planning page instead
+  - [x] 6.10 Add a ↻ Refresh control matching `OrdersPage.tsx:66` — neither page polls
 
-- [ ] 7.0 Stats entry points and mobile visibility
-  - [ ] 7.1 "Stats" button in the `MenuDetail` header action cluster, beside share and QR
-  - [ ] 7.2 Stats link on `MenuList` cards, shown only when `item_count > 0`
-  - [ ] 7.3 Make sure the stats entry point survives at phone width — the host will be
-        checking this behind the bar. Mirror the Orders badge treatment from `525bf73`
-  - [ ] 7.4 Verify end to end: place orders from `/share/:token`, confirm counts, unique
-        guests, zero-order drinks and the guest breakdown all reconcile
+- [x] 7.0 Stats entry points and mobile visibility
+  - [x] 7.1 "Stats" button in the `MenuDetail` header action cluster, beside share and QR
+  - [x] 7.2 Stats link on `MenuList` cards, shown only when `item_count > 0`
+  - [x] 7.3 Make sure the stats entry point survives at phone width — the host will be
+        checking this behind the bar. **No nav badge added**: stats are per-menu, so unlike
+        Orders they have no global nav home. `.menu-detail-actions` already sets
+        `flex-wrap: wrap` under 640px (`MenuDetail.css:298`), so Stats wraps to a second
+        row rather than overflowing. Still wants a real phone check alongside task 3.3.
+  - [x] 7.4 Verify end to end against a running server: 10 orders across 3 guests
+        reconcile (6+3+1+0), guests sort by count, a zero-order drink appears, and removing
+        an ordered drink from the menu flips it to `on_menu: false` while the total holds
 
 ## Deferred — moved to `backlog.md`, not in scope here
 

@@ -311,6 +311,9 @@ export default function MenuDetail() {
             <Link to={`/menus/${menuId}/edit`} className="btn btn-secondary btn-sm">
               Edit
             </Link>
+            <Link to={`/menus/${menuId}/stats`} className="btn btn-secondary btn-sm">
+              Stats
+            </Link>
             <Button variant="secondary" size="sm" className="btn-icon" onClick={handleShare} title={copied ? 'Copied!' : 'Copy share link'}>
               {copied ? (
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>

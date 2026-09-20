@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { fetchRecipes, fetchIngredients, fetchCategories } from '../services/cocktailsApi';
+import StatCard from './ui/StatCard';
 import './HomePage.css';
 
 export default function HomePage() {
@@ -53,18 +53,9 @@ export default function HomePage() {
       </div>
 
       <div className="home-stats">
-        <Link to="/recipes" className="home-stat-card">
-          <span className="home-stat-number">{counts?.recipes ?? '—'}</span>
-          <span className="home-stat-label">Recipes</span>
-        </Link>
-        <Link to="/ingredients" className="home-stat-card">
-          <span className="home-stat-number">{counts?.ingredients ?? '—'}</span>
-          <span className="home-stat-label">Ingredients</span>
-        </Link>
-        <Link to="/categories" className="home-stat-card">
-          <span className="home-stat-number">{counts?.categories ?? '—'}</span>
-          <span className="home-stat-label">Categories</span>
-        </Link>
+        <StatCard to="/recipes" value={counts?.recipes ?? '—'} label="Recipes" />
+        <StatCard to="/ingredients" value={counts?.ingredients ?? '—'} label="Ingredients" />
+        <StatCard to="/categories" value={counts?.categories ?? '—'} label="Categories" />
       </div>
 
       <div className="home-glasses">

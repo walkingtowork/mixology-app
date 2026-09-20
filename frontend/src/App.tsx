@@ -10,6 +10,7 @@ import HomePage from './components/HomePage';
 import MenuList from './components/menus/MenuList';
 import MenuForm from './components/menus/MenuForm';
 import MenuDetail from './components/menus/MenuDetail';
+import MenuStats from './components/menus/MenuStats';
 import PublicMenu from './components/menus/PublicMenu';
 import OrdersPage from './components/orders/OrdersPage';
 import { fetchOrders } from './services/cocktailsApi';
@@ -66,6 +67,7 @@ function App() {
                 <Route path="/menus/new" element={<MenuForm />} />
                 <Route path="/menus/:id" element={<MenuDetail />} />
                 <Route path="/menus/:id/edit" element={<MenuForm />} />
+                <Route path="/menus/:id/stats" element={<MenuStats />} />
                 <Route path="/orders" element={<OrdersPage />} />
               </Routes>
             </main>

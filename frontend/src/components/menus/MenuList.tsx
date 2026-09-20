@@ -65,6 +65,9 @@ export default function MenuList() {
               </div>
               <div className="menu-card-actions">
                 <Link to={`/menus/${menu.id}`} className="btn btn-secondary btn-sm">Plan</Link>
+                {menu.item_count > 0 && (
+                  <Link to={`/menus/${menu.id}/stats`} className="btn btn-secondary btn-sm">Stats</Link>
+                )}
                 <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(menu)}>Delete</Button>
               </div>
             </div>
