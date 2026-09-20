@@ -48,8 +48,8 @@ per-feature task breakdowns.
 
 ## Testing
 
-Still entirely unstarted — there is no frontend test framework in the repo, which is why
-the current task lists carry no test files.
+The backend has 59 tests in `backend/cocktails/tests.py`, but they stop at ingredients,
+recipes and categories. The frontend has no test framework at all.
 
 - [ ] **Backend: no Menu test coverage.** The 59 tests in `backend/cocktails/tests.py`
       cover ingredients, recipes and categories only. Menu, MenuItem, Order and BuyList —
