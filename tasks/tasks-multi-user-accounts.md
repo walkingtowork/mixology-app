@@ -86,15 +86,15 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
 - [x] 0.0 Create feature branch
   - [x] 0.1 `git checkout -b feature/multi-user-accounts` from an up-to-date `main`
 
-- [ ] 1.0 Fix `SECRET_KEY` and deploy hardening — ships first, breaks nothing
+- [x] 1.0 Fix `SECRET_KEY` and deploy hardening — ships first, breaks nothing
   - [x] 1.1 Rename `DJANGO_SECRET_KEY` → `SECRET_KEY` in `backend/.env.example` so it matches what `settings.py:36` actually reads
   - [x] 1.2 Remove the `django-insecure-…` fallback; raise `ImproperlyConfigured` at startup when `DEBUG=False` and `SECRET_KEY` is unset, keeping a dev-only fallback for `DEBUG=True`
-  - [ ] 1.3 Generate a fresh key and rotate the Railway env var — do it now, while there are no real sessions to invalidate
+  - [x] 1.3 Generate a fresh key and rotate the Railway env var — do it now, while there are no real sessions to invalidate
   - [x] 1.4 Add `SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE` and HSTS under `if not DEBUG`. `SECURE_SSL_REDIRECT` got its **own env var** instead: the test runner forces `DEBUG` off, so tying the redirect to `DEBUG` would 301 every request in CI and fail the suite. `SECURE_PROXY_SSL_HEADER` is set unconditionally, since Railway terminates TLS and the redirect would otherwise loop
   - [x] 1.5 Set `SESSION_COOKIE_SAMESITE = 'Lax'` and `CSRF_COOKIE_SAMESITE = 'Lax'` explicitly, even though Lax is already Django's default
   - [x] 1.6 Run `python manage.py check --deploy` and resolve or consciously accept each warning
   - [x] 1.7 Confirm history needs no rewriting: no real `.env` was ever committed and `.gitignore` has always covered it — rotation makes the old key worthless
-  - [ ] 1.8 Deploy and verify the site still loads
+  - [x] 1.8 Deploy and verify the site still loads — merged as PR #15 (`13a98e4`). Verified live rather than assumed: `strict-transport-security: max-age=2592000; includeSubDomains` (the configured 30 days, no `preload`), plain HTTP 301s to HTTPS so Railway is reading `SECURE_SSL_REDIRECT`, and `Vary: Cookie` is present
 
 - [ ] 2.0 Continuous integration
   - [ ] 2.1 Add `.github/workflows/ci.yml` triggered on push and pull request
