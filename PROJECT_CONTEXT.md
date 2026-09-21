@@ -16,9 +16,15 @@ Last updated: 2026-09-21
 - Root directory: `backend/`
 - Start command: `python manage.py migrate && gunicorn backend.wsgi --workers 3`
 - Env vars: `SECRET_KEY`, `ALLOWED_HOSTS=.railway.app`, `DEBUG=False`,
-  `CORS_ALLOWED_ORIGINS=https://mixology-app-eight.vercel.app`, `DATABASE_URL` (auto)
+  `CORS_ALLOWED_ORIGINS=https://thebarcart.vercel.app,https://mixology-app-eight.vercel.app`,
+  `DATABASE_URL` (auto)
 
-**Frontend** — React/Vite on Vercel: `https://mixology-app-eight.vercel.app`
+**Frontend** — React/Vite on Vercel: `https://thebarcart.vercel.app` (renamed 2026-09-21;
+the old `mixology-app-eight.vercel.app` stays as a 307 redirect, which keeps already-printed
+QR codes working). Share URLs are built from `window.location.origin`
+(`MenuDetail.tsx:273`, `:384`), so nothing is hardcoded and new QR codes pick up the new
+domain automatically. **Renaming the Vercel domain breaks the API until
+`CORS_ALLOWED_ORIGINS` is updated in Railway** — it is an env var, so no redeploy is needed.
 - Repo: `walkingtowork/mixology-app`, root directory: `frontend/`
 - Env var: `VITE_API_BASE_URL=https://mixology-app-production.up.railway.app`
 - Vercel agent plugin is installed for Vercel-related tasks

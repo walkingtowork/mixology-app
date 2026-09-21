@@ -123,10 +123,10 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
   - [ ] 5.2 Add `/admin/:path*` → Railway rewrite as well — task 6.0 depends on being able to log into Django admin on the Vercel origin
   - [ ] 5.3 Point `VITE_API_BASE_URL` at a relative path and update `frontend/.env.example`
   - [ ] 5.4 Add a matching `server.proxy` entry to `vite.config.ts` so local dev is structurally identical and cookie bugs surface on your laptop
-  - [ ] 5.5 Add `CSRF_TRUSTED_ORIGINS = ['https://mixology-app-eight.vercel.app']` — the browser's `Origin` says vercel.app while Django's `Host` says railway.app, and Django's CSRF check compares them
+  - [ ] 5.5 Add `CSRF_TRUSTED_ORIGINS = ['https://thebarcart.vercel.app']` — the browser's `Origin` says vercel.app while Django's `Host` says railway.app, and Django's CSRF check compares them
   - [ ] 5.6 Leave `SESSION_COOKIE_DOMAIN` unset; pinning it to the Railway host makes the browser reject the cookie outright
   - [ ] 5.7 Verify Vercel forwards the destination's `Host` so `ALLOWED_HOSTS=.railway.app` still passes — a mismatch appears as a 400 `DisallowedHost`
-  - [ ] 5.8 Decide where preview deployments proxy to, so an unfinished branch cannot write to production data
+  - [ ] 5.8 Decide where preview deployments proxy to, so an unfinished branch cannot write to production data. Note a second *Vercel* project is not the answer — previews are automatic per-branch within one project, and the risk is which **backend** they reach. Doing this properly needs a second Railway environment with its own database, plus a small proxy function in place of the static rewrite, because `vercel.json` cannot interpolate env vars into a destination. Cheapest safe option for now: turn preview deployments off until multi-user ships
   - [ ] 5.9 Test on a real iOS device, since that is the browser this whole decision exists to satisfy
 
 - [ ] 6.0 Close the exposure — default-deny API
