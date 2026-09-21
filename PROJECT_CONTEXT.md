@@ -4,7 +4,7 @@ Decisions, plans, and environment details for the mixology app ("The Bar Cart") 
 aren't derivable from the code or git history. Companion to `PROJECT_REFERENCE.md`
 (what exists) and `backlog.md` (what's queued) — this file captures *why* and *what's agreed*.
 
-Last updated: 2026-09-20
+Last updated: 2026-09-21
 
 ---
 
@@ -16,9 +16,20 @@ Last updated: 2026-09-20
 - Root directory: `backend/`
 - Start command: `python manage.py migrate && gunicorn backend.wsgi --workers 3`
 - Env vars: `SECRET_KEY`, `ALLOWED_HOSTS=.railway.app`, `DEBUG=False`,
-  `CORS_ALLOWED_ORIGINS=https://mixology-app-eight.vercel.app`, `DATABASE_URL` (auto)
+  `CORS_ALLOWED_ORIGINS=https://thebarcart.vercel.app,https://mixology-app-eight.vercel.app`,
+  `SECURE_SSL_REDIRECT=True`, `DATABASE_URL` (auto)
+- `SECRET_KEY` has **no fallback** since 2026-09-21 — the app raises `ImproperlyConfigured`
+  at startup if it is missing while `DEBUG=False`, rather than silently using the
+  `django-insecure-` literal committed in `ade7f58`. Local dev needs `DEBUG=True` in
+  `backend/.env`, both to get a fallback key and to keep the production-only security
+  settings off plain-http localhost
 
-**Frontend** — React/Vite on Vercel: `https://mixology-app-eight.vercel.app`
+**Frontend** — React/Vite on Vercel: `https://thebarcart.vercel.app` (renamed 2026-09-21;
+the old `mixology-app-eight.vercel.app` stays as a 307 redirect, which keeps already-printed
+QR codes working). Share URLs are built from `window.location.origin`
+(`MenuDetail.tsx:273`, `:384`), so nothing is hardcoded and new QR codes pick up the new
+domain automatically. **Renaming the Vercel domain breaks the API until
+`CORS_ALLOWED_ORIGINS` is updated in Railway** — it is an env var, so no redeploy is needed.
 - Repo: `walkingtowork/mixology-app`, root directory: `frontend/`
 - Env var: `VITE_API_BASE_URL=https://mixology-app-production.up.railway.app`
 - Vercel agent plugin is installed for Vercel-related tasks
@@ -143,7 +154,94 @@ Note `cancelOrder` hard-deletes, so cancelled drinks leave no trace — there is
 
 ---
 
+## Multi-user accounts — agreed decisions
+
+**Status: planned**, not started. Full task breakdown in `tasks/tasks-multi-user-accounts.md`.
+
+Motivation: the app was built single-user with no authentication at all. Sharing a menu link
+lets a guest truncate the URL and reach the full app, and — more seriously — the API has no
+`REST_FRAMEWORK` block, so DRF defaults to `AllowAny` and anyone can `curl -X DELETE` any
+record without a browser. Decided in conversation on 2026-09-21:
+
+- **Session cookie auth**, not tokens. Django's own session machinery, `HttpOnly`, immune to
+  XSS token theft, and it reuses the built-in password-reset crypto.
+- **Same-origin via a Vercel proxy**, not a custom domain (yet). `vercel.app` and
+  `up.railway.app` are both on the Public Suffix List, so no shared parent cookie is possible
+  and a cross-site session cookie would be blocked outright by Safari/iOS — the exact devices
+  used behind the bar. An `/api/:path*` rewrite in `frontend/vercel.json` makes the browser
+  talk to one origin, so the cookie is first-party, `SameSite=Lax` keeps working, and CORS
+  stops being load-bearing. A custom domain is strictly better and remains the upgrade path:
+  delete the rewrite, change one env var. Nothing built on the proxy is wasted.
+- **`SameSite=Lax`** (Django's default) set *explicitly* in settings, so it reads as a
+  decision and won't move under a future Django upgrade. It is defence in depth, not a
+  replacement for CSRF tokens — keep `CsrfViewMiddleware` and DRF's CSRF enforcement.
+- **Email is the login identifier**, not username. Friends expect it, and it matches the
+  "change the email you signed up with" requirement.
+- **Invite-only signup.** No public registration form to find and farm.
+- **New accounts start completely empty.** Every category, ingredient, recipe and menu belongs
+  to exactly one user; nothing is shared or seeded. A starter-ingredient wizard is deliberately
+  deferred to `backlog.md` so the ownership model stays totally open.
+- **Django admin is the admin area.** `accounts/admin.py` already registers `User` with list
+  display, filters and search; it just needs the domain models to expose and filter by owner.
+  No custom React admin — that would be the single largest chunk of work here for the least
+  return. Accepted cost: admin is a separate login, so you sign in twice.
+- **Password reset is built in full now, but delivered by hand at first.** Django's reset is
+  two separable halves — token generation/validation needs nothing external; only *delivery*
+  needs email. Build the real flow, point `EMAIL_BACKEND` at the console backend, and add an
+  admin action that prints a copyable reset link. Switching to Gmail SMTP later is four env
+  vars and zero code. The trap to avoid is not building the flow and retrofitting it.
+- **Invites are delivered by hand too** — generate a link in Django admin, text it over.
+  With invite-only signup the invite *is* the email verification, so that's one fewer
+  dependency.
+- **Rate limiting at "Tier 1" only**: DRF throttling plus `django-axes`. No Redis, no Vercel
+  shared-secret gate. Note DRF throttling is inaccurate under `gunicorn --workers 3` (each
+  worker counts separately), but `django-axes` is DB-backed and therefore accurate across
+  workers — and login brute-force is the case that actually matters.
+- **CI plus a rehearsed backup**, not a full staging environment. They cover different
+  failures: CI catches code regressions (a broken tenant-isolation test is worthless if
+  nobody runs it), a backup catches data disasters. Restoring a production dump locally and
+  running the migration against it gets most of staging's value for a fraction of the cost.
+- **The ownership migration is phased across separate deploys** — add nullable `owner`,
+  backfill, then enforce `NOT NULL` and per-owner uniqueness. This matters more than usual
+  because Railway runs `migrate` inside its start command: a migration that fails partway
+  doesn't warn, it stops gunicorn from booting at all.
+
+- **Vercel preview deployments are turned off** for the duration (decided 2026-09-21). They
+  would otherwise proxy `/api` to production Railway, letting an unfinished branch write to
+  real data. Proper isolation needs a second Railway environment plus a proxy function, which
+  is not worth it for a solo project with no PR-review workflow.
+- **A custom domain is deferred until the app goes public.** `thebarcart.vercel.app` is still
+  under the `vercel.app` public suffix, so the rename on 2026-09-21 changed nothing about the
+  cookie problem. Buying `thebarcart.com` would remove the proxy hop, make the session cookie
+  first-party without any rewrite, and is a prerequisite for putting Cloudflare in front of
+  the API — revisit it as part of any public-launch conversation, not before.
+
+**Two landmines this uncovered**, both recorded because they are easy to miss:
+
+- `CacheReadsMixin` (`cocktails/views.py:11`) stamps `Cache-Control: public` on every 200 GET
+  for `Ingredient`, `Recipe` and `IngredientCategory` — precisely the three viewsets about to
+  become per-user — while `PublicMenuView`, the one endpoint that genuinely benefits, has no
+  caching at all. Putting a CDN in front of `public` responses is how one user gets served
+  another's data. The fix is to invert it: drop caching from the owner-scoped viewsets and
+  move it to the public menu (short max-age, so a late typo fix still propagates fast). This
+  must land *with or before* the proxy.
+- `backend/.env.example` documents `DJANGO_SECRET_KEY` while `settings.py:36` reads
+  `SECRET_KEY`, falling back to the committed `django-insecure-…` placeholder from commit
+  `ade7f58`. Following the repo's own example file lands you silently on a public key, at
+  which point session cookies are forgeable. No real `.env` was ever committed and
+  `.gitignore` has always covered it, so git history does *not* need rewriting — rotating the
+  Railway value makes the old one worthless.
+
+**Deferred security work** is listed in `backlog.md` under "Security — deferred from
+multi-user planning". It is safe for a handful of invited friends and explicitly *not* safe
+for a public launch; raise it before any such conversation.
+
+---
+
 ## Next features to build
+
+**The multi-user overhaul above is now the active project** and supersedes the ordering below
+until it ships.
 
 1. **Menu theming via decoration selector** (in progress — deadline 2026-09-20)
    - See "Menu decoration system" above

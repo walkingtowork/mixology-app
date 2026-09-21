@@ -73,14 +73,24 @@ Copy the example environment file and update with your values:
 cp .env.example .env
 ```
 
-Edit `.env` and set your `DJANGO_SECRET_KEY`:
+Edit `.env` and set `DEBUG` and `SECRET_KEY`:
 
 ```
-DJANGO_SECRET_KEY=your-secret-key-here
-API_BASE_URL=http://localhost:8000
+DEBUG=True
+SECRET_KEY=replace-me-for-local-development
 ```
 
-**Note**: For development, you can use the default secret key, but for production, generate a secure key.
+Generate a key with:
+
+```bash
+python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
+
+**Note**: the variable is `SECRET_KEY`, not `DJANGO_SECRET_KEY` — `settings.py` reads the
+former, and this file documented the latter until 2026-09-21. Local development needs
+`DEBUG=True`: with `DEBUG=False` and no `SECRET_KEY` the app refuses to start, and the
+production-only security settings (secure cookies, HSTS) would be applied to plain-http
+localhost. There is deliberately no production fallback key.
 
 ### 6. Run Database Migrations
 

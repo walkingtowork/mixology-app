@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 from dotenv import load_dotenv
+from django.core.exceptions import ImproperlyConfigured
 import dj_database_url
 import os
 
@@ -25,10 +26,22 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-68g&=jn#dwcvnifjx0#asl%g&wv9=#q#qy%eacqo&!_d66%nyi')
-
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
+
+# SECURITY WARNING: keep the secret key used in production secret!
+# There is deliberately NO production fallback. Until 2026-09-21 this line read
+#     SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-...')
+# with the literal committed in ade7f58, so a missing or misspelled env var silently
+# signed sessions and password-reset tokens with a value that is public in this repo's
+# history. `.env.example` even documented the wrong variable name. Fail loudly instead.
+SECRET_KEY = os.getenv('SECRET_KEY')
+if not SECRET_KEY:
+    if not DEBUG:
+        raise ImproperlyConfigured(
+            "SECRET_KEY is required when DEBUG is False. Set it in the deployment "
+            "environment (Railway), or in backend/.env for local development."
+        )
+    SECRET_KEY = 'django-insecure-local-development-only'
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
@@ -146,3 +159,31 @@ CORS_ALLOWED_ORIGINS = [
 ] + _extra_cors
 
 CORS_ALLOW_CREDENTIALS = True
+
+
+# Security
+# SameSite=Lax is already Django's default for both cookies. It is set explicitly so it
+# reads as a decision rather than an inherited default, and so a future Django upgrade
+# cannot move it silently. It is defence in depth, NOT a replacement for CSRF tokens:
+# "same site" means same eTLD+1, so a compromised sibling subdomain would still qualify.
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_HTTPONLY = True
+
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 60 * 60 * 24 * 30  # 30 days; raise to a year once verified
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    # SECURE_HSTS_PRELOAD stays False on purpose: `preload` is a commitment about a
+    # domain we do not own (*.up.railway.app). Revisit alongside a custom domain.
+    # `manage.py check --deploy` flags this as W021 - a consciously accepted warning.
+
+# Railway terminates TLS and forwards the original scheme in X-Forwarded-Proto; without
+# this Django sees plain http and an SSL redirect would loop forever.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Deliberately its own env var rather than `if not DEBUG`. Django's test runner forces
+# DEBUG off, so tying the redirect to DEBUG would turn every request in CI into a 301
+# and fail the whole suite. Set SECURE_SSL_REDIRECT=True in Railway.
+SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'False') == 'True'
