@@ -96,14 +96,14 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
   - [x] 1.7 Confirm history needs no rewriting: no real `.env` was ever committed and `.gitignore` has always covered it — rotation makes the old key worthless
   - [x] 1.8 Deploy and verify the site still loads — merged as PR #15 (`13a98e4`). Verified live rather than assumed: `strict-transport-security: max-age=2592000; includeSubDomains` (the configured 30 days, no `preload`), plain HTTP 301s to HTTPS so Railway is reading `SECURE_SSL_REDIRECT`, and `Vary: Cookie` is present
 
-- [ ] 2.0 Continuous integration
+- [x] 2.0 Continuous integration
   - [x] 2.1 Add `.github/workflows/ci.yml` triggered on push and pull request
   - [x] 2.2 Backend job: install `requirements.txt`, run `python manage.py test`. **The job must set a `SECRET_KEY` env var** — since 1.2 there is no fallback when `DEBUG=False`, and the test runner forces `DEBUG` off, so a bare checkout raises `ImproperlyConfigured` at import. Leave `SECURE_SSL_REDIRECT` unset so CI requests are not redirected
   - [x] 2.3 Backend job: `python manage.py makemigrations --check --dry-run` to catch model changes with no migration
   - [x] 2.4 Backend job: `python manage.py check --deploy`
   - [x] 2.5 Frontend job: `npm ci`, `npm run build` (this runs `tsc -b`), `npx eslint .`
   - [x] 2.6 Decide how to handle the standing 8-problem lint baseline — fail above 8, rather than failing on any problem
-  - [ ] 2.7 Confirm a deliberately broken test actually fails the workflow, then revert it
+  - [x] 2.7 Confirm a deliberately broken test actually fails the workflow, then revert it — done 2026-09-21 (`8b9d30d`, reverted in `8fdf150`). Backend went red in 11s while the frontend stayed green, confirming the jobs are independent. **It also exposed that nothing gates the merge**: GitHub still offered a green merge button with a failing check. Tracked in `backlog.md`
   - [x] 2.8 Note in `PROJECT_CONTEXT.md` that CI now exists, replacing the "there is no CI" working note
 
 - [ ] 3.0 Extract a single request helper in `cocktailsApi.ts`
@@ -126,7 +126,7 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
   - [ ] 5.5 Add `CSRF_TRUSTED_ORIGINS = ['https://thebarcart.vercel.app']` — the browser's `Origin` says vercel.app while Django's `Host` says railway.app, and Django's CSRF check compares them
   - [ ] 5.6 Leave `SESSION_COOKIE_DOMAIN` unset; pinning it to the Railway host makes the browser reject the cookie outright
   - [ ] 5.7 Verify Vercel forwards the destination's `Host` so `ALLOWED_HOSTS=.railway.app` still passes — a mismatch appears as a 400 `DisallowedHost`
-  - [ ] 5.8 **Decided 2026-09-21: turn preview deployments off** in the Vercel project settings before the `/api` rewrite lands, so no preview can ever reach production data. A second Vercel project is not what this needs — previews are automatic per-branch within one project, and the risk is which *backend* they reach. Proper preview isolation would need a second Railway environment with its own database plus a proxy function in place of the static rewrite, since `vercel.json` cannot interpolate env vars into a destination. Revisit only if previews start earning their keep
+  - [ ] 5.8 **Decided 2026-09-21: turn preview deployments off** in the Vercel project settings before the `/api` rewrite lands, so no preview can ever reach production data. A second Vercel project is not what this needs — previews are automatic per-branch within one project, and the risk is which *backend* they reach. Proper preview isolation would need a second Railway environment with its own database plus a proxy function in place of the static rewrite, since `vercel.json` cannot interpolate env vars into a destination. Revisit only if previews start earning their keep. **More urgent than it first looked:** previews are already live — the CI PR produced a Vercel preview deployment on 2026-09-21 — and `VITE_API_BASE_URL` points them at production Railway, so a preview branch can write to real data *today*. This is not only a future-proxy concern
   - [ ] 5.9 Test on a real iOS device, since that is the browser this whole decision exists to satisfy
 
 - [ ] 6.0 Close the exposure — default-deny API
