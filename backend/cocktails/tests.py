@@ -22,7 +22,9 @@ class IngredientAPITests(APITestCase):
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 3)
+        # TEMPORARY: deliberately wrong (setUp creates 3) to prove CI fails the build.
+        # Task 2.7 of tasks-multi-user-accounts.md. Reverted in the very next commit.
+        self.assertEqual(len(response.data), 4)
         self.assertEqual(response.data[0]['name'], 'Gin')
         self.assertEqual(response.data[1]['name'], 'Lemon Juice')  # Ordered by name
         self.assertEqual(response.data[2]['name'], 'Vermouth')
