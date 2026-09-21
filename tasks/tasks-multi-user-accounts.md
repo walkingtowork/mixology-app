@@ -126,7 +126,7 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
   - [ ] 5.5 Add `CSRF_TRUSTED_ORIGINS = ['https://thebarcart.vercel.app']` — the browser's `Origin` says vercel.app while Django's `Host` says railway.app, and Django's CSRF check compares them
   - [ ] 5.6 Leave `SESSION_COOKIE_DOMAIN` unset; pinning it to the Railway host makes the browser reject the cookie outright
   - [ ] 5.7 Verify Vercel forwards the destination's `Host` so `ALLOWED_HOSTS=.railway.app` still passes — a mismatch appears as a 400 `DisallowedHost`
-  - [ ] 5.8 Decide where preview deployments proxy to, so an unfinished branch cannot write to production data. Note a second *Vercel* project is not the answer — previews are automatic per-branch within one project, and the risk is which **backend** they reach. Doing this properly needs a second Railway environment with its own database, plus a small proxy function in place of the static rewrite, because `vercel.json` cannot interpolate env vars into a destination. Cheapest safe option for now: turn preview deployments off until multi-user ships
+  - [ ] 5.8 **Decided 2026-09-21: turn preview deployments off** in the Vercel project settings before the `/api` rewrite lands, so no preview can ever reach production data. A second Vercel project is not what this needs — previews are automatic per-branch within one project, and the risk is which *backend* they reach. Proper preview isolation would need a second Railway environment with its own database plus a proxy function in place of the static rewrite, since `vercel.json` cannot interpolate env vars into a destination. Revisit only if previews start earning their keep
   - [ ] 5.9 Test on a real iOS device, since that is the browser this whole decision exists to satisfy
 
 - [ ] 6.0 Close the exposure — default-deny API
@@ -138,13 +138,17 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
   - [ ] 6.6 Confirm the public share link and guest ordering still work signed out — this is the regression that matters most
 
 - [ ] 7.0 Ownership, phase one — add nullable owner and backfill
-  - [ ] 7.1 `pg_dump` production from Railway and **restore it locally**, then rehearse everything below against the restored copy before touching production
-  - [ ] 7.2 Add a nullable `owner` FK to `IngredientCategory`, `Ingredient`, `Recipe`, `Menu` and `BuyListItem`
-  - [ ] 7.3 Decide `on_delete` per model — deleting a user should not silently orphan or cascade away a menu with order history
-  - [ ] 7.4 Write a data migration backfilling every existing row to your admin account
-  - [ ] 7.5 Verify against the restored dump that all 304 records come out owned, with zero nulls remaining
-  - [ ] 7.6 Note that `Order` and `MenuItem` derive ownership through `menu`, so they get no `owner` column of their own
-  - [ ] 7.7 Deploy this phase alone and confirm the app still works before starting 8.0
+  - [ ] 7.1 Use **`pg_dump`, not `manage.py dumpdata`**. A Django fixture is schema-coupled: a fixture taken before this work cannot be loaded back once `owner` is required, because the rows carry no owner. `pg_dump` captures schema *and* data, so restoring it is a genuine point-in-time rollback. `pg_dump "$DATABASE_URL" -Fc -f backup.dump`
+  - [ ] 7.2 Stand up a **local Postgres** to restore into — local dev is SQLite (`dj_database_url` falls back when `DATABASE_URL` is unset), so there is nowhere to `pg_restore` to until one exists. Homebrew or Docker both fine. Note `pg_dump` must be at least the server's version, or it refuses
+  - [ ] 7.3 Restore into that local Postgres and confirm the app runs against it, before trusting the dump as a rollback
+  - [ ] 7.4 Check whether Railway's Postgres service offers its own scheduled backups, and turn them on if so — belt and braces
+  - [ ] 7.5 Rehearse every step below against the restored copy before touching production
+  - [ ] 7.6 Add a nullable `owner` FK to `IngredientCategory`, `Ingredient`, `Recipe`, `Menu` and `BuyListItem`
+  - [ ] 7.7 Decide `on_delete` per model — deleting a user should not silently orphan or cascade away a menu with order history
+  - [ ] 7.8 Write a data migration backfilling every existing row to your admin account
+  - [ ] 7.9 Verify against the restored dump that all 304 records come out owned, with zero nulls remaining
+  - [ ] 7.10 Note that `Order` and `MenuItem` derive ownership through `menu`, so they get no `owner` column of their own
+  - [ ] 7.11 Deploy this phase alone and confirm the app still works before starting 8.0
 
 - [ ] 8.0 Ownership, phase two — enforce and scope
   - [ ] 8.1 Migration making `owner` `NOT NULL`

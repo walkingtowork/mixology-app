@@ -201,6 +201,16 @@ record without a browser. Decided in conversation on 2026-09-21:
   because Railway runs `migrate` inside its start command: a migration that fails partway
   doesn't warn, it stops gunicorn from booting at all.
 
+- **Vercel preview deployments are turned off** for the duration (decided 2026-09-21). They
+  would otherwise proxy `/api` to production Railway, letting an unfinished branch write to
+  real data. Proper isolation needs a second Railway environment plus a proxy function, which
+  is not worth it for a solo project with no PR-review workflow.
+- **A custom domain is deferred until the app goes public.** `thebarcart.vercel.app` is still
+  under the `vercel.app` public suffix, so the rename on 2026-09-21 changed nothing about the
+  cookie problem. Buying `thebarcart.com` would remove the proxy hop, make the session cookie
+  first-party without any rewrite, and is a prerequisite for putting Cloudflare in front of
+  the API — revisit it as part of any public-launch conversation, not before.
+
 **Two landmines this uncovered**, both recorded because they are easy to miss:
 
 - `CacheReadsMixin` (`cocktails/views.py:11`) stamps `Cache-Control: public` on every 200 GET
