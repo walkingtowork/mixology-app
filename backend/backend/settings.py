@@ -187,3 +187,9 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 # DEBUG off, so tying the redirect to DEBUG would turn every request in CI into a 301
 # and fail the whole suite. Set SECURE_SSL_REDIRECT=True in Railway.
 SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'False') == 'True'
+
+# security.W021 (SECURE_HSTS_PRELOAD not True) is silenced, not overlooked: `preload` is
+# a commitment about a domain we do not own (*.up.railway.app). Silencing the one warning
+# we accepted is what lets CI run `check --deploy --fail-level WARNING`, so any NEW
+# deployment warning fails the build instead of scrolling past. Revisit with a custom domain.
+SILENCED_SYSTEM_CHECKS = ['security.W021']

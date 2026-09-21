@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# ESLint JSON report written by CI
+eslint-report.json

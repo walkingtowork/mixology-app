@@ -97,14 +97,14 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
   - [x] 1.8 Deploy and verify the site still loads — merged as PR #15 (`13a98e4`). Verified live rather than assumed: `strict-transport-security: max-age=2592000; includeSubDomains` (the configured 30 days, no `preload`), plain HTTP 301s to HTTPS so Railway is reading `SECURE_SSL_REDIRECT`, and `Vary: Cookie` is present
 
 - [ ] 2.0 Continuous integration
-  - [ ] 2.1 Add `.github/workflows/ci.yml` triggered on push and pull request
-  - [ ] 2.2 Backend job: install `requirements.txt`, run `python manage.py test`. **The job must set a `SECRET_KEY` env var** — since 1.2 there is no fallback when `DEBUG=False`, and the test runner forces `DEBUG` off, so a bare checkout raises `ImproperlyConfigured` at import. Leave `SECURE_SSL_REDIRECT` unset so CI requests are not redirected
-  - [ ] 2.3 Backend job: `python manage.py makemigrations --check --dry-run` to catch model changes with no migration
-  - [ ] 2.4 Backend job: `python manage.py check --deploy`
-  - [ ] 2.5 Frontend job: `npm ci`, `npm run build` (this runs `tsc -b`), `npx eslint .`
-  - [ ] 2.6 Decide how to handle the standing 8-problem lint baseline — fail above 8, rather than failing on any problem
+  - [x] 2.1 Add `.github/workflows/ci.yml` triggered on push and pull request
+  - [x] 2.2 Backend job: install `requirements.txt`, run `python manage.py test`. **The job must set a `SECRET_KEY` env var** — since 1.2 there is no fallback when `DEBUG=False`, and the test runner forces `DEBUG` off, so a bare checkout raises `ImproperlyConfigured` at import. Leave `SECURE_SSL_REDIRECT` unset so CI requests are not redirected
+  - [x] 2.3 Backend job: `python manage.py makemigrations --check --dry-run` to catch model changes with no migration
+  - [x] 2.4 Backend job: `python manage.py check --deploy`
+  - [x] 2.5 Frontend job: `npm ci`, `npm run build` (this runs `tsc -b`), `npx eslint .`
+  - [x] 2.6 Decide how to handle the standing 8-problem lint baseline — fail above 8, rather than failing on any problem
   - [ ] 2.7 Confirm a deliberately broken test actually fails the workflow, then revert it
-  - [ ] 2.8 Note in `PROJECT_CONTEXT.md` that CI now exists, replacing the "there is no CI" working note
+  - [x] 2.8 Note in `PROJECT_CONTEXT.md` that CI now exists, replacing the "there is no CI" working note
 
 - [ ] 3.0 Extract a single request helper in `cocktailsApi.ts`
   - [ ] 3.1 Write one `request()` helper handling base URL, JSON headers, `credentials: 'include'`, error shaping, and reading the `csrftoken` cookie into an `X-CSRFToken` header for unsafe methods

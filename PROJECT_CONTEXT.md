@@ -273,13 +273,24 @@ menu visual polish — SVG decorations, QR code modal, drag-and-drop menu planni
 
 - The `gh` CLI is not installed locally, so PRs have to be created via a URL. Suggest
   `brew install gh` followed by `gh auth login` next time a PR comes up.
-- **There is no CI.** No `.github/workflows` exists, and both Railway and Vercel auto-deploy
-  on push to `main`, so nothing catches a broken build or a failing test before it reaches
-  production. Run `manage.py check`, `manage.py makemigrations --check --dry-run`,
-  `manage.py test`, `npm run build` and `npx eslint .` before pushing.
+- **CI exists** as of 2026-09-21: `.github/workflows/ci.yml`, running on every pull request
+  and on `main` after merge. Two parallel jobs — backend (`manage.py test`,
+  `makemigrations --check --dry-run`, `check --deploy --fail-level WARNING`) and frontend
+  (`npm run build`, which is `tsc -b` plus the bundle, and the lint baseline gate). It still
+  does not gate deploys: Railway and Vercel auto-deploy on push to `main` independently of
+  the workflow result, so a red build on `main` means something already shipped.
+- **CI's `SECRET_KEY` is a visible literal in the workflow, not a GitHub secret.** CI has no
+  real users, sessions or data, so the key protects nothing; storing the real one there would
+  add exposure for no benefit. It is also deliberately not prefixed `django-insecure-`, which
+  would trip `security.W009` and make `check --deploy` noisy.
+- **`security.W021` is silenced in `settings.py`**, which is what lets `check --deploy` run at
+  `--fail-level WARNING`. Silencing the single warning we consciously accepted turns that step
+  from a log line into a real gate on any *new* deployment warning.
 - **Lint has a standing baseline of 8 problems** (7 errors, 1 warning) — pre-existing
-  `no-explicit-any` and `set-state-in-effect` issues. Treat "still 8" as clean and anything
-  above it as newly introduced.
+  `no-explicit-any` and `set-state-in-effect` issues. Now enforced by
+  `frontend/scripts/check-lint-baseline.mjs`: the build fails only when the count goes *up*,
+  since a bare `eslint .` exits non-zero on any error and could never gate anything here.
+  Fix some and lower `BASELINE` in that file — it should only ratchet downwards.
 - **Confirming a deploy landed:** for the frontend, read the bundle name from the root HTML,
   then download it to a *file* and grep the file — capturing a ~370KB bundle into a shell
   variable produced a truncated, confidently wrong "not deployed" reading once. Vercel's
