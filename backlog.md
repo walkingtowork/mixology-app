@@ -8,6 +8,11 @@ per-feature task breakdowns.
 
 ## In progress
 
+- [ ] **Multi-user accounts** (planned 2026-09-21, no deadline) — auth, invite-only signup,
+      per-user ownership of every model, password reset, personal info. Closes the standing
+      hole where the API has no authentication at all.
+      → `tasks/tasks-multi-user-accounts.md`, decisions in `PROJECT_CONTEXT.md`
+
 - [ ] **Menu theming — decoration selector** (deadline 2026-09-20)
       `top_decoration` / `bottom_decoration` on `Menu`, a thumbnail picker, a fall SVG set,
       and the menu edit UI it depends on.
@@ -19,6 +24,14 @@ per-feature task breakdowns.
       → `tasks/tasks-menu-theming-and-stats.md`
 
 ## Features
+
+- [ ] **Starter-ingredient wizard** — a new account starts completely empty (every
+      category, ingredient, recipe and menu belongs to exactly one user, with nothing
+      shared or seeded). That means a friend's first load is three empty pages and they
+      must create a category before they can do anything. A guided "stock your bar"
+      wizard on first login would fill that gap. Deferred deliberately during the
+      multi-user planning on 2026-09-20 to keep the ownership model totally open —
+      build it after multi-user ships, against a real first-run experience.
 
 - [ ] Add ingredient substitutions
 - [ ] Add recipes for home-made ingredients
@@ -56,6 +69,51 @@ per-feature task breakdowns.
       ordering plan that was never built.
 - [ ] **Non-alcoholic / N/A menu options** — either a separate N/A menu type or tagging
       recipes as N/A. No decision made yet.
+
+## Security — deferred from multi-user planning (2026-09-21)
+
+Raised while planning the multi-user overhaul and explicitly paused, not dismissed.
+Revisit before inviting anyone in, and again before any public launch.
+
+**Agreed 2026-09-21:** rate limiting goes in at "Tier 1" — DRF throttling plus `django-axes`,
+both of which are settings-and-a-dependency rather than new infrastructure. Redis-backed
+accurate throttling and any Vercel shared-secret gate are deferred until there is a reason.
+
+- [ ] **Rotate `SECRET_KEY` and fix the fallback — ships in the first PR, not deferred.**
+      `settings.py:36` falls back to the committed `django-insecure-…` placeholder from commit
+      `ade7f58`, and `backend/.env.example` documents the variable as `DJANGO_SECRET_KEY` while
+      settings reads `SECRET_KEY` — so following the repo's own example lands you silently on the
+      public key. Align the name, raise on startup when `DEBUG=False` and the key is missing, and
+      rotate the Railway value now while there are no real sessions to invalidate. No real `.env`
+      was ever committed and `.gitignore` has always covered it, so history does not need rewriting.
+
+- [ ] **`OrderViewSet` is unauthenticated by design but under-scoped.** `views.py:249` is
+      `AllowAny` with `authentication_classes = []` so guests can order without accounts.
+      But anyone can POST an order against *any* menu id, and GET returns every order for
+      every user. Needs splitting: anonymous create gated on possession of the menu's
+      `share_token`, owner-only read and fulfil. No rate limiting either — it is a spam
+      target by construction.
+- [ ] **IDOR risk on nested writes.** Scoping `get_queryset` is not enough when an id
+      arrives in a request body or query string. Three concrete spots: `MenuViewSet.add_item`
+      (recipe id), `BuyListViewSet.create` (`ingredient_id`), and `RecipeViewSet.get_queryset`
+      (`?ingredient=` / `?category=`). Each must verify the referenced object belongs to the
+      requester, or user A can pull user B's recipe onto their menu.
+- [ ] **No login rate limiting.** A login form with unlimited password attempts. Consider
+      `django-axes`, plus DRF throttling (see note about `--workers 3` below).
+- [ ] **Cookie and transport flags are unset.** `SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE`,
+      `SECURE_SSL_REDIRECT`, HSTS, and a deliberate session lifetime. `HttpOnly` is on by
+      default. Run `python manage.py check --deploy` — it enumerates these.
+- [ ] **Vercel preview deployments proxy to a Railway backend.** If previews point at
+      production, an unfinished branch writes to real data. Decide where previews point
+      before the `/api` rewrite lands.
+- [ ] **Django 4.2.26 is past end of life** (4.2 LTS extended support ended April 2026), so
+      it no longer receives security patches. Fine for a private app; a blocker for opening
+      to the public. Note `requirements.txt` claims "Python 3.12+ required" while the local
+      venv runs Python 3.9.6, itself EOL since October 2025.
+- [ ] **DRF throttling needs a shared cache to work.** The Railway start command runs
+      `gunicorn --workers 3`; with the default local-memory cache each worker keeps its own
+      counter, so any rate limit is effectively 3x looser and resets on restart. Accurate
+      throttling needs Redis.
 
 ## Testing
 
