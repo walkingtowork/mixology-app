@@ -17,7 +17,12 @@ Last updated: 2026-09-21
 - Start command: `python manage.py migrate && gunicorn backend.wsgi --workers 3`
 - Env vars: `SECRET_KEY`, `ALLOWED_HOSTS=.railway.app`, `DEBUG=False`,
   `CORS_ALLOWED_ORIGINS=https://thebarcart.vercel.app,https://mixology-app-eight.vercel.app`,
-  `DATABASE_URL` (auto)
+  `SECURE_SSL_REDIRECT=True`, `DATABASE_URL` (auto)
+- `SECRET_KEY` has **no fallback** since 2026-09-21 — the app raises `ImproperlyConfigured`
+  at startup if it is missing while `DEBUG=False`, rather than silently using the
+  `django-insecure-` literal committed in `ade7f58`. Local dev needs `DEBUG=True` in
+  `backend/.env`, both to get a fallback key and to keep the production-only security
+  settings off plain-http localhost
 
 **Frontend** — React/Vite on Vercel: `https://thebarcart.vercel.app` (renamed 2026-09-21;
 the old `mixology-app-eight.vercel.app` stays as a 307 redirect, which keeps already-printed
