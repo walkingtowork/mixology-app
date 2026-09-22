@@ -1,0 +1,100 @@
+name: CI
+
+# Runs on every pull request, and on main after merge. Deliberately not on every push to
+# every branch: a PR-targeted run plus a post-merge run covers the same ground without
+# doubling up on branches that already have an open PR.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A newer push to the same PR makes the previous run irrelevant.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (Django)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      # NOT a secret, and deliberately not stored as one. CI has no real users, no real
+      # sessions and no production data -- this key exists only so Django can boot. It is
+      # also intentionally NOT prefixed `django-insecure-`, which would trip security.W009
+      # and make `check --deploy` noisy for no reason. The real key lives in Railway.
+      SECRET_KEY: ci-not-a-secret-this-key-signs-nothing-real-0123456789
+    steps:
+      - uses: actions/checkout@v4
+
+      # Django 4.2 supports Python 3.8-3.12 and does NOT support 3.13+. Railway has no
+      # runtime pin, so it picks its own version -- see backlog.md.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Tests
+        # DEBUG is unset, so this exercises the production settings branch (secure
+        # cookies, HSTS). SECURE_SSL_REDIRECT is left off on purpose: the test runner
+        # forces DEBUG off, and an unconditional redirect would turn every request in the
+        # suite into a 301.
+        run: python manage.py test --verbosity 2
+
+      - name: Migrations are up to date
+        # Catches a model change that never got a migration -- otherwise it surfaces weeks
+        # later as a mystery, or as a migration Railway tries to apply on boot.
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Deployment checks
+        # --fail-level WARNING makes this a real gate rather than a log line. It only works
+        # because security.W021 is silenced in settings.py as a conscious decision; any NEW
+        # deployment warning will fail the build.
+        env:
+          DEBUG: 'False'
+          ALLOWED_HOSTS: .railway.app
+          SECURE_SSL_REDIRECT: 'True'
+        run: python manage.py check --deploy --fail-level WARNING
+
+  frontend:
+    name: Frontend (Vite / TypeScript)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        # `npm run build` is `tsc -b && vite build`, so this is the type check too.
+        run: npm run build
+
+      - name: Lint against baseline
+        # eslint exits 1 whenever problems exist, and this repo has 8 standing ones, so a
+        # bare `eslint .` could never gate anything. Exit 2 means eslint itself failed to
+        # run (bad config), which should always fail the build.
+        run: |
+          set +e
+          npx eslint . -f json -o eslint-report.json
+          code=$?
+          set -e
+          if [ "$code" -gt 1 ]; then
+            echo "eslint failed to run (exit $code)"
+            exit "$code"
+          fi
+          node scripts/check-lint-baseline.mjs

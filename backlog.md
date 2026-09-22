@@ -110,6 +110,24 @@ accurate throttling and any Vercel shared-secret gate are deferred until there i
       it no longer receives security patches. Fine for a private app; a blocker for opening
       to the public. Note `requirements.txt` claims "Python 3.12+ required" while the local
       venv runs Python 3.9.6, itself EOL since October 2025.
+- [ ] **CI detects but does not gate — nothing actually blocks a bad merge or deploy.**
+      Verified 2026-09-21 by deliberately breaking a test: the backend check went red, and
+      GitHub still offered a green "Merge pull request" button. Two separate gaps:
+      1. **No branch protection on `main`.** Requiring the CI checks to pass before merge is
+         a repo setting, not code — Settings → Branches → add a rule for `main` requiring
+         "CI / Backend (Django)" and "CI / Frontend (Vite / TypeScript)".
+      2. **Deploys ignore CI entirely.** Railway and Vercel both build from `main` on push,
+         independently of the workflow, so a red build on `main` means it already shipped.
+      Worth closing *before* the ownership migration in task 7.0/8.0, which is the first
+      change where a bad merge reaching production costs more than a quick revert.
+
+- [ ] **Railway has no Python runtime pin.** There is no `runtime.txt`, `.python-version`
+      or nixpacks config in `backend/`, so Railway chooses the Python version itself.
+      Django 4.2 supports 3.8–3.12 and does **not** support 3.13+, so if Railway's default
+      ever moves past 3.12 the deploy breaks with no warning. CI pins 3.12 explicitly.
+      Pinning the deploy side too would close the gap — verify which file Railway honours
+      before relying on it. Related to the Django 4.2 end-of-life item above.
+
 - [ ] **DRF throttling needs a shared cache to work.** The Railway start command runs
       `gunicorn --workers 3`; with the default local-memory cache each worker keeps its own
       counter, so any rate limit is effectively 3x looser and resets on restart. Accurate
