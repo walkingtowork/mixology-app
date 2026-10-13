@@ -46,11 +46,8 @@ through the app, and repeated it on a real iPhone. Rolling back is re-adding the
 **The API is default-deny in production as of 2026-10-13.** Verified live: signed out, every
 private read and write is a 403 from `curl`, both through Vercel and directly on Railway;
 logged in at `thebarcart.vercel.app/admin/`, the app is fully populated; signed out on a
-phone, the app shows zeros and a shared menu still opens. **One check is still open — 6.6's
-second half:** nobody has placed a real guest order signed out on a phone since the flip.
-`POST /api/orders/` gets past permissions (an empty body is a 400 validation error, not a
-403) and the full round-trip passed locally, so this is expected to work; it was not tested
-from `curl` because that would write to production.
+phone, the app shows zeros and a shared menu still opens. The user then placed and cancelled a real guest order signed
+out on a phone, which closes 6.6.
 
 **Next — 7.0, ownership phase one, and it is a different kind of task.** It is the first
 schema and data migration, on a platform where a failed migration is an outage. Before any
@@ -196,13 +193,13 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
   - [x] 5.8 **Done 2026-09-22 — preview deployments are off.** Behavior set to "Only build production". in the Vercel project settings before the `/api` rewrite lands, so no preview can ever reach production data. A second Vercel project is not what this needs — previews are automatic per-branch within one project, and the risk is which *backend* they reach. Proper preview isolation would need a second Railway environment with its own database plus a proxy function in place of the static rewrite, since `vercel.json` cannot interpolate env vars into a destination. Revisit only if previews start earning their keep. **More urgent than it first looked:** previews are already live — the CI PR produced a Vercel preview deployment on 2026-09-21 — and `VITE_API_BASE_URL` points them at production Railway, so a preview branch can write to real data *today*. This is not only a future-proxy concern. **How:** Vercel Project Settings → Git → *Ignored Build Step* → Behavior: **"Only build production"** (a preset dropdown; the raw shell-command field it replaced used the counterintuitive convention exit 1 = build, exit 0 = skip). Not "Don't build anything", which would stop production deploys too
   - [x] 5.9 Test on a real iOS device, since that is the browser this whole decision exists to satisfy — done by the user 2026-10-13: admin login and an edit through the app, on an iPhone
 
-- [x] 6.0 Close the exposure — default-deny API — merged as PR #20, live 2026-10-13 (6.6's guest-order half still to confirm on a phone)
+- [x] 6.0 Close the exposure — default-deny API — merged as PR #20, live 2026-10-13
   - [x] 6.1 Change `DEFAULT_PERMISSION_CLASSES` from `IsAuthenticatedOrReadOnly` to `IsAuthenticated` — the block already exists as of task 2.5, so this is a one-word flip that closes the remaining read exposure — `AnonymousAccessTests` now asserts 403 on 11 private read URLs (including `/api/hello/` and menu stats) in place of the three "reads stay open" tests
   - [x] 6.2 Keep `PublicMenuView` explicitly `AllowAny` with `authentication_classes = []` (`views.py:249`)
   - [x] 6.3 Keep `OrderViewSet` create reachable anonymously so guests can still order; full scoping of that endpoint is tracked in `backlog.md` and is **not** in this task — left entirely as it was, so anonymous list/fulfil/cancel of orders also still work. That is the one read still open to the internet
   - [x] 6.4 Log in at `…vercel.app/admin/` and confirm the app works end to end with the session cookie, no login UI required yet — confirmed by the user on a laptop, 2026-10-13
   - [x] 6.5 Confirm from a signed-out browser and from `curl` that writes now return 403 — 2026-10-13: 7 private GETs, a POST and a DELETE all 403, through Vercel and directly on Railway
-  - [ ] 6.6 Confirm the public share link and guest ordering still work signed out — this is the regression that matters most — share link confirmed on a phone 2026-10-13; **a real guest order placed signed out is still unconfirmed** (see Current state)
+  - [x] 6.6 Confirm the public share link and guest ordering still work signed out — this is the regression that matters most — confirmed by the user on a phone 2026-10-13: share link opens, a guest order can be placed and cancelled
 
 - [ ] 7.0 Ownership, phase one — add nullable owner and backfill
   - [x] 7.1 Use **`pg_dump`, not `manage.py dumpdata`** — first dump taken 2026-10-12, verified with `pg_restore -l` (18 `TABLE DATA` entries). Repeat immediately before 7.6 and 7.8; this one will be stale by then. A Django fixture is schema-coupled: a fixture taken before this work cannot be loaded back once `owner` is required, because the rows carry no owner. `pg_dump` captures schema *and* data, so restoring it is a genuine point-in-time rollback. `pg_dump "$DATABASE_URL" -Fc -f backup.dump`
