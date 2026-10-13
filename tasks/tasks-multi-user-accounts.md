@@ -45,14 +45,18 @@ the SPA catch-all; a matching `server.proxy` in `vite.config.ts`; `CSRF_TRUSTED_
 `settings.py`; `.env.example` updated. Two things that are easy to get wrong:
 
 - **Base URL trap (5.3).** `request()` builds `${API_BASE_URL}/api/...`, so same-origin means
-  `VITE_API_BASE_URL` becomes the **empty string**, not `/api`. But `cocktailsApi.ts:3` uses
-  `|| 'http://localhost:8000'`, and `''` is falsy, so production would silently call
-  localhost. Change it to `??` in the same PR. It is the only place the variable is read.
+  the base is the **empty string**, not `/api`. But `cocktailsApi.ts:3` uses
+  `|| 'http://localhost:8000'`, and `''` is falsy, so an empty value silently falls back to
+  localhost. **Recommended fix:** make the default itself `''` (and use `??`), so same-origin
+  needs no configuration anywhere and the variable only exists to bypass the proxy. It is the
+  only place the variable is read.
 - **Rollout order.** Vite inlines the variable at build time, so the switch happens on the
   Vercel side. (1) Merge the code. With the Vercel env var still set to the Railway URL,
   nothing changes and the rewrites sit unused. (2) Set `VITE_API_BASE_URL` to empty in Vercel
   and redeploy. Now same-origin. Rolling back is just restoring the env var and redeploying.
-  The local, gitignored `frontend/.env` needs the same change to exercise the dev proxy.
+  With the recommended `''` default, step (2) is *deleting* the variable in Vercel.
+  Locally, the user has a gitignored `frontend/.env` containing `VITE_API_BASE_URL=""`. It
+  is a no-op under today's `||` and correct after 5.0; with the `''` default it is redundant.
 
 Verify after deploy: 5.7 (no 400 `DisallowedHost`), 5.9 (a real iPhone), and that the share
 page still returns `Cache-Control: public, max-age=30` through Vercel.
