@@ -160,6 +160,18 @@ CORS_ALLOWED_ORIGINS = [
 
 CORS_ALLOW_CREDENTIALS = True
 
+# The browser reaches this API through a rewrite on the Vercel origin, so on unsafe
+# requests its Origin header says vercel.app while Host says railway.app. Django's CSRF
+# check compares the two and refuses the mismatch unless the origin is listed here.
+CSRF_TRUSTED_ORIGINS = ['https://thebarcart.vercel.app']
+if DEBUG:
+    # The Vite dev proxy produces the same mismatch: Origin localhost:5173, Host localhost:8000.
+    CSRF_TRUSTED_ORIGINS += ['http://localhost:5173', 'http://127.0.0.1:5173']
+
+# SESSION_COOKIE_DOMAIN is deliberately unset. A host-only cookie set through the proxy
+# belongs to the Vercel origin; pinning it to the Railway host would make the browser
+# reject it outright.
+
 
 # Django REST Framework
 # Default-deny for writes. Until this landed there was no REST_FRAMEWORK block at all, so

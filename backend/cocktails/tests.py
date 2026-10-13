@@ -1,6 +1,6 @@
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.contrib.auth import get_user_model
-from rest_framework.test import APITestCase
+from rest_framework.test import APIClient, APITestCase
 from rest_framework import status
 from .models import (
     Ingredient, Recipe, RecipeIngredient, IngredientCategory,
@@ -1289,3 +1289,45 @@ class CacheHeaderTests(APITestCase):
         self.assertNotIn('Cache-Control', response)
         vary = {v.strip().lower() for v in response.get('Vary', '').split(',')}
         self.assertNotIn('cookie', vary)
+
+
+@override_settings(ALLOWED_HOSTS=['.railway.app'])
+class ProxiedCsrfTests(APITestCase):
+    """Writes arriving through the Vercel rewrite must pass Django's CSRF origin check.
+
+    Behind the proxy the browser's Origin is the Vercel domain while Host is Railway's.
+    Django refuses that mismatch unless the origin is in CSRF_TRUSTED_ORIGINS, and the
+    failure is a 403 on every write for a logged-in user -- reads keep working, so it is
+    easy to ship without noticing.
+    """
+
+    RAILWAY_HOST = 'mixology-app-production.up.railway.app'
+
+    def setUp(self):
+        self.client = APIClient(enforce_csrf_checks=True)
+        # The admin login page is what hands the browser its csrftoken cookie.
+        self.client.get('/admin/login/', secure=True, HTTP_HOST=self.RAILWAY_HOST)
+        self.csrf_token = self.client.cookies['csrftoken'].value
+        self.client.force_login(
+            get_user_model().objects.create_user(username='tester', email='tester@example.com')
+        )
+
+    def post_category(self, origin):
+        return self.client.post(
+            '/api/categories/',
+            {'name': 'Gin'},
+            format='json',
+            secure=True,
+            HTTP_HOST=self.RAILWAY_HOST,
+            HTTP_ORIGIN=origin,
+            HTTP_X_CSRFTOKEN=self.csrf_token,
+        )
+
+    def test_write_from_the_vercel_origin_is_accepted(self):
+        response = self.post_category('https://thebarcart.vercel.app')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_write_from_an_unlisted_origin_is_refused(self):
+        response = self.post_category('https://evil.example')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn('Origin checking failed', response.data['detail'])
