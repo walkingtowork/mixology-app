@@ -168,7 +168,7 @@ Note `cancelOrder` hard-deletes, so cancelled drinks leave no trace — there is
 
 ## Multi-user accounts — agreed decisions
 
-**Status: in progress** — 1.0–7.0 shipped as of 2026-10-13; 8.0 (enforce and scope ownership) is next. Full task breakdown, and a
+**Status: in progress** — 1.0–8.0 shipped as of 2026-10-13; scoping `/api/orders/` and then 9.0 (frontend tests) are next. Full task breakdown, and a
 "Current state" block that is kept up to date, in `tasks/tasks-multi-user-accounts.md`.
 
 Motivation: the app was built single-user with no authentication at all. Sharing a menu link
@@ -264,6 +264,13 @@ belongs to the non-admin `walkingtowork` account; the superuser `admin` owns not
 design. `walkingtowork` was made staff so it can get a session through `/admin/` until the
 login screen exists. Nothing reads `owner` yet. `MenuItem` and `Order` have no owner column;
 they belong to whoever owns their menu.
+
+**Ownership, phase two (task 8.0, 2026-10-13):** `owner` is `NOT NULL`, every viewset is
+scoped to the signed-in user, and ids in request bodies must name the requester's own rows —
+another user's row is a 404, never a 403. Category and ingredient names are unique per owner,
+not globally. It shipped as one deploy rather than two at the user's call, since they would
+not be writing to production during it. Day-to-day use is as `walkingtowork`; `admin` sees an
+empty app by design. `/api/orders/` is the one endpoint still open and unscoped.
 
 **Deferred security work** is listed in `backlog.md` under "Security — deferred from
 multi-user planning". It is safe for a handful of invited friends and explicitly *not* safe
