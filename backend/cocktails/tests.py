@@ -1,5 +1,5 @@
 from django.core.management import call_command
-from django.db import connection
+from django.db import IntegrityError, connection, transaction
 from django.db.migrations.executor import MigrationExecutor
 from django.test import TestCase, TransactionTestCase, override_settings
 from django.contrib.auth import get_user_model
@@ -38,9 +38,9 @@ class IngredientAPITests(AuthenticatedAPITestCase):
     def setUp(self):
         """Set up test data."""
         super().setUp()
-        self.ingredient1 = Ingredient.objects.create(name='Gin')
-        self.ingredient2 = Ingredient.objects.create(name='Vermouth')
-        self.ingredient3 = Ingredient.objects.create(name='Lemon Juice')
+        self.ingredient1 = Ingredient.objects.create(owner=self.user, name='Gin')
+        self.ingredient2 = Ingredient.objects.create(owner=self.user, name='Vermouth')
+        self.ingredient3 = Ingredient.objects.create(owner=self.user, name='Lemon Juice')
 
     def test_list_ingredients(self):
         """Test GET /api/ingredients/ returns all ingredients."""
@@ -120,7 +120,7 @@ class IngredientAPITests(AuthenticatedAPITestCase):
     def test_delete_ingredient_used_in_recipes(self):
         """Test that deleting an ingredient used in recipes deletes the ingredient and related RecipeIngredients."""
         # Create a recipe using ingredient1
-        recipe = Recipe.objects.create(name='Test Recipe')
+        recipe = Recipe.objects.create(owner=self.user, name='Test Recipe')
         RecipeIngredient.objects.create(
             recipe=recipe,
             ingredient=self.ingredient1,
@@ -152,11 +152,12 @@ class RecipeAPITests(AuthenticatedAPITestCase):
     def setUp(self):
         """Set up test data."""
         super().setUp()
-        self.gin = Ingredient.objects.create(name='Gin')
-        self.vermouth = Ingredient.objects.create(name='Vermouth')
-        self.lemon = Ingredient.objects.create(name='Lemon Juice')
+        self.gin = Ingredient.objects.create(owner=self.user, name='Gin')
+        self.vermouth = Ingredient.objects.create(owner=self.user, name='Vermouth')
+        self.lemon = Ingredient.objects.create(owner=self.user, name='Lemon Juice')
         
         self.recipe = Recipe.objects.create(
+            owner=self.user,
             name='Martini',
             notes='Stir with ice',
             garnish='Olive'
@@ -204,7 +205,7 @@ class RecipeAPITests(AuthenticatedAPITestCase):
     def test_filter_recipes_by_ingredient(self):
         """Test GET /api/recipes/?ingredient={id} filters recipes by ingredient."""
         # Create another recipe without gin
-        recipe2 = Recipe.objects.create(name='Whiskey Sour')
+        recipe2 = Recipe.objects.create(owner=self.user, name='Whiskey Sour')
         RecipeIngredient.objects.create(
             recipe=recipe2,
             ingredient=self.lemon,
@@ -359,7 +360,7 @@ class RecipeAPITests(AuthenticatedAPITestCase):
 
     def test_recipe_same_ingredient_different_amounts(self):
         """Test that the same ingredient can be used in multiple recipes with different amounts."""
-        recipe2 = Recipe.objects.create(name='Gin and Tonic')
+        recipe2 = Recipe.objects.create(owner=self.user, name='Gin and Tonic')
         RecipeIngredient.objects.create(
             recipe=recipe2,
             ingredient=self.gin,
@@ -508,6 +509,7 @@ class RecipeAPITests(AuthenticatedAPITestCase):
         """Test that source_url is included in recipe retrieval."""
         # Create recipe with source_url
         recipe = Recipe.objects.create(
+            owner=self.user,
             name='Test Recipe',
             source_url='https://www.example.com/test'
         )
@@ -565,8 +567,8 @@ class IngredientCategoryAPITests(AuthenticatedAPITestCase):
     def setUp(self):
         """Set up test data."""
         super().setUp()
-        self.category1 = IngredientCategory.objects.create(name='Whiskey', notes='Various whiskey types')
-        self.category2 = IngredientCategory.objects.create(name='Gin', notes='Gin category')
+        self.category1 = IngredientCategory.objects.create(owner=self.user, name='Whiskey', notes='Various whiskey types')
+        self.category2 = IngredientCategory.objects.create(owner=self.user, name='Gin', notes='Gin category')
 
     def test_list_categories(self):
         """Test GET /api/categories/ returns all categories."""
@@ -625,7 +627,7 @@ class IngredientCategoryAPITests(AuthenticatedAPITestCase):
     def test_create_category_with_existing_ingredient_name(self):
         """Test that creating a category with existing ingredient name links it to category."""
         # Create an ingredient first
-        existing_ingredient = Ingredient.objects.create(name='Brandy')
+        existing_ingredient = Ingredient.objects.create(owner=self.user, name='Brandy')
         
         url = '/api/categories/'
         data = {
@@ -663,8 +665,8 @@ class IngredientCategoryAPITests(AuthenticatedAPITestCase):
     def test_retrieve_category_with_ingredients(self):
         """Test that category retrieval includes ingredients."""
         # Create ingredients in category
-        ingredient1 = Ingredient.objects.create(name='Jameson', category=self.category1)
-        ingredient2 = Ingredient.objects.create(name='Red Breast 12', category=self.category1)
+        ingredient1 = Ingredient.objects.create(owner=self.user, name='Jameson', category=self.category1)
+        ingredient2 = Ingredient.objects.create(owner=self.user, name='Red Breast 12', category=self.category1)
         
         url = f'/api/categories/{self.category1.id}/'
         response = self.client.get(url)
@@ -677,6 +679,7 @@ class IngredientCategoryAPITests(AuthenticatedAPITestCase):
         """Test that category retrieval includes generic ingredient if it exists."""
         # Create generic ingredient
         generic = Ingredient.objects.create(
+            owner=self.user,
             name='Whiskey',
             category=self.category1,
             is_generic=True
@@ -711,6 +714,7 @@ class IngredientCategoryAPITests(AuthenticatedAPITestCase):
         """Test that updating category name also updates generic ingredient name."""
         # Create generic ingredient
         generic = Ingredient.objects.create(
+            owner=self.user,
             name='Whiskey',
             category=self.category1,
             is_generic=True
@@ -738,10 +742,10 @@ class IngredientCategoryAPITests(AuthenticatedAPITestCase):
     def test_delete_category_with_recipes_prevents_deletion(self):
         """Test that deleting a category used in recipes is prevented."""
         # Create ingredient in category
-        ingredient = Ingredient.objects.create(name='Jameson', category=self.category1)
+        ingredient = Ingredient.objects.create(owner=self.user, name='Jameson', category=self.category1)
         
         # Create recipe using that ingredient
-        recipe = Recipe.objects.create(name='Irish Coffee')
+        recipe = Recipe.objects.create(owner=self.user, name='Irish Coffee')
         RecipeIngredient.objects.create(
             recipe=recipe,
             ingredient=ingredient,
@@ -761,9 +765,9 @@ class IngredientCategoryAPITests(AuthenticatedAPITestCase):
 
     def test_category_ingredients_endpoint(self):
         """Test GET /api/categories/{id}/ingredients/ returns ingredients in category."""
-        ingredient1 = Ingredient.objects.create(name='Jameson', category=self.category1)
-        ingredient2 = Ingredient.objects.create(name='Red Breast 12', category=self.category1)
-        ingredient3 = Ingredient.objects.create(name='Gin', category=self.category2)  # Different category
+        ingredient1 = Ingredient.objects.create(owner=self.user, name='Jameson', category=self.category1)
+        ingredient2 = Ingredient.objects.create(owner=self.user, name='Red Breast 12', category=self.category1)
+        ingredient3 = Ingredient.objects.create(owner=self.user, name='Gin', category=self.category2)  # Different category
         
         url = f'/api/categories/{self.category1.id}/ingredients/'
         response = self.client.get(url)
@@ -782,8 +786,8 @@ class IngredientWithCategoryTests(AuthenticatedAPITestCase):
     def setUp(self):
         """Set up test data."""
         super().setUp()
-        self.category = IngredientCategory.objects.create(name='Whiskey')
-        self.ingredient = Ingredient.objects.create(name='Jameson', category=self.category)
+        self.category = IngredientCategory.objects.create(owner=self.user, name='Whiskey')
+        self.ingredient = Ingredient.objects.create(owner=self.user, name='Jameson', category=self.category)
 
     def test_ingredient_includes_category(self):
         """Test that ingredient API response includes category information."""
@@ -799,7 +803,7 @@ class IngredientWithCategoryTests(AuthenticatedAPITestCase):
 
     def test_ingredient_without_category(self):
         """Test that ingredient without category returns null category."""
-        ingredient = Ingredient.objects.create(name='Uncategorized Ingredient')
+        ingredient = Ingredient.objects.create(owner=self.user, name='Uncategorized Ingredient')
         url = f'/api/ingredients/{ingredient.id}/'
         response = self.client.get(url)
         
@@ -808,7 +812,7 @@ class IngredientWithCategoryTests(AuthenticatedAPITestCase):
 
     def test_update_ingredient_category(self):
         """Test that ingredient category can be updated."""
-        new_category = IngredientCategory.objects.create(name='Rum')
+        new_category = IngredientCategory.objects.create(owner=self.user, name='Rum')
         url = f'/api/ingredients/{self.ingredient.id}/'
         data = {'category_id': new_category.id}
         response = self.client.patch(url, data, format='json')
@@ -835,7 +839,7 @@ class IngredientWithCategoryTests(AuthenticatedAPITestCase):
 
     def test_update_ingredient_name_and_category(self):
         """Test that ingredient name and category can be updated together."""
-        new_category = IngredientCategory.objects.create(name='Rum')
+        new_category = IngredientCategory.objects.create(owner=self.user, name='Rum')
         url = f'/api/ingredients/{self.ingredient.id}/'
         data = {
             'name': 'Updated Jameson',
@@ -859,28 +863,30 @@ class RecipeCategoryFilterTests(AuthenticatedAPITestCase):
     def setUp(self):
         """Set up test data."""
         super().setUp()
-        self.whiskey_category = IngredientCategory.objects.create(name='Whiskey')
-        self.gin_category = IngredientCategory.objects.create(name='Gin')
+        self.whiskey_category = IngredientCategory.objects.create(owner=self.user, name='Whiskey')
+        self.gin_category = IngredientCategory.objects.create(owner=self.user, name='Gin')
         
         # Create generic ingredients
         self.whiskey_generic = Ingredient.objects.create(
+            owner=self.user,
             name='Whiskey',
             category=self.whiskey_category,
             is_generic=True
         )
         self.gin_generic = Ingredient.objects.create(
+            owner=self.user,
             name='Gin',
             category=self.gin_category,
             is_generic=True
         )
         
         # Create brand ingredients
-        self.jameson = Ingredient.objects.create(name='Jameson', category=self.whiskey_category)
-        self.red_breast = Ingredient.objects.create(name='Red Breast 12', category=self.whiskey_category)
-        self.tanqueray = Ingredient.objects.create(name='Tanqueray', category=self.gin_category)
+        self.jameson = Ingredient.objects.create(owner=self.user, name='Jameson', category=self.whiskey_category)
+        self.red_breast = Ingredient.objects.create(owner=self.user, name='Red Breast 12', category=self.whiskey_category)
+        self.tanqueray = Ingredient.objects.create(owner=self.user, name='Tanqueray', category=self.gin_category)
         
         # Create recipes
-        self.recipe1 = Recipe.objects.create(name='Irish Coffee')
+        self.recipe1 = Recipe.objects.create(owner=self.user, name='Irish Coffee')
         RecipeIngredient.objects.create(
             recipe=self.recipe1,
             ingredient=self.jameson,
@@ -888,7 +894,7 @@ class RecipeCategoryFilterTests(AuthenticatedAPITestCase):
             unit='oz'
         )
         
-        self.recipe2 = Recipe.objects.create(name='Whiskey Sour')
+        self.recipe2 = Recipe.objects.create(owner=self.user, name='Whiskey Sour')
         RecipeIngredient.objects.create(
             recipe=self.recipe2,
             ingredient=self.whiskey_generic,
@@ -896,7 +902,7 @@ class RecipeCategoryFilterTests(AuthenticatedAPITestCase):
             unit='oz'
         )
         
-        self.recipe3 = Recipe.objects.create(name='Gin and Tonic')
+        self.recipe3 = Recipe.objects.create(owner=self.user, name='Gin and Tonic')
         RecipeIngredient.objects.create(
             recipe=self.recipe3,
             ingredient=self.tanqueray,
@@ -919,7 +925,7 @@ class RecipeCategoryFilterTests(AuthenticatedAPITestCase):
     def test_filter_recipes_by_category_and_ingredient(self):
         """Test that both category and ingredient filters can be used together."""
         # Create recipe with both whiskey category ingredient and specific ingredient
-        recipe4 = Recipe.objects.create(name='Complex Recipe')
+        recipe4 = Recipe.objects.create(owner=self.user, name='Complex Recipe')
         RecipeIngredient.objects.create(
             recipe=recipe4,
             ingredient=self.jameson,
@@ -945,7 +951,7 @@ class RecipeCategoryFilterTests(AuthenticatedAPITestCase):
 
     def test_filter_recipes_by_category_no_matches(self):
         """Test that filtering by category with no matches returns empty list."""
-        empty_category = IngredientCategory.objects.create(name='Empty Category')
+        empty_category = IngredientCategory.objects.create(owner=self.user, name='Empty Category')
         url = f'/api/recipes/?category={empty_category.id}'
         response = self.client.get(url)
         
@@ -958,10 +964,10 @@ class MenuStatsAPITests(AuthenticatedAPITestCase):
 
     def setUp(self):
         super().setUp()
-        self.menu = Menu.objects.create(name='Autumn Equinox')
-        self.negroni = Recipe.objects.create(name='Negroni')
-        self.martini = Recipe.objects.create(name='Espresso Martini')
-        self.highball = Recipe.objects.create(name='Highball')
+        self.menu = Menu.objects.create(owner=self.user, name='Autumn Equinox')
+        self.negroni = Recipe.objects.create(owner=self.user, name='Negroni')
+        self.martini = Recipe.objects.create(owner=self.user, name='Espresso Martini')
+        self.highball = Recipe.objects.create(owner=self.user, name='Highball')
         for order, recipe in enumerate([self.negroni, self.martini, self.highball]):
             MenuItem.objects.create(menu=self.menu, recipe=recipe, order=order)
 
@@ -1075,7 +1081,7 @@ class MenuStatsAPITests(AuthenticatedAPITestCase):
         self.assertLessEqual(data['first_order_at'], data['last_order_at'])
 
     def test_orders_on_another_menu_are_excluded(self):
-        other = Menu.objects.create(name='Summer')
+        other = Menu.objects.create(owner=self.user, name='Summer')
         MenuItem.objects.create(menu=other, recipe=self.martini, order=0)
         Order.objects.create(menu=other, recipe=self.martini, guest_name='Someone')
         self.order(self.negroni, 'Alex')
@@ -1084,6 +1090,644 @@ class MenuStatsAPITests(AuthenticatedAPITestCase):
 
         self.assertEqual(data['total_orders'], 1)
         self.assertEqual(data['unique_guests'], 1)
+
+
+class TwoUserAPITestCase(AuthenticatedAPITestCase):
+    """Two accounts with a full set of data each; the client is signed in as `self.user`.
+
+    `mine` and `theirs` hold one row of every kind. Both bars have a "Rum" category with a
+    generic "Rum" ingredient in it, because names are unique per owner, not globally.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.other = get_user_model().objects.create_user(
+            username='other',
+            email='other@example.com',
+        )
+        self.mine = self.make_bar(self.user, 'Gin', 'Plymouth Gin', 'Martini', 'Friday Night')
+        self.theirs = self.make_bar(self.other, 'Agave', 'Smith & Cross', 'Daiquiri', 'Tiki Night')
+
+    def make_bar(self, owner, category, ingredient, recipe, menu):
+        bar = {}
+        shared = IngredientCategory.objects.create(owner=owner, name='Rum')
+        bar['category'] = IngredientCategory.objects.create(owner=owner, name=category)
+        bar['ingredient'] = Ingredient.objects.create(
+            owner=owner, name=ingredient, category=bar['category'],
+        )
+        Ingredient.objects.create(owner=owner, name='Rum', category=shared, is_generic=True)
+        bar['recipe'] = Recipe.objects.create(owner=owner, name=recipe)
+        RecipeIngredient.objects.create(
+            recipe=bar['recipe'], ingredient=bar['ingredient'], amount=2, unit='oz',
+        )
+        bar['menu'] = Menu.objects.create(owner=owner, name=menu, is_published=True)
+        bar['menu_item'] = MenuItem.objects.create(menu=bar['menu'], recipe=bar['recipe'], order=1)
+        bar['buy_list_item'] = BuyListItem.objects.create(owner=owner, ingredient=bar['ingredient'])
+        return bar
+
+    def detail_urls(self, bar):
+        return {
+            'category': f"/api/categories/{bar['category'].id}/",
+            'ingredient': f"/api/ingredients/{bar['ingredient'].id}/",
+            'recipe': f"/api/recipes/{bar['recipe'].id}/",
+            'menu': f"/api/menus/{bar['menu'].id}/",
+            'buy_list_item': f"/api/buy-list/{bar['buy_list_item'].id}/",
+        }
+
+
+class CrossUserIsolationTests(TwoUserAPITestCase):
+    """One user can never see or touch another user's rows.
+
+    Another user's object is a 404, not a 403: the response must not confirm that the id
+    exists at all.
+    """
+
+    def test_lists_contain_only_my_rows(self):
+        for name, url in [
+            ('category', '/api/categories/'),
+            ('ingredient', '/api/ingredients/'),
+            ('recipe', '/api/recipes/'),
+            ('menu', '/api/menus/'),
+            ('buy_list_item', '/api/buy-list/'),
+        ]:
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                self.assertIn(self.mine[name].id, [row['id'] for row in response.data])
+                model = type(self.mine[name])
+                self.assertEqual(
+                    {row['id'] for row in response.data},
+                    set(model.objects.filter(owner=self.user).values_list('id', flat=True)),
+                )
+
+    def test_search_does_not_reach_another_users_rows(self):
+        for url in ['/api/ingredients/?search=Smith', '/api/recipes/?search=Daiquiri',
+                    '/api/categories/?search=Agave']:
+            with self.subTest(url=url):
+                self.assertEqual(self.client.get(url).data, [])
+
+    def test_my_own_rows_are_readable(self):
+        for name, url in self.detail_urls(self.mine).items():
+            with self.subTest(model=name):
+                self.assertEqual(self.client.get(url).status_code, status.HTTP_200_OK)
+
+    def test_another_users_rows_cannot_be_read(self):
+        for name, url in self.detail_urls(self.theirs).items():
+            with self.subTest(model=name):
+                self.assertEqual(self.client.get(url).status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_another_users_rows_cannot_be_updated(self):
+        for name, url in self.detail_urls(self.theirs).items():
+            with self.subTest(model=name):
+                response = self.client.patch(url, {'name': 'Hijacked', 'notes': 'Hijacked'}, format='json')
+                self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.theirs['recipe'].refresh_from_db()
+        self.theirs['buy_list_item'].refresh_from_db()
+        self.assertEqual(self.theirs['recipe'].name, 'Daiquiri')
+        self.assertEqual(self.theirs['buy_list_item'].notes, '')
+
+    def test_another_users_rows_cannot_be_deleted(self):
+        for name, url in self.detail_urls(self.theirs).items():
+            with self.subTest(model=name):
+                self.assertEqual(self.client.delete(url).status_code, status.HTTP_404_NOT_FOUND)
+        for name in ['category', 'ingredient', 'recipe', 'menu', 'buy_list_item']:
+            with self.subTest(model=name):
+                self.theirs[name].refresh_from_db()  # raises DoesNotExist if it was deleted
+
+    def test_another_users_detail_actions_are_not_found(self):
+        menu = self.theirs['menu'].id
+        calls = [
+            ('get', f"/api/ingredients/{self.theirs['ingredient'].id}/recipes/", None),
+            ('get', f"/api/categories/{self.theirs['category'].id}/ingredients/", None),
+            ('get', f'/api/menus/{menu}/stats/', None),
+            ('post', f'/api/menus/{menu}/activate/', None),
+            ('post', f'/api/menus/{menu}/add-item/', {'recipe_id': self.mine['recipe'].id}),
+            ('patch', f'/api/menus/{menu}/reorder-items/',
+             [{'id': self.theirs['menu_item'].id, 'order': 9}]),
+            ('delete', f"/api/menu-items/{self.theirs['menu_item'].id}/", None),
+        ]
+        for method, url, body in calls:
+            with self.subTest(method=method, url=url):
+                response = getattr(self.client, method)(url, body, format='json')
+                self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.theirs['menu'].refresh_from_db()
+        self.theirs['menu_item'].refresh_from_db()
+        self.assertFalse(self.theirs['menu'].is_active)
+        self.assertEqual(self.theirs['menu_item'].order, 1)
+        self.assertEqual(self.theirs['menu'].items.count(), 1)
+
+    def test_reordering_my_menu_cannot_move_another_menus_item(self):
+        response = self.client.patch(
+            f"/api/menus/{self.mine['menu'].id}/reorder-items/",
+            [{'id': self.theirs['menu_item'].id, 'order': 9}],
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.theirs['menu_item'].refresh_from_db()
+        self.assertEqual(self.theirs['menu_item'].order, 1)
+
+    def test_recipe_filters_ignore_another_users_ids(self):
+        # Put their ingredient in my recipe behind the API's back: even then, filtering by
+        # an ingredient or category that is not mine must match nothing.
+        RecipeIngredient.objects.create(
+            recipe=self.mine['recipe'], ingredient=self.theirs['ingredient'], amount=1, unit='oz',
+        )
+        for query in [f"ingredient={self.theirs['ingredient'].id}",
+                      f"category={self.theirs['category'].id}"]:
+            with self.subTest(query=query):
+                self.assertEqual(self.client.get(f'/api/recipes/?{query}').data, [])
+
+    def test_stats_do_not_name_another_users_recipe(self):
+        # /api/orders/ is still open, so an order can point my menu at somebody else's drink.
+        Order.objects.create(menu=self.mine['menu'], recipe=self.theirs['recipe'], guest_name='Sam')
+        response = self.client.get(f"/api/menus/{self.mine['menu'].id}/stats/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertNotIn('Daiquiri', str(response.data))
+
+    def test_activating_my_menu_leaves_another_users_active_menu_alone(self):
+        self.theirs['menu'].is_active = True
+        self.theirs['menu'].save()
+        mine_old = Menu.objects.create(owner=self.user, name='Last Week', is_active=True)
+
+        response = self.client.post(f"/api/menus/{self.mine['menu'].id}/activate/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.theirs['menu'].refresh_from_db()
+        mine_old.refresh_from_db()
+        self.assertTrue(self.theirs['menu'].is_active)
+        self.assertFalse(mine_old.is_active)
+
+
+class ForeignIdTests(TwoUserAPITestCase):
+    """Ids in a request body must name the requester's own rows.
+
+    Scoping the queryset does not cover these; each is rejected exactly as a nonexistent id
+    would be.
+    """
+
+    def test_ingredient_cannot_join_another_users_category(self):
+        response = self.client.post(
+            '/api/ingredients/',
+            {'name': 'Tanqueray', 'category_id': self.theirs['category'].id},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('category_id', response.data)
+
+    def test_ingredient_cannot_be_moved_into_another_users_category(self):
+        response = self.client.patch(
+            f"/api/ingredients/{self.mine['ingredient'].id}/",
+            {'category_id': self.theirs['category'].id},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.mine['ingredient'].refresh_from_db()
+        self.assertEqual(self.mine['ingredient'].category, self.mine['category'])
+
+    def recipe_payload(self, ingredient):
+        return {
+            'name': 'Borrowed',
+            'ingredients': [{'ingredient_id': ingredient.id, 'amount': 2, 'unit': 'oz'}],
+        }
+
+    def test_recipe_cannot_be_created_with_another_users_ingredient(self):
+        response = self.client.post(
+            '/api/recipes/', self.recipe_payload(self.theirs['ingredient']), format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(Recipe.objects.filter(name='Borrowed').exists())
+
+    def test_recipe_cannot_be_updated_to_use_another_users_ingredient(self):
+        response = self.client.put(
+            f"/api/recipes/{self.mine['recipe'].id}/",
+            self.recipe_payload(self.theirs['ingredient']),
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            list(self.mine['recipe'].ingredients.all()), [self.mine['ingredient']],
+        )
+
+    def test_another_users_recipe_cannot_be_added_to_my_menu(self):
+        response = self.client.post(
+            f"/api/menus/{self.mine['menu'].id}/add-item/",
+            {'recipe_id': self.theirs['recipe'].id},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('recipe_id', response.data)
+        self.assertEqual(self.mine['menu'].items.count(), 1)
+
+    def test_another_users_ingredient_cannot_go_on_my_buy_list(self):
+        other_ingredient = Ingredient.objects.create(owner=self.other, name='Wray & Nephew')
+        response = self.client.post(
+            '/api/buy-list/', {'ingredient_id': other_ingredient.id}, format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(BuyListItem.objects.filter(ingredient=other_ingredient).exists())
+
+    def test_buy_list_does_not_hand_back_another_users_existing_item(self):
+        """Posting an ingredient already on a list returns that item -- but only my own."""
+        response = self.client.post(
+            '/api/buy-list/', {'ingredient_id': self.theirs['ingredient'].id}, format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class PerOwnerNameTests(TwoUserAPITestCase):
+    """Category and ingredient names are unique within an account, not across accounts."""
+
+    def test_i_can_use_a_name_another_user_already_has(self):
+        for url, name in [('/api/categories/', 'Agave'), ('/api/ingredients/', 'Smith & Cross')]:
+            with self.subTest(url=url):
+                response = self.client.post(url, {'name': name}, format='json')
+                self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_new_category_gets_its_own_generic_ingredient_not_another_users(self):
+        response = self.client.post('/api/categories/', {'name': 'Agave'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        generic = Ingredient.objects.get(owner=self.user, name='Agave')
+        self.assertTrue(generic.is_generic)
+        self.assertEqual(generic.category.owner, self.user)
+        self.assertFalse(Ingredient.objects.filter(owner=self.other, name='Agave').exists())
+
+    def test_i_cannot_use_one_of_my_own_names_twice(self):
+        for url, name in [('/api/categories/', 'Gin'), ('/api/ingredients/', 'Plymouth Gin')]:
+            with self.subTest(url=url):
+                response = self.client.post(url, {'name': name}, format='json')
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertIn('already exists', str(response.data['name']))
+
+    def test_renaming_onto_one_of_my_own_names_is_rejected(self):
+        response = self.client.patch(
+            f"/api/ingredients/{self.mine['ingredient'].id}/", {'name': 'Rum'}, format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_saving_a_row_under_its_existing_name_is_fine(self):
+        for name, body in [('category', {'name': 'Gin', 'notes': 'juniper'}),
+                           ('ingredient', {'name': 'Plymouth Gin', 'stock_level': 50})]:
+            with self.subTest(model=name):
+                response = self.client.patch(self.detail_urls(self.mine)[name], body, format='json')
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_the_database_enforces_it_too(self):
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            Ingredient.objects.create(owner=self.user, name='Plymouth Gin')
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            IngredientCategory.objects.create(owner=self.user, name='Gin')
+
+    def test_a_row_cannot_exist_without_an_owner(self):
+        for model in [IngredientCategory, Ingredient, Recipe, Menu]:
+            with self.subTest(model=model.__name__):
+                with self.assertRaises(IntegrityError), transaction.atomic():
+                    model.objects.create(name='Nobody')
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            BuyListItem.objects.create(ingredient=Ingredient.objects.create(owner=self.user, name='Tonic'))
+
+
+class OwnerAssignmentTests(TwoUserAPITestCase):
+    """Everything created through the API belongs to whoever created it, and only them."""
+
+    def test_created_rows_belong_to_the_requester(self):
+        ingredient = self.client.post('/api/ingredients/', {'name': 'Campari'}, format='json')
+        recipe = self.client.post(
+            '/api/recipes/',
+            {'name': 'Negroni', 'ingredients': [
+                {'ingredient_id': self.mine['ingredient'].id, 'amount': 1, 'unit': 'oz'},
+            ]},
+            format='json',
+        )
+        menu = self.client.post('/api/menus/', {'name': 'Sunday'}, format='json')
+        buy = self.client.post('/api/buy-list/', {'ingredient_id': ingredient.data['id']}, format='json')
+        for response, model in [(ingredient, Ingredient), (recipe, Recipe), (menu, Menu),
+                                (buy, BuyListItem)]:
+            with self.subTest(model=model.__name__):
+                self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+                self.assertEqual(model.objects.get(pk=response.data['id']).owner, self.user)
+
+    def test_category_and_its_generic_ingredient_belong_to_the_requester(self):
+        response = self.client.post('/api/categories/', {'name': 'Vermouth'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(IngredientCategory.objects.get(name='Vermouth').owner, self.user)
+        generic = Ingredient.objects.get(name='Vermouth')
+        self.assertEqual(generic.owner, self.user)
+        self.assertTrue(generic.is_generic)
+
+    def test_owner_in_the_request_body_is_ignored(self):
+        calls = [
+            ('/api/ingredients/', {'name': 'Campari'}, Ingredient),
+            ('/api/categories/', {'name': 'Amaro'}, IngredientCategory),
+            ('/api/recipes/', {'name': 'Negroni', 'ingredients': []}, Recipe),
+            ('/api/menus/', {'name': 'Sunday'}, Menu),
+        ]
+        for url, body, model in calls:
+            with self.subTest(url=url):
+                body = {**body, 'owner': self.other.id, 'owner_id': self.other.id}
+                response = self.client.post(url, body, format='json')
+                self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+                self.assertNotIn('owner', response.data)
+                self.assertEqual(model.objects.get(pk=response.data['id']).owner, self.user)
+
+    def test_owner_cannot_be_reassigned_by_update(self):
+        response = self.client.patch(
+            f"/api/recipes/{self.mine['recipe'].id}/",
+            {'owner': self.other.id, 'owner_id': self.other.id},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.mine['recipe'].refresh_from_db()
+        self.assertEqual(self.mine['recipe'].owner, self.user)
+
+    def test_renaming_a_category_renames_only_my_generic_ingredient(self):
+        generic = Ingredient.objects.create(
+            owner=self.user, name='Gin', category=self.mine['category'], is_generic=True,
+        )
+        response = self.client.patch(
+            f"/api/categories/{self.mine['category'].id}/", {'name': 'Genever'}, format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        generic.refresh_from_db()
+        self.assertEqual(generic.name, 'Genever')
+
+
+class MenuAPITests(AuthenticatedAPITestCase):
+    """Menus and their items."""
+
+    def setUp(self):
+        super().setUp()
+        self.negroni = Recipe.objects.create(owner=self.user, name='Negroni')
+        self.martini = Recipe.objects.create(owner=self.user, name='Martini')
+        self.menu = Menu.objects.create(owner=self.user, name='Friday Night')
+
+    def test_create_menu(self):
+        response = self.client.post(
+            '/api/menus/', {'name': 'Sunday', 'top_decoration': 'maple'}, format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['top_decoration'], 'maple')
+        self.assertFalse(response.data['is_active'])
+        self.assertEqual(response.data['items'], [])
+
+    def test_is_active_cannot_be_set_directly(self):
+        response = self.client.patch(
+            f'/api/menus/{self.menu.id}/', {'is_active': True}, format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.menu.refresh_from_db()
+        self.assertFalse(self.menu.is_active)
+
+    def test_list_reports_item_count(self):
+        MenuItem.objects.create(menu=self.menu, recipe=self.negroni, order=1)
+        response = self.client.get('/api/menus/')
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['item_count'], 1)
+        self.assertNotIn('items', response.data[0])
+
+    def test_activate_publishes_and_deactivates_my_other_menus(self):
+        old = Menu.objects.create(owner=self.user, name='Last Week', is_active=True)
+        response = self.client.post(f'/api/menus/{self.menu.id}/activate/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['is_active'])
+        self.assertTrue(response.data['is_published'])
+        old.refresh_from_db()
+        self.assertFalse(old.is_active)
+
+    def test_add_item_appends_in_order(self):
+        for recipe in [self.negroni, self.martini]:
+            response = self.client.post(
+                f'/api/menus/{self.menu.id}/add-item/', {'recipe_id': recipe.id}, format='json',
+            )
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        items = response.data['items']
+        self.assertEqual([item['recipe']['name'] for item in items], ['Negroni', 'Martini'])
+        self.assertEqual([item['order'] for item in items], [1, 2])
+
+    def test_add_item_twice_is_rejected(self):
+        MenuItem.objects.create(menu=self.menu, recipe=self.negroni, order=1)
+        response = self.client.post(
+            f'/api/menus/{self.menu.id}/add-item/', {'recipe_id': self.negroni.id}, format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['detail'], 'This recipe is already on the menu.')
+
+    def test_reorder_items(self):
+        first = MenuItem.objects.create(menu=self.menu, recipe=self.negroni, order=1)
+        second = MenuItem.objects.create(menu=self.menu, recipe=self.martini, order=2)
+        response = self.client.patch(
+            f'/api/menus/{self.menu.id}/reorder-items/',
+            [{'id': first.id, 'order': 2}, {'id': second.id, 'order': 1}],
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            list(self.menu.items.values_list('recipe__name', flat=True)), ['Martini', 'Negroni'],
+        )
+
+    def test_remove_item(self):
+        item = MenuItem.objects.create(menu=self.menu, recipe=self.negroni, order=1)
+        response = self.client.delete(f'/api/menu-items/{item.id}/')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(self.menu.items.count(), 0)
+
+    def test_deleting_a_menu_takes_its_items_and_orders_with_it(self):
+        MenuItem.objects.create(menu=self.menu, recipe=self.negroni, order=1)
+        Order.objects.create(menu=self.menu, recipe=self.negroni, guest_name='Sam')
+        response = self.client.delete(f'/api/menus/{self.menu.id}/')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(MenuItem.objects.count(), 0)
+        self.assertEqual(Order.objects.count(), 0)
+        self.assertTrue(Recipe.objects.filter(pk=self.negroni.pk).exists())
+
+
+class OrderAPITests(APITestCase):
+    """Guest ordering, as it works today: no session, no scoping.
+
+    Anonymous on purpose. These pin the behaviour the public menu page depends on; they do
+    not endorse how open the endpoint is, which is tracked in backlog.md.
+    """
+
+    def setUp(self):
+        owner = get_user_model().objects.create_user(username='tester', email='tester@example.com')
+        self.recipe = Recipe.objects.create(owner=owner, name='Negroni')
+        self.menu = Menu.objects.create(owner=owner, name='Friday Night', is_published=True)
+        MenuItem.objects.create(menu=self.menu, recipe=self.recipe, order=1)
+        self.other_menu = Menu.objects.create(owner=owner, name='Last Week')
+
+    def place(self, guest='Sam', menu=None):
+        return Order.objects.create(menu=menu or self.menu, recipe=self.recipe, guest_name=guest)
+
+    def test_guest_can_place_an_order(self):
+        response = self.client.post(
+            '/api/orders/',
+            {'recipe_id': self.recipe.id, 'menu_id': self.menu.id, 'guest_name': 'Sam'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['recipe']['name'], 'Negroni')
+        self.assertEqual(response.data['menu_id'], self.menu.id)
+        self.assertFalse(response.data['is_fulfilled'])
+
+    def test_order_needs_a_guest_name(self):
+        response = self.client.post(
+            '/api/orders/', {'recipe_id': self.recipe.id, 'menu_id': self.menu.id}, format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('guest_name', response.data)
+
+    def test_orders_are_listed_oldest_first(self):
+        first, second = self.place('Sam'), self.place('Alex')
+        response = self.client.get('/api/orders/')
+        self.assertEqual([order['id'] for order in response.data], [first.id, second.id])
+
+    def test_filter_by_menu_and_guest(self):
+        mine = self.place('Sam')
+        self.place('Alex')
+        self.place('Sam', menu=self.other_menu)
+        response = self.client.get(f'/api/orders/?menu_id={self.menu.id}&guest_name=Sam')
+        self.assertEqual([order['id'] for order in response.data], [mine.id])
+
+    def test_filter_by_fulfilled(self):
+        waiting = self.place('Sam')
+        done = self.place('Alex')
+        done.is_fulfilled = True
+        done.save()
+        response = self.client.get('/api/orders/?fulfilled=false')
+        self.assertEqual([order['id'] for order in response.data], [waiting.id])
+        response = self.client.get('/api/orders/?today=true&fulfilled=true')
+        self.assertEqual([order['id'] for order in response.data], [done.id])
+
+    def test_fulfil_an_order(self):
+        order = self.place()
+        response = self.client.patch(
+            f'/api/orders/{order.id}/', {'is_fulfilled': True}, format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        order.refresh_from_db()
+        self.assertTrue(order.is_fulfilled)
+
+    def test_cancel_an_order(self):
+        order = self.place()
+        response = self.client.delete(f'/api/orders/{order.id}/')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Order.objects.exists())
+
+    def test_put_is_not_allowed(self):
+        order = self.place()
+        response = self.client.put(f'/api/orders/{order.id}/', {'guest_name': 'X'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+
+class BuyListAPITests(AuthenticatedAPITestCase):
+    """The buy list: one entry per ingredient."""
+
+    def setUp(self):
+        super().setUp()
+        self.category = IngredientCategory.objects.create(owner=self.user, name='Gin')
+        self.ingredient = Ingredient.objects.create(
+            owner=self.user, name='Plymouth Gin', category=self.category,
+        )
+
+    def add(self, **extra):
+        return self.client.post(
+            '/api/buy-list/', {'ingredient_id': self.ingredient.id, **extra}, format='json',
+        )
+
+    def test_add_ingredient(self):
+        response = self.add(notes='two bottles')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['ingredient']['name'], 'Plymouth Gin')
+        self.assertEqual(response.data['ingredient']['category']['name'], 'Gin')
+        self.assertEqual(response.data['notes'], 'two bottles')
+
+    def test_adding_twice_returns_the_existing_entry(self):
+        first = self.add(notes='two bottles')
+        second = self.add(notes='ignored')
+        self.assertEqual(second.status_code, status.HTTP_200_OK)
+        self.assertEqual(second.data['id'], first.data['id'])
+        self.assertEqual(second.data['notes'], 'two bottles')
+        self.assertEqual(BuyListItem.objects.count(), 1)
+
+    def test_list_is_newest_first(self):
+        tonic = Ingredient.objects.create(owner=self.user, name='Tonic')
+        self.add()
+        self.client.post('/api/buy-list/', {'ingredient_id': tonic.id}, format='json')
+        response = self.client.get('/api/buy-list/')
+        self.assertEqual(
+            [row['ingredient']['name'] for row in response.data], ['Tonic', 'Plymouth Gin'],
+        )
+
+    def test_update_notes(self):
+        item = self.add().data['id']
+        response = self.client.patch(f'/api/buy-list/{item}/', {'notes': 'the navy strength'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['notes'], 'the navy strength')
+
+    def test_remove(self):
+        item = self.add().data['id']
+        response = self.client.delete(f'/api/buy-list/{item}/')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(BuyListItem.objects.exists())
+        self.assertTrue(Ingredient.objects.filter(pk=self.ingredient.pk).exists())
+
+    def test_put_is_not_allowed(self):
+        item = self.add().data['id']
+        response = self.client.put(f'/api/buy-list/{item}/', {'notes': 'x'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_deleting_the_ingredient_removes_it_from_the_list(self):
+        self.add()
+        self.client.delete(f'/api/ingredients/{self.ingredient.id}/')
+        self.assertFalse(BuyListItem.objects.exists())
+
+
+class OwnerAdminTests(TestCase):
+    """Django admin shows who owns each row and will not create a row nobody owns."""
+
+    def setUp(self):
+        User = get_user_model()
+        self.admin_user = User.objects.create_superuser(username='admin', email='admin@example.com')
+        self.owner = User.objects.create_user(username='tester', email='tester@example.com')
+        self.client.force_login(self.admin_user)
+        category = IngredientCategory.objects.create(owner=self.owner, name='Gin')
+        ingredient = Ingredient.objects.create(owner=self.owner, name='Plymouth Gin', category=category)
+        Recipe.objects.create(owner=self.owner, name='Martini')
+        Menu.objects.create(owner=self.owner, name='Friday Night')
+        BuyListItem.objects.create(owner=self.owner, ingredient=ingredient)
+
+    def test_changelists_show_and_filter_by_owner(self):
+        for model in ['ingredientcategory', 'ingredient', 'recipe', 'menu', 'buylistitem']:
+            with self.subTest(model=model):
+                response = self.client.get(f'/admin/cocktails/{model}/')
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, 'column-owner')
+                self.assertContains(response, f'?owner__id__exact={self.owner.id}')
+                filtered = self.client.get(
+                    f'/admin/cocktails/{model}/?owner__id__exact={self.admin_user.id}'
+                )
+                self.assertEqual(filtered.context['cl'].result_count, 0)
+
+    def test_add_forms_load(self):
+        for model in ['ingredientcategory', 'ingredient', 'recipe', 'menu', 'buylistitem']:
+            with self.subTest(model=model):
+                response = self.client.get(f'/admin/cocktails/{model}/add/')
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, 'name="owner"')
+
+    def test_a_row_cannot_be_created_without_an_owner(self):
+        response = self.client.post('/admin/cocktails/ingredient/add/', {'name': 'Tonic'})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('owner', response.context['adminform'].form.errors)
+        self.assertFalse(Ingredient.objects.filter(name='Tonic').exists())
+
+    def test_category_created_in_admin_gives_its_generic_ingredient_the_same_owner(self):
+        response = self.client.post('/admin/cocktails/ingredientcategory/add/', {
+            'owner': self.owner.id, 'name': 'Rum', 'notes': '', 'create_generic_ingredient': 'on',
+        })
+        self.assertEqual(response.status_code, 302)
+        generic = Ingredient.objects.get(name='Rum')
+        self.assertEqual(generic.owner, self.owner)
+        self.assertTrue(generic.is_generic)
 
 
 class AnonymousAccessTests(APITestCase):
@@ -1096,13 +1740,16 @@ class AnonymousAccessTests(APITestCase):
 
     def setUp(self):
         super().setUp()
-        self.category = IngredientCategory.objects.create(name='Gin')
-        self.ingredient = Ingredient.objects.create(name='Plymouth Gin', category=self.category)
-        self.recipe = Recipe.objects.create(name='Martini')
+        owner = get_user_model().objects.create_user(username='tester', email='tester@example.com')
+        self.category = IngredientCategory.objects.create(owner=owner, name='Gin')
+        self.ingredient = Ingredient.objects.create(
+            owner=owner, name='Plymouth Gin', category=self.category,
+        )
+        self.recipe = Recipe.objects.create(owner=owner, name='Martini')
         RecipeIngredient.objects.create(
             recipe=self.recipe, ingredient=self.ingredient, amount=2.5, unit='oz'
         )
-        self.menu = Menu.objects.create(name='Friday Night', is_published=True)
+        self.menu = Menu.objects.create(owner=owner, name='Friday Night', is_published=True)
         self.menu_item = MenuItem.objects.create(menu=self.menu, recipe=self.recipe, order=1)
 
     # --- reads are refused ---
@@ -1237,10 +1884,10 @@ class CacheHeaderTests(APITestCase):
             username='tester',
             email='tester@example.com',
         )
-        self.category = IngredientCategory.objects.create(name='Gin')
-        self.ingredient = Ingredient.objects.create(name='London Dry', category=self.category)
-        self.recipe = Recipe.objects.create(name='Martini')
-        self.menu = Menu.objects.create(name='Friday Night')
+        self.category = IngredientCategory.objects.create(owner=self.user, name='Gin')
+        self.ingredient = Ingredient.objects.create(owner=self.user, name='London Dry', category=self.category)
+        self.recipe = Recipe.objects.create(owner=self.user, name='Martini')
+        self.menu = Menu.objects.create(owner=self.user, name='Friday Night')
 
     def private_read_urls(self):
         return [
@@ -1436,3 +2083,14 @@ class OwnerBackfillMigrationTests(TransactionTestCase):
         self.create_unowned_rows()
         with self.assertRaisesMessage(RuntimeError, "no user named 'walkingtowork'"):
             self.run_backfill()
+
+
+class OwnerRebackfillMigrationTests(OwnerBackfillMigrationTests):
+    """Migration 0012 runs the same backfill again, for rows created after 0011.
+
+    Nothing set an owner on create between the two, so those rows arrive unowned. Every
+    case that matters for 0011 matters here too, so this reruns them one migration later.
+    """
+
+    BEFORE = [('cocktails', '0011_backfill_owner')]
+    AFTER = [('cocktails', '0012_backfill_owner_again')]

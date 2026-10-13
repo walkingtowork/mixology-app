@@ -7,6 +7,24 @@ from .models import (
 )
 
 
+class OwnedAdmin(admin.ModelAdmin):
+    """Base for models that belong to a user: show the owner and filter by it.
+
+    The API sets the owner from the session, but here the person at the keyboard is an
+    administrator acting on somebody else's data -- the superuser owns nothing by design --
+    so the owner is chosen explicitly in the form.
+    """
+
+    def get_list_display(self, request):
+        return [*super().get_list_display(request), 'owner']
+
+    def get_list_filter(self, request):
+        return ['owner', *super().get_list_filter(request)]
+
+    def get_list_select_related(self, request):
+        return ['owner']
+
+
 class RecipeIngredientInline(admin.TabularInline):
     """Inline admin for managing RecipeIngredients within Recipe admin."""
     model = RecipeIngredient
@@ -15,7 +33,7 @@ class RecipeIngredientInline(admin.TabularInline):
 
 
 @admin.register(Recipe)
-class RecipeAdmin(admin.ModelAdmin):
+class RecipeAdmin(OwnedAdmin):
     """Admin configuration for Recipe model."""
     list_display = ['name', 'garnish', 'ingredient_count']
     list_filter = ['garnish']
@@ -23,7 +41,7 @@ class RecipeAdmin(admin.ModelAdmin):
     inlines = [RecipeIngredientInline]
     fieldsets = (
         ('Basic Information', {
-            'fields': ('name', 'notes', 'garnish', 'source_url')
+            'fields': ('owner', 'name', 'notes', 'garnish', 'source_url')
         }),
     )
     
@@ -34,7 +52,7 @@ class RecipeAdmin(admin.ModelAdmin):
 
 
 @admin.register(Ingredient)
-class IngredientAdmin(admin.ModelAdmin):
+class IngredientAdmin(OwnedAdmin):
     """Admin configuration for Ingredient model."""
     list_display = ['name', 'category', 'is_generic', 'recipe_count']
     list_filter = ['category', 'is_generic']
@@ -42,7 +60,7 @@ class IngredientAdmin(admin.ModelAdmin):
     ordering = ['name']
     fieldsets = (
         ('Basic Information', {
-            'fields': ('name', 'category', 'is_generic')
+            'fields': ('owner', 'name', 'category', 'is_generic')
         }),
     )
     
@@ -73,7 +91,7 @@ class IngredientCategoryAdminForm(forms.ModelForm):
     
     class Meta:
         model = IngredientCategory
-        fields = ['name', 'notes', 'create_generic_ingredient']
+        fields = ['owner', 'name', 'notes', 'create_generic_ingredient']
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -84,7 +102,7 @@ class IngredientCategoryAdminForm(forms.ModelForm):
 
 
 @admin.register(IngredientCategory)
-class IngredientCategoryAdmin(admin.ModelAdmin):
+class IngredientCategoryAdmin(OwnedAdmin):
     """Admin configuration for IngredientCategory model."""
     form = IngredientCategoryAdminForm
     list_display = ['name', 'ingredient_count', 'generic_ingredient_display']
@@ -92,7 +110,7 @@ class IngredientCategoryAdmin(admin.ModelAdmin):
     ordering = ['name']
     fieldsets = (
         ('Basic Information', {
-            'fields': ('name', 'notes', 'create_generic_ingredient')
+            'fields': ('owner', 'name', 'notes', 'create_generic_ingredient')
         }),
     )
     
@@ -120,7 +138,7 @@ class IngredientCategoryAdmin(admin.ModelAdmin):
         # Auto-create generic ingredient if requested and this is a new category
         if not change and create_generic:
             # Check if an ingredient with the same name already exists
-            existing_ingredient = Ingredient.objects.filter(name=obj.name).first()
+            existing_ingredient = Ingredient.objects.filter(owner=obj.owner, name=obj.name).first()
             
             if existing_ingredient:
                 # Link existing ingredient to category and mark as generic
@@ -131,6 +149,7 @@ class IngredientCategoryAdmin(admin.ModelAdmin):
             else:
                 # Create new generic ingredient
                 Ingredient.objects.create(
+                    owner=obj.owner,
                     name=obj.name,
                     category=obj,
                     is_generic=True
@@ -138,6 +157,7 @@ class IngredientCategoryAdmin(admin.ModelAdmin):
         elif change and 'name' in form.changed_data:
             # Update generic ingredient name if category name changed
             generic_ingredient = Ingredient.objects.filter(
+                owner=obj.owner,
                 category=obj,
                 is_generic=True
             ).first()
@@ -177,7 +197,7 @@ class MenuItemInline(admin.TabularInline):
 
 
 @admin.register(Menu)
-class MenuAdmin(admin.ModelAdmin):
+class MenuAdmin(OwnedAdmin):
     """Admin configuration for Menu."""
     list_display = ['name', 'is_active', 'is_published', 'item_count', 'created_at']
     list_filter = ['is_active', 'is_published', 'created_at']
@@ -187,7 +207,7 @@ class MenuAdmin(admin.ModelAdmin):
     readonly_fields = ['share_token', 'created_at', 'updated_at']
     fieldsets = (
         ('Basic Information', {
-            'fields': ('name', 'is_active', 'is_published')
+            'fields': ('owner', 'name', 'is_active', 'is_published')
         }),
         ('Decoration', {
             'fields': ('top_decoration', 'bottom_decoration', 'theme_notes')
@@ -232,7 +252,7 @@ class OrderAdmin(admin.ModelAdmin):
 
 
 @admin.register(BuyListItem)
-class BuyListItemAdmin(admin.ModelAdmin):
+class BuyListItemAdmin(OwnedAdmin):
     """Admin configuration for BuyListItem."""
     list_display = ['ingredient', 'added_at']
     search_fields = ['ingredient__name', 'notes']
