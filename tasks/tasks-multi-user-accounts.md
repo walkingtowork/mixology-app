@@ -106,6 +106,16 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
   - [x] 2.7 Confirm a deliberately broken test actually fails the workflow, then revert it — done 2026-09-21 (`8b9d30d`, reverted in `8fdf150`). Backend went red in 11s while the frontend stayed green, confirming the jobs are independent. **It also exposed that nothing gates the merge**: GitHub still offered a green merge button with a failing check. Tracked in `backlog.md`
   - [x] 2.8 Note in `PROJECT_CONTEXT.md` that CI now exists, replacing the "there is no CI" working note
 
+- [x] 2.5 **Interim API lockdown — not in the original plan.** Added 2026-10-12 because the
+  exposure was the only thing in the project exploitable *today*, and the planned fix (6.0)
+  was four PRs away. Closes the destructive half now; reads stay open until 6.0.
+  - [x] 2.5.1 `REST_FRAMEWORK` block with `IsAuthenticatedOrReadOnly` and `SessionAuthentication` only — `BasicAuthentication` dropped from DRF's defaults, so there is no password-over-the-wire path to the API
+  - [x] 2.5.2 Confirm `PublicMenuView` and `OrderViewSet` keep their explicit `AllowAny` + `authentication_classes = []`
+  - [x] 2.5.3 Register `Menu`, `MenuItem`, `Order` and `BuyListItem` in Django admin — they never were, so with the API refusing anonymous writes there would otherwise be no way at all to manage menus. Task 8.12 needs them registered regardless
+  - [x] 2.5.4 Create a superuser on production — **`data.json` contained zero user records**, so the production database had no account and `/admin/` was a door with no key. Done 2026-10-12 via the Railway dashboard console
+  - [x] 2.5.5 `AuthenticatedAPITestCase` base class: all 34 write calls across the 6 existing test classes were anonymous and would now 403. Uses `force_authenticate` with no password — hashing one per test added ~9s to the suite for nothing
+  - [x] 2.5.6 `AnonymousAccessTests`: 14 tests covering reads open, writes refused (403, not 401 — `SessionAuthentication` offers no `WWW-Authenticate` challenge), and both deliberate exemptions still working
+
 - [ ] 3.0 Extract a single request helper in `cocktailsApi.ts`
   - [ ] 3.1 Write one `request()` helper handling base URL, JSON headers, `credentials: 'include'`, error shaping, and reading the `csrftoken` cookie into an `X-CSRFToken` header for unsafe methods
   - [ ] 3.2 Migrate all ~30 `fetch` call sites in the 670-line module onto it, preserving each function's existing error messages and return types
@@ -130,7 +140,7 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
   - [ ] 5.9 Test on a real iOS device, since that is the browser this whole decision exists to satisfy
 
 - [ ] 6.0 Close the exposure — default-deny API
-  - [ ] 6.1 Add a `REST_FRAMEWORK` block with `DEFAULT_PERMISSION_CLASSES = ['rest_framework.permissions.IsAuthenticated']` and `DEFAULT_AUTHENTICATION_CLASSES = ['rest_framework.authentication.SessionAuthentication']`
+  - [ ] 6.1 Change `DEFAULT_PERMISSION_CLASSES` from `IsAuthenticatedOrReadOnly` to `IsAuthenticated` — the block already exists as of task 2.5, so this is a one-word flip that closes the remaining read exposure
   - [ ] 6.2 Keep `PublicMenuView` explicitly `AllowAny` with `authentication_classes = []` (`views.py:241`)
   - [ ] 6.3 Keep `OrderViewSet` create reachable anonymously so guests can still order; full scoping of that endpoint is tracked in `backlog.md` and is **not** in this task
   - [ ] 6.4 Log in at `…vercel.app/admin/` and confirm the app works end to end with the session cookie, no login UI required yet
@@ -139,13 +149,13 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
 
 - [ ] 7.0 Ownership, phase one — add nullable owner and backfill
   - [ ] 7.1 Use **`pg_dump`, not `manage.py dumpdata`**. A Django fixture is schema-coupled: a fixture taken before this work cannot be loaded back once `owner` is required, because the rows carry no owner. `pg_dump` captures schema *and* data, so restoring it is a genuine point-in-time rollback. `pg_dump "$DATABASE_URL" -Fc -f backup.dump`
-  - [ ] 7.2 Stand up a **local Postgres** to restore into — local dev is SQLite (`dj_database_url` falls back when `DATABASE_URL` is unset), so there is nowhere to `pg_restore` to until one exists. Homebrew or Docker both fine. Note `pg_dump` must be at least the server's version, or it refuses
+  - [ ] 7.2 Stand up a **local Postgres** to restore into. Confirmed 2026-10-12 that `psql` and `pg_dump` are **not installed** locally, and the venv is missing `psycopg2-binary` and `gunicorn` despite both being in `requirements.txt` — so neither the dump nor a Django run against Postgres works from this machine yet — local dev is SQLite (`dj_database_url` falls back when `DATABASE_URL` is unset), so there is nowhere to `pg_restore` to until one exists. Homebrew or Docker both fine. Note `pg_dump` must be at least the server's version, or it refuses
   - [ ] 7.3 Restore into that local Postgres and confirm the app runs against it, before trusting the dump as a rollback
   - [ ] 7.4 Check whether Railway's Postgres service offers its own scheduled backups, and turn them on if so — belt and braces
   - [ ] 7.5 Rehearse every step below against the restored copy before touching production
   - [ ] 7.6 Add a nullable `owner` FK to `IngredientCategory`, `Ingredient`, `Recipe`, `Menu` and `BuyListItem`
   - [ ] 7.7 Decide `on_delete` per model — deleting a user should not silently orphan or cascade away a menu with order history
-  - [ ] 7.8 Write a data migration backfilling every existing row to your admin account
+  - [ ] 7.8 Write a data migration backfilling every existing row to your admin account. **This had no account to point at until 2026-10-12** — `data.json` held zero user records, so production had no users at all. Resolved by 2.5.4; the migration must look the account up rather than assume a hardcoded id
   - [ ] 7.9 Verify against the restored dump that all 304 records come out owned, with zero nulls remaining
   - [ ] 7.10 Note that `Order` and `MenuItem` derive ownership through `menu`, so they get no `owner` column of their own
   - [ ] 7.11 Deploy this phase alone and confirm the app still works before starting 8.0

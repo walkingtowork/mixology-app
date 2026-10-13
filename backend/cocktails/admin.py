@@ -1,7 +1,10 @@
 from django.contrib import admin
 from django import forms
 from django.core.exceptions import ValidationError
-from .models import Ingredient, Recipe, RecipeIngredient, IngredientCategory
+from .models import (
+    Ingredient, Recipe, RecipeIngredient, IngredientCategory,
+    Menu, MenuItem, Order, BuyListItem,
+)
 
 
 class RecipeIngredientInline(admin.TabularInline):
@@ -158,3 +161,80 @@ class IngredientCategoryAdmin(admin.ModelAdmin):
             )
         
         super().delete_model(request, obj)
+
+
+# Menu, MenuItem, Order and BuyListItem were never registered here, so the only way to
+# manage them was the API. Now that anonymous writes are refused, admin is the only way to
+# edit them until the real auth UI lands -- and task 8.12 needs them registered anyway, to
+# expose and filter by owner once ownership exists.
+
+class MenuItemInline(admin.TabularInline):
+    """Manage a menu's drinks inline, in their display order."""
+    model = MenuItem
+    extra = 1
+    fields = ['recipe', 'order']
+    ordering = ['order']
+
+
+@admin.register(Menu)
+class MenuAdmin(admin.ModelAdmin):
+    """Admin configuration for Menu."""
+    list_display = ['name', 'is_active', 'is_published', 'item_count', 'created_at']
+    list_filter = ['is_active', 'is_published', 'created_at']
+    search_fields = ['name', 'theme_notes']
+    inlines = [MenuItemInline]
+    # share_token is editable=False on the model, so it can only be displayed, never edited.
+    readonly_fields = ['share_token', 'created_at', 'updated_at']
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('name', 'is_active', 'is_published')
+        }),
+        ('Decoration', {
+            'fields': ('top_decoration', 'bottom_decoration', 'theme_notes')
+        }),
+        ('Sharing', {
+            'fields': ('share_token',),
+            'description': 'The public menu lives at /share/&lt;share token&gt; on the frontend.',
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',),
+        }),
+    )
+
+    def item_count(self, obj):
+        """Display how many drinks are on this menu."""
+        return obj.items.count()
+    item_count.short_description = 'Drinks'
+
+
+@admin.register(MenuItem)
+class MenuItemAdmin(admin.ModelAdmin):
+    """Admin configuration for MenuItem (usually managed inline from Menu)."""
+    list_display = ['menu', 'recipe', 'order']
+    list_filter = ['menu']
+    search_fields = ['menu__name', 'recipe__name']
+    ordering = ['menu', 'order']
+
+
+@admin.register(Order)
+class OrderAdmin(admin.ModelAdmin):
+    """Admin configuration for Order.
+
+    Guest names are self-entered and not unique, so two guests who both type 'Sam'
+    are indistinguishable here, exactly as in the menu stats page.
+    """
+    list_display = ['guest_name', 'recipe', 'menu', 'is_fulfilled', 'created_at']
+    list_filter = ['is_fulfilled', 'menu', 'created_at']
+    search_fields = ['guest_name', 'recipe__name']
+    ordering = ['-created_at']
+    readonly_fields = ['created_at']
+
+
+@admin.register(BuyListItem)
+class BuyListItemAdmin(admin.ModelAdmin):
+    """Admin configuration for BuyListItem."""
+    list_display = ['ingredient', 'added_at']
+    search_fields = ['ingredient__name', 'notes']
+    ordering = ['-added_at']
+    readonly_fields = ['added_at']

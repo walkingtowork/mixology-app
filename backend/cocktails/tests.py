@@ -1,17 +1,40 @@
 from django.test import TestCase
+from django.contrib.auth import get_user_model
 from rest_framework.test import APITestCase
 from rest_framework import status
 from .models import (
     Ingredient, Recipe, RecipeIngredient, IngredientCategory,
-    Menu, MenuItem, Order,
+    Menu, MenuItem, Order, BuyListItem,
 )
 
 
-class IngredientAPITests(APITestCase):
+class AuthenticatedAPITestCase(APITestCase):
+    """Base class for API tests that write.
+
+    The API is default-deny for unsafe methods (IsAuthenticatedOrReadOnly), so anything
+    that creates, updates or deletes has to act as a signed-in user. Authenticating here
+    keeps that concern in one place, and means anonymous behaviour is asserted
+    deliberately in AnonymousAccessTests rather than relied on by accident everywhere
+    else. When ownership lands in task 8.0 this is where the owning user comes from.
+    """
+
+    def setUp(self):
+        super().setUp()
+        # No password: force_authenticate bypasses the login path entirely, and hashing one
+        # per test added ~9s to the suite for nothing.
+        self.user = get_user_model().objects.create_user(
+            username='tester',
+            email='tester@example.com',
+        )
+        self.client.force_authenticate(user=self.user)
+
+
+class IngredientAPITests(AuthenticatedAPITestCase):
     """Test cases for Ingredient API endpoints."""
 
     def setUp(self):
         """Set up test data."""
+        super().setUp()
         self.ingredient1 = Ingredient.objects.create(name='Gin')
         self.ingredient2 = Ingredient.objects.create(name='Vermouth')
         self.ingredient3 = Ingredient.objects.create(name='Lemon Juice')
@@ -120,11 +143,12 @@ class IngredientAPITests(APITestCase):
         self.assertTrue(Recipe.objects.filter(id=recipe.id).exists())
 
 
-class RecipeAPITests(APITestCase):
+class RecipeAPITests(AuthenticatedAPITestCase):
     """Test cases for Recipe API endpoints."""
 
     def setUp(self):
         """Set up test data."""
+        super().setUp()
         self.gin = Ingredient.objects.create(name='Gin')
         self.vermouth = Ingredient.objects.create(name='Vermouth')
         self.lemon = Ingredient.objects.create(name='Lemon Juice')
@@ -532,11 +556,12 @@ class RecipeAPITests(APITestCase):
         self.assertIsNone(response.data.get('source_url'))
 
 
-class IngredientCategoryAPITests(APITestCase):
+class IngredientCategoryAPITests(AuthenticatedAPITestCase):
     """Test cases for IngredientCategory API endpoints."""
 
     def setUp(self):
         """Set up test data."""
+        super().setUp()
         self.category1 = IngredientCategory.objects.create(name='Whiskey', notes='Various whiskey types')
         self.category2 = IngredientCategory.objects.create(name='Gin', notes='Gin category')
 
@@ -748,11 +773,12 @@ class IngredientCategoryAPITests(APITestCase):
         self.assertNotIn('Gin', ingredient_names)
 
 
-class IngredientWithCategoryTests(APITestCase):
+class IngredientWithCategoryTests(AuthenticatedAPITestCase):
     """Test cases for Ingredient API with category support."""
 
     def setUp(self):
         """Set up test data."""
+        super().setUp()
         self.category = IngredientCategory.objects.create(name='Whiskey')
         self.ingredient = Ingredient.objects.create(name='Jameson', category=self.category)
 
@@ -824,11 +850,12 @@ class IngredientWithCategoryTests(APITestCase):
         self.assertEqual(self.ingredient.category.name, 'Rum')
 
 
-class RecipeCategoryFilterTests(APITestCase):
+class RecipeCategoryFilterTests(AuthenticatedAPITestCase):
     """Test cases for recipe filtering by category."""
 
     def setUp(self):
         """Set up test data."""
+        super().setUp()
         self.whiskey_category = IngredientCategory.objects.create(name='Whiskey')
         self.gin_category = IngredientCategory.objects.create(name='Gin')
         
@@ -923,10 +950,11 @@ class RecipeCategoryFilterTests(APITestCase):
         self.assertEqual(len(response.data), 0)
 
 
-class MenuStatsAPITests(APITestCase):
+class MenuStatsAPITests(AuthenticatedAPITestCase):
     """Test cases for the per-menu order stats endpoint."""
 
     def setUp(self):
+        super().setUp()
         self.menu = Menu.objects.create(name='Autumn Equinox')
         self.negroni = Recipe.objects.create(name='Negroni')
         self.martini = Recipe.objects.create(name='Espresso Martini')
@@ -1053,3 +1081,127 @@ class MenuStatsAPITests(APITestCase):
 
         self.assertEqual(data['total_orders'], 1)
         self.assertEqual(data['unique_guests'], 1)
+
+
+class AnonymousAccessTests(APITestCase):
+    """What an unauthenticated caller can and cannot do.
+
+    This is the interim security posture: reads stay open so the app keeps rendering,
+    writes are refused. Deliberately NOT inheriting AuthenticatedAPITestCase -- these
+    tests are about the anonymous client.
+
+    The reads being open is a known privacy gap, not an oversight; it closes in task 6.0
+    once the Vercel /api proxy lets the frontend hold a session. Until then, flipping to
+    IsAuthenticated would lock the owner out of their own app.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.category = IngredientCategory.objects.create(name='Gin')
+        self.ingredient = Ingredient.objects.create(name='Plymouth Gin', category=self.category)
+        self.recipe = Recipe.objects.create(name='Martini')
+        RecipeIngredient.objects.create(
+            recipe=self.recipe, ingredient=self.ingredient, amount=2.5, unit='oz'
+        )
+        self.menu = Menu.objects.create(name='Friday Night', is_published=True)
+        self.menu_item = MenuItem.objects.create(menu=self.menu, recipe=self.recipe, order=1)
+
+    # --- reads stay open ---
+
+    def test_anonymous_can_list_ingredients(self):
+        """GET /api/ingredients/ still works without credentials."""
+        response = self.client.get('/api/ingredients/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_anonymous_can_list_recipes(self):
+        """GET /api/recipes/ still works without credentials."""
+        response = self.client.get('/api/recipes/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_anonymous_can_list_menus(self):
+        """GET /api/menus/ still works without credentials."""
+        response = self.client.get('/api/menus/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    # --- writes are refused ---
+    # 403 rather than 401: SessionAuthentication offers no WWW-Authenticate challenge,
+    # so DRF reports forbidden rather than unauthorized.
+
+    def test_anonymous_cannot_create_ingredient(self):
+        """The destructive hole this whole change exists to close."""
+        response = self.client.post('/api/ingredients/', {'name': 'Rye'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertFalse(Ingredient.objects.filter(name='Rye').exists())
+
+    def test_anonymous_cannot_update_ingredient(self):
+        response = self.client.patch(
+            f'/api/ingredients/{self.ingredient.id}/', {'name': 'Vandalised'}, format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.ingredient.refresh_from_db()
+        self.assertEqual(self.ingredient.name, 'Plymouth Gin')
+
+    def test_anonymous_cannot_delete_recipe(self):
+        """`curl -X DELETE .../api/recipes/12/` was the exact exposure."""
+        response = self.client.delete(f'/api/recipes/{self.recipe.id}/')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(Recipe.objects.filter(pk=self.recipe.pk).exists())
+
+    def test_anonymous_cannot_create_category(self):
+        response = self.client.post('/api/categories/', {'name': 'Mezcal'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_anonymous_cannot_create_menu(self):
+        response = self.client.post('/api/menus/', {'name': 'Hijacked'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_anonymous_cannot_activate_menu(self):
+        """Activation is a POST action, so it falls under the same default."""
+        response = self.client.post(f'/api/menus/{self.menu.id}/activate/')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.menu.refresh_from_db()
+        self.assertFalse(self.menu.is_active)
+
+    def test_anonymous_cannot_remove_menu_item(self):
+        response = self.client.delete(f'/api/menu-items/{self.menu_item.id}/')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(MenuItem.objects.filter(pk=self.menu_item.pk).exists())
+
+    def test_anonymous_cannot_add_to_buy_list(self):
+        response = self.client.post(
+            '/api/buy-list/', {'ingredient_id': self.ingredient.id}, format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertFalse(BuyListItem.objects.exists())
+
+    # --- the two deliberate exemptions must keep working ---
+
+    def test_public_menu_is_readable_by_share_token(self):
+        """Guests open a shared menu with no account; breaking this breaks every QR code."""
+        response = self.client.get(f'/api/public/menu/{self.menu.share_token}/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['name'], 'Friday Night')
+
+    def test_guest_can_still_place_an_order(self):
+        """Guests order without accounts -- OrderViewSet opts out of the default on purpose."""
+        response = self.client.post(
+            '/api/orders/',
+            {'recipe_id': self.recipe.id, 'menu_id': self.menu.id, 'guest_name': 'Sam'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(Order.objects.filter(guest_name='Sam').exists())
+
+    def test_bartender_can_still_fulfil_an_order(self):
+        """Fulfilment happens behind the bar on an unauthenticated device today.
+
+        This documents current behaviour rather than endorsing it: OrderViewSet is wide
+        open to anyone who knows the URL, which is tracked in backlog.md for task 6.0.
+        """
+        order = Order.objects.create(menu=self.menu, recipe=self.recipe, guest_name='Alex')
+        response = self.client.patch(
+            f'/api/orders/{order.id}/', {'is_fulfilled': True}, format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        order.refresh_from_db()
+        self.assertTrue(order.is_fulfilled)
