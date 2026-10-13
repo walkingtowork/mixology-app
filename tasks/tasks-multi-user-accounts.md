@@ -31,6 +31,28 @@ data. Today that header is on exactly the three viewsets about to become per-use
 `migrate` inside its start command, so a migration that fails partway does not warn — gunicorn
 never boots and the app is down until it is fixed.
 
+## Current state — updated 2026-10-12
+
+**Shipped:** 1.0 (`SECRET_KEY` + deploy hardening), 2.0 (CI). Preview deployments are off (5.8).
+
+**In review:** 2.5, the interim API lockdown — branch `feature/api-read-only-stopgap`, PR open
+and not yet merged. Merge it before starting anything else; it is the actual security fix.
+
+**Next PR — 3.0 and 4.0 together**, both small and behaviour-neutral, plus one deletion:
+- 3.0 — extract one `request()` helper from the ~30 hand-written `fetch` calls
+- 4.0 — invert the cache headers
+- **Delete `backend/data.json`** (decided 2026-10-12). Nothing in the codebase reads it; it is
+  referenced only in docs. It was a one-time export for the May 2026 Postgres migration
+  (`6fd0968`), is five months stale, and stops loading entirely once `owner` is `NOT NULL` in
+  8.0. The local dev database is already more current than it. **Do not regenerate it from
+  production:** a current fixture would put real guest names — and after 10.0, password hashes
+  — into a *public* repo. It is only harmless today because it predates orders and users.
+  Update the `PROJECT_CONTEXT.md` "Data" note to point at the `pg_dump` → local Postgres path
+  from 7.2/7.3 instead.
+
+**Deferred by choice, all due before 7.0:** branch protection on `main`; a Python runtime pin
+on Railway; local Postgres plus `psycopg2-binary` in the venv. See `backlog.md`.
+
 ## Relevant Files
 
 ### Safety net (tasks 1.0–2.0)
@@ -136,7 +158,7 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
   - [ ] 5.5 Add `CSRF_TRUSTED_ORIGINS = ['https://thebarcart.vercel.app']` — the browser's `Origin` says vercel.app while Django's `Host` says railway.app, and Django's CSRF check compares them
   - [ ] 5.6 Leave `SESSION_COOKIE_DOMAIN` unset; pinning it to the Railway host makes the browser reject the cookie outright
   - [ ] 5.7 Verify Vercel forwards the destination's `Host` so `ALLOWED_HOSTS=.railway.app` still passes — a mismatch appears as a 400 `DisallowedHost`
-  - [ ] 5.8 **Decided 2026-09-21: turn preview deployments off** in the Vercel project settings before the `/api` rewrite lands, so no preview can ever reach production data. A second Vercel project is not what this needs — previews are automatic per-branch within one project, and the risk is which *backend* they reach. Proper preview isolation would need a second Railway environment with its own database plus a proxy function in place of the static rewrite, since `vercel.json` cannot interpolate env vars into a destination. Revisit only if previews start earning their keep. **More urgent than it first looked:** previews are already live — the CI PR produced a Vercel preview deployment on 2026-09-21 — and `VITE_API_BASE_URL` points them at production Railway, so a preview branch can write to real data *today*. This is not only a future-proxy concern. **How:** Vercel Project Settings → Git → *Ignored Build Step* → Behavior: **"Only build production"** (a preset dropdown; the raw shell-command field it replaced used the counterintuitive convention exit 1 = build, exit 0 = skip). Not "Don't build anything", which would stop production deploys too
+  - [x] 5.8 **Done 2026-09-22 — preview deployments are off.** Behavior set to "Only build production". in the Vercel project settings before the `/api` rewrite lands, so no preview can ever reach production data. A second Vercel project is not what this needs — previews are automatic per-branch within one project, and the risk is which *backend* they reach. Proper preview isolation would need a second Railway environment with its own database plus a proxy function in place of the static rewrite, since `vercel.json` cannot interpolate env vars into a destination. Revisit only if previews start earning their keep. **More urgent than it first looked:** previews are already live — the CI PR produced a Vercel preview deployment on 2026-09-21 — and `VITE_API_BASE_URL` points them at production Railway, so a preview branch can write to real data *today*. This is not only a future-proxy concern. **How:** Vercel Project Settings → Git → *Ignored Build Step* → Behavior: **"Only build production"** (a preset dropdown; the raw shell-command field it replaced used the counterintuitive convention exit 1 = build, exit 0 = skip). Not "Don't build anything", which would stop production deploys too
   - [ ] 5.9 Test on a real iOS device, since that is the browser this whole decision exists to satisfy
 
 - [ ] 6.0 Close the exposure — default-deny API
