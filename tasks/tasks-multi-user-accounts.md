@@ -27,6 +27,13 @@ internet while the real auth UI is still weeks away, and it needs no throwaway c
 front of responses marked `Cache-Control: public` is how one user gets served another user's
 data. Today that header is on exactly the three viewsets about to become per-user.
 
+**10.0 and 11.0 now come before 9.0** (the user's call, 2026-10-14). The plan was to have the
+frontend test framework in place before the auth UI. The user wants a real login screen
+before the 2026-10-31 party, so the bar device does not have to sign in through `/admin/`.
+The cost: the auth UI ships covered only by backend tests and a browser click-through until
+9.0 lands, which then starts by writing the auth UI tests (9.6). Task numbers are unchanged
+so existing references still resolve; the list below is in working order.
+
 **The ownership migration is phased across separate deploys** (7.0, then 8.0). Railway runs
 `migrate` inside its start command, so a migration that fails partway does not warn — gunicorn
 never boots and the app is down until it is fixed.
@@ -98,7 +105,7 @@ deployed.** Decisions the user agreed in that session:
 Verified locally in headless Chrome on a DB copy with two hosts and a signed-out guest (27
 checks, UI and raw requests). **Still to do after merge:** confirm in production that a
 signed-out phone can order from the active menu's link and that the Orders page works signed
-in. Then 9.0.
+in. Then 10.0 and 11.0 (login), then 9.0 — reordered 2026-10-14, see Sequencing.
 
 **Loose ends from 8.0:**
 - **No anonymous write was re-tested against production after the 8.0 deploy.** Claude's
@@ -335,13 +342,6 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
   - [x] 8.12 Show `owner` in Django admin for every model, with a filter by user — `OwnedAdmin` base class; the owner is required in admin forms even while the column is nullable
   - [x] 8.13 Rehearse against the restored dump, then deploy — rehearsed against the 21:52 dump, deployed and confirmed live 2026-10-13 (see Current state)
 
-- [ ] 9.0 Frontend test framework — before the auth UI, not after
-  - [ ] 9.1 Add Vitest, React Testing Library, `@testing-library/jest-dom` and `jsdom`
-  - [ ] 9.2 Add `vitest.config.ts` and `src/test/setup.ts`
-  - [ ] 9.3 Add a `test` script and wire it into the CI workflow from 2.0
-  - [ ] 9.4 Write one component test and one routing test to prove the setup
-  - [ ] 9.5 Establish and write down the mocking convention for `cocktailsApi`
-
 - [ ] 10.0 Authentication backend
   - [ ] 10.1 Make `email` unique and required on `accounts.User`; set `USERNAME_FIELD = 'email'` and adjust `REQUIRED_FIELDS`
   - [ ] 10.2 Data migration guaranteeing existing users have unique, non-empty emails before the constraint lands
@@ -357,7 +357,15 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
   - [ ] 11.3 Route guard redirecting anonymous users to login, with `/share/:shareToken` explicitly exempt — this is the original complaint: truncating a share URL must land on a login screen, not your data
   - [ ] 11.4 Wire the 401 handler from 3.3 to the redirect
   - [ ] 11.5 Account controls in the nav in `App.tsx`
-  - [ ] 11.6 Tests: guard redirects, login succeeds, logout clears state, share route stays public
+  - [ ] 11.6 Click through in a real browser: guard redirects, login succeeds, logout clears state, share route stays public. The automated versions of these are 9.6, since 9.0 now comes after
+
+- [ ] 9.0 Frontend test framework — moved after 11.0 on 2026-10-14 (see Sequencing); numbers kept
+  - [ ] 9.1 Add Vitest, React Testing Library, `@testing-library/jest-dom` and `jsdom`
+  - [ ] 9.2 Add `vitest.config.ts` and `src/test/setup.ts`
+  - [ ] 9.3 Add a `test` script and wire it into the CI workflow from 2.0
+  - [ ] 9.4 Write one component test and one routing test to prove the setup
+  - [ ] 9.5 Establish and write down the mocking convention for `cocktailsApi`
+  - [ ] 9.6 Write the auth UI tests deferred from 11.6
 
 - [ ] 12.0 Invites
   - [ ] 12.1 `Invite` model — token, email, created/used timestamps, issuing user, expiry
