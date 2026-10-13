@@ -1205,3 +1205,87 @@ class AnonymousAccessTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         order.refresh_from_db()
         self.assertTrue(order.is_fulfilled)
+
+
+class CacheHeaderTests(APITestCase):
+    """`Cache-Control: public` must appear only on anonymous, share-token-keyed responses.
+
+    Task 5.0 puts Vercel's CDN in front of the API. A per-user response marked public would
+    then be cached and served to whoever asks next -- one user seeing another's data.
+    """
+
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username='tester',
+            email='tester@example.com',
+        )
+        self.category = IngredientCategory.objects.create(name='Gin')
+        self.ingredient = Ingredient.objects.create(name='London Dry', category=self.category)
+        self.recipe = Recipe.objects.create(name='Martini')
+        self.menu = Menu.objects.create(name='Friday Night')
+
+    def private_read_urls(self):
+        return [
+            '/api/ingredients/',
+            f'/api/ingredients/{self.ingredient.id}/',
+            '/api/recipes/',
+            f'/api/recipes/{self.recipe.id}/',
+            '/api/categories/',
+            f'/api/categories/{self.category.id}/',
+            '/api/menus/',
+            f'/api/menus/{self.menu.id}/',
+            '/api/buy-list/',
+            '/api/orders/',
+        ]
+
+    def test_public_menu_is_briefly_publicly_cacheable(self):
+        response = self.client.get(f'/api/public/menu/{self.menu.share_token}/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        directives = {d.strip() for d in response['Cache-Control'].split(',')}
+        self.assertIn('public', directives)
+        self.assertIn('max-age=30', directives)
+        # A menu fix should reach guests in seconds, not after minutes of stale copies.
+        self.assertNotIn('stale-while-revalidate', response['Cache-Control'])
+
+    def test_missing_public_menu_is_not_cached(self):
+        response = self.client.get('/api/public/menu/00000000-0000-0000-0000-000000000000/')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertNotIn('public', response.get('Cache-Control', ''))
+
+    def test_no_other_read_is_publicly_cacheable(self):
+        self.client.force_login(self.user)
+        for url in self.private_read_urls():
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                self.assertNotIn('public', response.get('Cache-Control', ''))
+
+    def test_authenticated_responses_vary_on_cookie(self):
+        """SessionMiddleware adds this once the session is read; verified, not assumed.
+
+        Uses a real session login: force_authenticate skips the session entirely, so it
+        would never trigger the header and the test would prove nothing.
+        """
+        self.client.force_login(self.user)
+        for url in self.private_read_urls():
+            if url == '/api/orders/':
+                continue  # see test_orders_do_not_vary_on_cookie_yet
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                vary = {v.strip().lower() for v in response.get('Vary', '').split(',')}
+                self.assertIn('cookie', vary)
+
+    def test_orders_do_not_vary_on_cookie_yet(self):
+        """Documents a known gap rather than endorsing it.
+
+        OrderViewSet sets `authentication_classes = []` so guests can order without an
+        account, which means the session is never read and SessionMiddleware never adds
+        `Vary: Cookie`. Harmless while the response carries no Cache-Control -- nothing
+        caches it. When orders become owner-scoped (task 8.0) this view must authenticate,
+        at which point this test fails and should be deleted in favour of the one above.
+        """
+        self.client.force_login(self.user)
+        response = self.client.get('/api/orders/')
+        self.assertNotIn('Cache-Control', response)
+        vary = {v.strip().lower() for v in response.get('Vary', '').split(',')}
+        self.assertNotIn('cookie', vary)
