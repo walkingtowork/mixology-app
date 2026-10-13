@@ -1,4 +1,5 @@
 import uuid
+from django.conf import settings
 from django.db import models
 from django.core.validators import MinValueValidator
 
@@ -37,6 +38,25 @@ UNIT_CHOICES = [
     ('pinch', 'pinch'),
 ]
 
+def owner_field(related_name):
+    """The user a row belongs to.
+
+    Nullable for now: ownership is rolled out in phases, and this is phase one (add the
+    column, backfill existing rows). Phase two makes it NOT NULL and scopes every query.
+
+    PROTECT, not CASCADE or SET_NULL: deleting a user must never silently take their
+    recipes and a menu's order history with it, nor leave rows that belong to nobody.
+    Removing an account that still owns data is refused until the data is dealt with.
+    """
+    return models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name=related_name,
+    )
+
+
 STOCK_LEVEL_CHOICES = [
     (0,   '0%'),
     (25,  '25%'),
@@ -47,6 +67,7 @@ STOCK_LEVEL_CHOICES = [
 
 
 class IngredientCategory(models.Model):
+    owner = owner_field('ingredient_categories')
     name = models.CharField(max_length=200, unique=True)
     notes = models.TextField(blank=True)
 
@@ -59,6 +80,7 @@ class IngredientCategory(models.Model):
 
 
 class Ingredient(models.Model):
+    owner = owner_field('ingredients')
     name = models.CharField(max_length=200, unique=True)
     category = models.ForeignKey(
         IngredientCategory,
@@ -81,6 +103,7 @@ class Ingredient(models.Model):
 
 
 class Recipe(models.Model):
+    owner = owner_field('recipes')
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     notes = models.TextField(blank=True)
@@ -115,6 +138,7 @@ class RecipeIngredient(models.Model):
 
 
 class Menu(models.Model):
+    owner = owner_field('menus')
     name = models.CharField(max_length=200)
     is_active = models.BooleanField(default=False)
     is_published = models.BooleanField(default=False)
@@ -141,6 +165,7 @@ class Menu(models.Model):
         super().save(*args, **kwargs)
 
 
+# MenuItem and Order have no owner of their own: they belong to whoever owns their menu.
 class MenuItem(models.Model):
     menu = models.ForeignKey(Menu, on_delete=models.CASCADE, related_name='items')
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name='menu_items')
@@ -169,6 +194,7 @@ class Order(models.Model):
 
 
 class BuyListItem(models.Model):
+    owner = owner_field('buy_list_items')
     ingredient = models.OneToOneField(
         Ingredient,
         on_delete=models.CASCADE,
