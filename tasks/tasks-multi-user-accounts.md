@@ -96,6 +96,45 @@ account missing, `0010` commits, `0011` raises, and the data stays intact and re
   production, so it can log in at `/admin/` (and, with no permissions, sees nothing there).
   After 8.0 deploys the user must sign in as `walkingtowork`, not `admin`, to see their data.
 
+**Handoff notes for 8.0** (written 2026-10-13 at the end of the 5.0–7.0 session; these are
+Claude's recommendations, not decisions the user has made — raise them in the plan):
+
+- **Suggested split into two deploys, because of the deploy window.** While Railway swaps
+  containers the *old* code is still serving against the *new* schema. If `NOT NULL` lands in
+  the same deploy as the code that sets `owner`, an insert from the old container fails.
+  So: **8.0a** — set `owner` on every create path (8.5), scope querysets (8.4, 8.6–8.8), fix
+  `Menu.save()` (8.3), tests (8.9–8.11), admin (8.12), plus a data migration re-running the
+  backfill for null rows. **8.0b** — only once 8.0a is live and the null count is 0: `NOT NULL`
+  (8.1) and per-owner uniqueness (8.2). 8.0b's migration should still re-backfill first.
+- **Every create path must set an owner, not just `perform_create`.** The ones that are easy
+  to miss: the generic ingredient auto-created in `IngredientCategoryViewSet.create`/`update`,
+  `MenuViewSet.add_item`'s drawer flow, `BuyListViewSet.create`, and anything created through
+  **Django admin**, where `owner` is `blank=True` today and becomes a required form field once
+  it is `NOT NULL`.
+- **`0011`'s backfill is reusable but lives in a migration.** It only touches rows where
+  `owner IS NULL` and honours `BACKFILL_OWNER_USERNAME`. A second data migration can import
+  and call `backfill_owner` rather than copy it.
+- **Expect heavy test churn.** Almost every fixture in `cocktails/tests.py` creates rows through
+  the ORM with no owner. `AuthenticatedAPITestCase` already has `self.user`; that is where the
+  owner comes from. `OwnerBackfillMigrationTests` migrates *backwards* to `0010` in `setUp`, so
+  every new migration must be reversible or those four tests break.
+- **Who owns what, per environment.** Production: `walkingtowork` owns everything, `admin`
+  owns nothing, both can log in at `/admin/`. Local SQLite: `admin` owns everything and there
+  is no `walkingtowork`. A scoping bug that only shows for a non-owner will not show locally
+  unless a second user is created — verify with two users, on a DB copy.
+- **Per-owner uniqueness (8.2) is safe on today's data**: one owner per database, and the
+  existing global `unique=True` already guarantees no duplicate names within it.
+- **`OrderViewSet` is still wide open** (anonymous list, fulfil, cancel for every menu). 6.3
+  left it deliberately; the `backlog.md` entry assigns the fix to 8.0. Guests reach it from
+  `/share/:token` with no session, so scoping it means keying guest access on the share token.
+- **The pre-7.0 dump is stale for 8.0.** Take a new one, restore it into `mixology-pg18` as a
+  new database, and rehearse there. The session scratchpad (and the Python 3.12 venv in it)
+  does not survive; rebuild the venv per the rehearsal note below.
+- **House rules that held all session:** one PR per deploy; the user opens PRs from a URL
+  (`gh` is not authenticated) and merges them; do not push until asked; after merge, run the
+  live checks, delete the branch locally and remotely, then update this block. Docs-only
+  commits go straight on `main` and ride along with the next branch push.
+
 **What signed-out looks like until 11.0.** There is no login screen, so a signed-out visitor
 gets the app shell with "Failed to load …" and empty-state copy ("No menus yet"). No data is
 exposed, but it reads as *empty*, not *locked* — including to the owner when the session
