@@ -1,5 +1,6 @@
 from rest_framework import viewsets, filters, generics, status
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from django.db.models import Count, Max, Min
@@ -22,12 +23,13 @@ class PublicCacheMixin:
             patch_cache_control(response, max_age=30, public=True)
         return response
 
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from .models import Ingredient, Recipe, IngredientCategory, RecipeIngredient, Menu, MenuItem, BuyListItem, Order
 from .serializers import (
     IngredientSerializer, RecipeSerializer, IngredientCategorySerializer,
     MenuSerializer, MenuListSerializer, MenuItemSerializer,
-    BuyListItemSerializer, OrderSerializer,
+    BuyListItemSerializer, OrderSerializer, GuestOrderSerializer,
 )
 
 
@@ -286,29 +288,73 @@ class PublicMenuView(PublicCacheMixin, generics.RetrieveAPIView):
 
 
 class OrderViewSet(viewsets.ModelViewSet):
+    """The bartender's side of ordering: the signed-in owner's orders, to fulfil or cancel.
+
+    Guests never come here -- they place and cancel orders through the share-token URLs
+    below. There is no POST: an order only ever starts from a shared menu.
+    """
     queryset = Order.objects.select_related('recipe').prefetch_related(
         'recipe__recipe_ingredients__ingredient'
     ).all()
     serializer_class = OrderSerializer
-    permission_classes = [AllowAny]
-    authentication_classes = []
-    http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
+    http_method_names = ['get', 'patch', 'delete', 'head', 'options']
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        # An order has no owner of its own; it belongs to whoever owns its menu.
+        queryset = super().get_queryset().filter(menu__owner=self.request.user)
         today = self.request.query_params.get('today')
         fulfilled = self.request.query_params.get('fulfilled')
-        menu_id = self.request.query_params.get('menu_id')
-        guest_name = self.request.query_params.get('guest_name')
         if today == 'true':
             queryset = queryset.filter(created_at__date=timezone.now().date())
         if fulfilled is not None:
             queryset = queryset.filter(is_fulfilled=fulfilled.lower() == 'true')
-        if menu_id:
-            queryset = queryset.filter(menu_id=menu_id)
-        if guest_name:
-            queryset = queryset.filter(guest_name=guest_name)
         return queryset
+
+
+class GuestOrderMixin:
+    """Guest ordering, authorised by the menu's share token in the URL rather than a session.
+
+    A guest is only a self-typed name, so "your own orders" means "orders on this menu under
+    the name you sent". That keeps a guest from walking order ids, not from impersonating
+    another guest whose name they know -- accepted for a party.
+
+    Never add PublicCacheMixin here: these responses are per-guest.
+    """
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    serializer_class = GuestOrderSerializer
+
+    def get_menu(self):
+        if not hasattr(self, '_menu'):
+            self._menu = get_object_or_404(Menu, share_token=self.kwargs['share_token'])
+        return self._menu
+
+    def get_queryset(self):
+        return Order.objects.select_related('recipe').prefetch_related(
+            'recipe__recipe_ingredients__ingredient'
+        ).filter(
+            menu=self.get_menu(),
+            guest_name=self.request.query_params.get('guest_name', ''),
+        )
+
+    def get_serializer_context(self):
+        return {**super().get_serializer_context(), 'menu': self.get_menu()}
+
+
+class GuestOrderListView(GuestOrderMixin, generics.ListCreateAPIView):
+    def perform_create(self, serializer):
+        menu = self.get_menu()
+        # Any menu can be previewed by its share link; only the active one takes orders.
+        if not menu.is_active:
+            raise PermissionDenied("This menu isn't taking orders right now.")
+        serializer.save(menu=menu)
+
+
+class GuestOrderDetailView(GuestOrderMixin, generics.DestroyAPIView):
+    def perform_destroy(self, instance):
+        if instance.is_fulfilled:
+            raise PermissionDenied('This drink has already been served.')
+        instance.delete()
 
 
 class BuyListViewSet(OwnerScopedMixin, viewsets.ModelViewSet):

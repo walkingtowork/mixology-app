@@ -69,53 +69,32 @@ would not be writing to production during it, and the split only protected such 
 
 **Sign in as `walkingtowork`, not `admin`** — `admin` owns nothing and sees an empty app.
 
-**Next — scope `OrderViewSet`, then 9.0.** The user said on 2026-10-13 that the next session
-will work on `/api/orders/`. It is not in the numbered task list; treat it as 8.5. Everything
-under "Handoff notes for order scoping" is Claude's recommendation, **not a decision the user
-has made** — explain the reasoning and get agreement before writing it.
+**Order scoping (8.5) is built on `feature/order-scoping`, 2026-10-13 — not yet merged or
+deployed.** Decisions the user agreed in that session:
 
-**Handoff notes for order scoping** (written 2026-10-13 at the end of the 8.0 session):
+- **Guests and the bartender no longer share an endpoint.** Guests use
+  `/api/public/menu/<share_token>/orders/` (place, list by `guest_name`) and
+  `…/orders/<id>/?guest_name=…` (cancel); no session, the token in the URL is the credential.
+  `/api/orders/` is owner-only (`menu__owner=request.user`), has no POST, and only
+  `is_fulfilled` is writable. The share page URL and printed QR codes are unchanged.
+- **Only the active menu takes orders**, and only for drinks on it. Any menu can still be
+  previewed by its share link; the page hides the Order button when `is_active` is false and
+  the API answers 403. "My Orders" stays visible on an inactive menu, deliberately, so someone
+  shown a draft link can see the feature exists.
+- **Guest identity is still just a typed name.** Cancelling needs the matching name and an
+  unserved order. Two guests who type the same name share one order list and can cancel each
+  other's drinks; the user is not worried about that for a party. The "guest name hint" item
+  in `backlog.md` is the mitigation if it ever matters.
+- **No compatibility shim for the old frontend bundle** — parties are months apart. The old
+  `POST /api/orders/` shape is now a 403.
+- **The device behind the bar must be signed in.** The Orders page used to work signed out;
+  it no longer does, and Django sessions last two weeks. Sign in at `/admin/` shortly before
+  a party (next one: 2026-10-31).
 
-- **What is open today** (`views.py`, `OrderViewSet`: `AllowAny`, `authentication_classes = []`).
-  Anyone on the internet can list every order for every menu, fulfil or cancel any order by
-  id, and post an order naming any `menu_id` and any `recipe_id` — the recipe need not be on
-  that menu, and the menu need not be published. With one real user there is nobody to leak
-  to yet; it must be closed before invites (12.0).
-- **Recommended shape.** Two kinds of caller on one endpoint. *The owner*, through the
-  session: list, fulfil and cancel, scoped to `menu__owner=request.user`. *A guest*, with no
-  session: must present the menu's `share_token`, and may then place an order on that menu,
-  list orders for that menu filtered by their `guest_name`, and cancel one. The view has to
-  authenticate when a session is present but still admit anonymous callers, so it cannot
-  keep `authentication_classes = []`.
-- **Cheap integrity checks to add at the same time:** the recipe must be an item on the menu,
-  and the menu must be published. `OrderSerializer` still uses global `Recipe.objects.all()`
-  and `Menu.objects.all()` querysets; it was deliberately left out of
-  `OwnedPrimaryKeyRelatedField` in 8.0 because its callers are anonymous.
-- **Open questions for the user.** Guest identity is only a self-typed name, so "cancel your
-  own order" cannot really be enforced — a guest holding the share token can cancel any order
-  on that menu if they know its id. Is that acceptable for a party? Should a guest be able to
-  cancel a fulfilled order? Should the share token travel as a query param, a body field or
-  a header? Rate limiting stays where it is, in 15.5.
-- **Frontend call sites** (all in `frontend/src/services/cocktailsApi.ts`, "Orders" section):
-  `PublicMenu.tsx` calls `createOrder(menu.id, recipeId, name)`,
-  `fetchOrders({ menu_id, guest_name })` and `cancelOrder(id)` — these need the share token,
-  which that page already has from its route. `OrdersPage.tsx` calls `fetchOrders`,
-  `fulfillOrder` and `cancelOrder` as the owner. `App.tsx:27` calls
-  `fetchOrders({ today: true, fulfilled: false })` for the nav badge on every page load,
-  including signed out and on `/share/…`, where it will start returning 403.
-- **The rollout risk is the cached bundle.** Vercel and Railway deploy independently, and a
-  guest whose phone has the old page open will send no token and fail to order until they
-  reload. Do not merge close to a party; consider having the backend accept the old shape
-  for one release if that matters.
-- **Tests to change.** `OrderAPITests` pins today's open behaviour on purpose and gets
-  rewritten. `AnonymousAccessTests` has the guest-ordering exemptions.
-  `CacheHeaderTests.test_orders_do_not_vary_on_cookie_yet` should be deleted once the view
-  reads the session — and check that the guest responses still carry no `Cache-Control`.
-- **Docs that go stale when it lands:** the `OrderViewSet` entry in `backlog.md`; the
-  "Posture since task 6.0" paragraph in `PROJECT_CONTEXT.md`; and, below, "the Orders page
-  alone still works signed out".
-- **Verify with two users and a signed-out client**, on a DB copy, as 8.0 did — and in a real
-  browser this time, since the guest flow is UI. 8.0 was never clicked through locally.
+Verified locally in headless Chrome on a DB copy with two hosts and a signed-out guest (27
+checks, UI and raw requests). **Still to do after merge:** confirm in production that a
+signed-out phone can order from the active menu's link and that the Orders page works signed
+in. Then 9.0.
 
 **Loose ends from 8.0:**
 - **No anonymous write was re-tested against production after the 8.0 deploy.** Claude's
@@ -180,8 +159,8 @@ account missing, `0010` commits, `0011` raises, and the data stays intact and re
 gets the app shell with "Failed to load …" and empty-state copy ("No menus yet"). No data is
 exposed, but it reads as *empty*, not *locked* — including to the owner when the session
 expires (Django's default is two weeks). The way back in is `thebarcart.vercel.app/admin/`.
-Any device used behind the bar needs to be logged in there first; the Orders page alone still
-works signed out, because `/api/orders/` is open.
+Any device used behind the bar needs to be logged in there first — including for the Orders
+page, once order scoping (8.5) is deployed.
 
 Locally no `frontend/.env` is needed; the Vite proxy forwards `/api`, `/admin` and `/static`
 to `localhost:8000`. `backend/.env` must have `DEBUG=True`, which is what adds the dev origin

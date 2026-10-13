@@ -1238,7 +1238,8 @@ class CrossUserIsolationTests(TwoUserAPITestCase):
                 self.assertEqual(self.client.get(f'/api/recipes/?{query}').data, [])
 
     def test_stats_do_not_name_another_users_recipe(self):
-        # /api/orders/ is still open, so an order can point my menu at somebody else's drink.
+        # The API no longer lets an order name a drink that is off its menu; a row that
+        # predates that check still must not leak the other user's recipe.
         Order.objects.create(menu=self.mine['menu'], recipe=self.theirs['recipe'], guest_name='Sam')
         response = self.client.get(f"/api/menus/{self.mine['menu'].id}/stats/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -1540,52 +1541,22 @@ class MenuAPITests(AuthenticatedAPITestCase):
         self.assertTrue(Recipe.objects.filter(pk=self.negroni.pk).exists())
 
 
-class OrderAPITests(APITestCase):
-    """Guest ordering, as it works today: no session, no scoping.
-
-    Anonymous on purpose. These pin the behaviour the public menu page depends on; they do
-    not endorse how open the endpoint is, which is tracked in backlog.md.
-    """
+class OrderAPITests(AuthenticatedAPITestCase):
+    """The bartender's side: the signed-in owner lists, fulfils and cancels their orders."""
 
     def setUp(self):
-        owner = get_user_model().objects.create_user(username='tester', email='tester@example.com')
-        self.recipe = Recipe.objects.create(owner=owner, name='Negroni')
-        self.menu = Menu.objects.create(owner=owner, name='Friday Night', is_published=True)
+        super().setUp()
+        self.recipe = Recipe.objects.create(owner=self.user, name='Negroni')
+        self.menu = Menu.objects.create(owner=self.user, name='Friday Night', is_active=True)
         MenuItem.objects.create(menu=self.menu, recipe=self.recipe, order=1)
-        self.other_menu = Menu.objects.create(owner=owner, name='Last Week')
 
-    def place(self, guest='Sam', menu=None):
-        return Order.objects.create(menu=menu or self.menu, recipe=self.recipe, guest_name=guest)
-
-    def test_guest_can_place_an_order(self):
-        response = self.client.post(
-            '/api/orders/',
-            {'recipe_id': self.recipe.id, 'menu_id': self.menu.id, 'guest_name': 'Sam'},
-            format='json',
-        )
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data['recipe']['name'], 'Negroni')
-        self.assertEqual(response.data['menu_id'], self.menu.id)
-        self.assertFalse(response.data['is_fulfilled'])
-
-    def test_order_needs_a_guest_name(self):
-        response = self.client.post(
-            '/api/orders/', {'recipe_id': self.recipe.id, 'menu_id': self.menu.id}, format='json',
-        )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('guest_name', response.data)
+    def place(self, guest='Sam'):
+        return Order.objects.create(menu=self.menu, recipe=self.recipe, guest_name=guest)
 
     def test_orders_are_listed_oldest_first(self):
         first, second = self.place('Sam'), self.place('Alex')
         response = self.client.get('/api/orders/')
         self.assertEqual([order['id'] for order in response.data], [first.id, second.id])
-
-    def test_filter_by_menu_and_guest(self):
-        mine = self.place('Sam')
-        self.place('Alex')
-        self.place('Sam', menu=self.other_menu)
-        response = self.client.get(f'/api/orders/?menu_id={self.menu.id}&guest_name=Sam')
-        self.assertEqual([order['id'] for order in response.data], [mine.id])
 
     def test_filter_by_fulfilled(self):
         waiting = self.place('Sam')
@@ -1612,9 +1583,191 @@ class OrderAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(Order.objects.exists())
 
+    def test_orders_cannot_be_created_here(self):
+        """An order only ever starts from a shared menu, through the share-token URL."""
+        response = self.client.post(
+            '/api/orders/',
+            {'recipe_id': self.recipe.id, 'menu_id': self.menu.id, 'guest_name': 'Sam'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
     def test_put_is_not_allowed(self):
         order = self.place()
         response = self.client.put(f'/api/orders/{order.id}/', {'guest_name': 'X'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+
+class OrderOwnershipTests(TwoUserAPITestCase):
+    """Orders belong to whoever owns their menu, and nobody else can see or touch them."""
+
+    def setUp(self):
+        super().setUp()
+        self.my_order = Order.objects.create(
+            menu=self.mine['menu'], recipe=self.mine['recipe'], guest_name='Sam',
+        )
+        self.their_order = Order.objects.create(
+            menu=self.theirs['menu'], recipe=self.theirs['recipe'], guest_name='Alex',
+        )
+
+    def test_list_holds_only_my_orders(self):
+        response = self.client.get('/api/orders/')
+        self.assertEqual([order['id'] for order in response.data], [self.my_order.id])
+
+    def test_another_users_order_is_a_404(self):
+        url = f'/api/orders/{self.their_order.id}/'
+        self.assertEqual(self.client.get(url).status_code, status.HTTP_404_NOT_FOUND)
+        response = self.client.patch(url, {'is_fulfilled': True}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(self.client.delete(url).status_code, status.HTTP_404_NOT_FOUND)
+        self.their_order.refresh_from_db()
+        self.assertFalse(self.their_order.is_fulfilled)
+
+    def test_patch_cannot_move_an_order_or_swap_its_recipe(self):
+        """Ids in the body are ignored, so they cannot reach into another user's bar."""
+        response = self.client.patch(
+            f'/api/orders/{self.my_order.id}/',
+            {
+                'menu_id': self.theirs['menu'].id,
+                'recipe_id': self.theirs['recipe'].id,
+                'guest_name': 'Mallory',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['recipe']['name'], 'Martini')
+        self.my_order.refresh_from_db()
+        self.assertEqual(self.my_order.menu, self.mine['menu'])
+        self.assertEqual(self.my_order.recipe, self.mine['recipe'])
+        self.assertEqual(self.my_order.guest_name, 'Sam')
+
+
+class GuestOrderAPITests(APITestCase):
+    """Guest ordering through the share-token URLs: no session, scoped to one menu.
+
+    Deliberately anonymous. The share token is the only credential a guest has, and their
+    name is the only thing separating their orders from another guest's.
+    """
+
+    def setUp(self):
+        owner = get_user_model().objects.create_user(username='tester', email='tester@example.com')
+        self.recipe = Recipe.objects.create(owner=owner, name='Negroni')
+        self.off_menu_recipe = Recipe.objects.create(owner=owner, name='Zombie')
+        self.menu = Menu.objects.create(owner=owner, name='Friday Night', is_active=True)
+        MenuItem.objects.create(menu=self.menu, recipe=self.recipe, order=1)
+        # Saved after the active menu, with is_active False, so it does not deactivate it.
+        self.draft_menu = Menu.objects.create(owner=owner, name='Next Month', is_published=True)
+        MenuItem.objects.create(menu=self.draft_menu, recipe=self.recipe, order=1)
+        self.url = f'/api/public/menu/{self.menu.share_token}/orders/'
+        self.draft_url = f'/api/public/menu/{self.draft_menu.share_token}/orders/'
+
+    def place(self, guest='Sam', menu=None):
+        return Order.objects.create(menu=menu or self.menu, recipe=self.recipe, guest_name=guest)
+
+    def order(self, url=None, **overrides):
+        body = {'recipe_id': self.recipe.id, 'guest_name': 'Sam', **overrides}
+        return self.client.post(url or self.url, body, format='json')
+
+    # --- placing ---
+
+    def test_guest_can_place_an_order(self):
+        response = self.order()
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['recipe']['name'], 'Negroni')
+        self.assertEqual(response.data['menu_id'], self.menu.id)
+        self.assertFalse(response.data['is_fulfilled'])
+
+    def test_order_needs_a_guest_name(self):
+        response = self.client.post(self.url, {'recipe_id': self.recipe.id}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('guest_name', response.data)
+
+    def test_unknown_share_token_is_a_404(self):
+        response = self.order(url='/api/public/menu/00000000-0000-0000-0000-000000000000/orders/')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertFalse(Order.objects.exists())
+
+    def test_inactive_menu_does_not_take_orders(self):
+        """Published is not enough: a menu can be previewed by its link before the party."""
+        response = self.order(url=self.draft_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertFalse(Order.objects.exists())
+
+    def test_drink_must_be_on_the_menu(self):
+        response = self.order(recipe_id=self.off_menu_recipe.id)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('recipe_id', response.data)
+        self.assertFalse(Order.objects.exists())
+
+    def test_body_cannot_redirect_the_order_or_mark_it_served(self):
+        response = self.order(menu_id=self.draft_menu.id, is_fulfilled=True)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        order = Order.objects.get()
+        self.assertEqual(order.menu, self.menu)
+        self.assertFalse(order.is_fulfilled)
+
+    # --- listing ---
+
+    def test_guest_sees_only_their_own_orders_on_this_menu(self):
+        mine = self.place('Sam')
+        self.place('Alex')
+        self.place('Sam', menu=self.draft_menu)
+        response = self.client.get(self.url, {'guest_name': 'Sam'})
+        self.assertEqual([order['id'] for order in response.data], [mine.id])
+
+    def test_listing_without_a_name_returns_nothing(self):
+        """The share token alone must not hand over the whole party's order list."""
+        self.place('Sam')
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, [])
+
+    def test_orders_can_still_be_read_once_the_menu_is_inactive(self):
+        order = self.place('Sam', menu=self.draft_menu)
+        response = self.client.get(self.draft_url, {'guest_name': 'Sam'})
+        self.assertEqual([o['id'] for o in response.data], [order.id])
+
+    def test_guest_order_list_is_not_publicly_cacheable(self):
+        """Per-guest data on an anonymous URL: a CDN must never hold on to it."""
+        self.place('Sam')
+        response = self.client.get(self.url, {'guest_name': 'Sam'})
+        self.assertNotIn('Cache-Control', response)
+
+    # --- cancelling ---
+
+    def test_guest_can_cancel_their_own_order(self):
+        order = self.place('Sam')
+        response = self.client.delete(f'{self.url}{order.id}/?guest_name=Sam')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Order.objects.exists())
+
+    def test_cancel_needs_the_matching_name(self):
+        order = self.place('Sam')
+        for query in ('', '?guest_name=Alex'):
+            with self.subTest(query=query):
+                response = self.client.delete(f'{self.url}{order.id}/{query}')
+                self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertTrue(Order.objects.exists())
+
+    def test_cancel_needs_the_orders_own_menu_token(self):
+        order = self.place('Sam')
+        response = self.client.delete(f'{self.draft_url}{order.id}/?guest_name=Sam')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertTrue(Order.objects.exists())
+
+    def test_served_order_cannot_be_cancelled(self):
+        order = self.place('Sam')
+        order.is_fulfilled = True
+        order.save()
+        response = self.client.delete(f'{self.url}{order.id}/?guest_name=Sam')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(Order.objects.exists())
+
+    def test_guest_cannot_fulfil_an_order(self):
+        order = self.place('Sam')
+        response = self.client.patch(
+            f'{self.url}{order.id}/?guest_name=Sam', {'is_fulfilled': True}, format='json',
+        )
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
@@ -1848,28 +2001,27 @@ class AnonymousAccessTests(APITestCase):
         self.assertEqual(response.data['name'], 'Friday Night')
 
     def test_guest_can_still_place_an_order(self):
-        """Guests order without accounts -- OrderViewSet opts out of the default on purpose."""
+        """Guests order without accounts, through the share-token URL of the active menu."""
+        self.menu.is_active = True
+        self.menu.save()
         response = self.client.post(
-            '/api/orders/',
-            {'recipe_id': self.recipe.id, 'menu_id': self.menu.id, 'guest_name': 'Sam'},
+            f'/api/public/menu/{self.menu.share_token}/orders/',
+            {'recipe_id': self.recipe.id, 'guest_name': 'Sam'},
             format='json',
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(Order.objects.filter(guest_name='Sam').exists())
 
-    def test_bartender_can_still_fulfil_an_order(self):
-        """Fulfilment happens behind the bar on an unauthenticated device today.
-
-        This documents current behaviour rather than endorsing it: OrderViewSet is wide
-        open to anyone who knows the URL, which is tracked in backlog.md for task 8.0.
-        """
+    def test_anonymous_cannot_use_the_bartenders_order_endpoint(self):
+        """Listing, fulfilling and cancelling by bare order id all need the owner's session."""
         order = Order.objects.create(menu=self.menu, recipe=self.recipe, guest_name='Alex')
-        response = self.client.patch(
-            f'/api/orders/{order.id}/', {'is_fulfilled': True}, format='json'
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        url = f'/api/orders/{order.id}/'
+        self.assertEqual(self.client.get('/api/orders/').status_code, status.HTTP_403_FORBIDDEN)
+        response = self.client.patch(url, {'is_fulfilled': True}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(self.client.delete(url).status_code, status.HTTP_403_FORBIDDEN)
         order.refresh_from_db()
-        self.assertTrue(order.is_fulfilled)
+        self.assertFalse(order.is_fulfilled)
 
 
 class CacheHeaderTests(APITestCase):
@@ -1933,27 +2085,10 @@ class CacheHeaderTests(APITestCase):
         """
         self.client.force_login(self.user)
         for url in self.private_read_urls():
-            if url == '/api/orders/':
-                continue  # see test_orders_do_not_vary_on_cookie_yet
             with self.subTest(url=url):
                 response = self.client.get(url)
                 vary = {v.strip().lower() for v in response.get('Vary', '').split(',')}
                 self.assertIn('cookie', vary)
-
-    def test_orders_do_not_vary_on_cookie_yet(self):
-        """Documents a known gap rather than endorsing it.
-
-        OrderViewSet sets `authentication_classes = []` so guests can order without an
-        account, which means the session is never read and SessionMiddleware never adds
-        `Vary: Cookie`. Harmless while the response carries no Cache-Control -- nothing
-        caches it. When orders become owner-scoped (task 8.0) this view must authenticate,
-        at which point this test fails and should be deleted in favour of the one above.
-        """
-        self.client.force_login(self.user)
-        response = self.client.get('/api/orders/')
-        self.assertNotIn('Cache-Control', response)
-        vary = {v.strip().lower() for v in response.get('Vary', '').split(',')}
-        self.assertNotIn('cookie', vary)
 
 
 @override_settings(ALLOWED_HOSTS=['.railway.app'])

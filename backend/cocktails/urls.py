@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     IngredientViewSet, RecipeViewSet, IngredientCategoryViewSet,
     MenuViewSet, MenuItemViewSet, BuyListViewSet, PublicMenuView, OrderViewSet,
+    GuestOrderListView, GuestOrderDetailView,
 )
 
 router = DefaultRouter()
@@ -17,4 +18,12 @@ router.register(r'orders', OrderViewSet, basename='order')
 urlpatterns = [
     path('', include(router.urls)),
     path('public/menu/<uuid:share_token>/', PublicMenuView.as_view(), name='public-menu'),
+    path(
+        'public/menu/<uuid:share_token>/orders/',
+        GuestOrderListView.as_view(), name='public-menu-orders',
+    ),
+    path(
+        'public/menu/<uuid:share_token>/orders/<int:pk>/',
+        GuestOrderDetailView.as_view(), name='public-menu-order',
+    ),
 ]

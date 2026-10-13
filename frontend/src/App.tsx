@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Routes, Route, NavLink, Link } from 'react-router-dom';
+import { Routes, Route, NavLink, Link, useMatch } from 'react-router-dom';
 import IngredientList from './components/IngredientList';
 import IngredientDetail from './components/IngredientDetail';
 import RecipeList from './components/RecipeList';
@@ -23,11 +23,15 @@ const IngredientDetailWrapper = () => <IngredientDetail />;
 function App() {
   const [hasPendingOrders, setHasPendingOrders] = useState(false);
 
+  // Guests on a shared menu have no session and no nav, so there is no badge to fill.
+  const onSharedMenu = useMatch('/share/:shareToken') !== null;
+
   useEffect(() => {
+    if (onSharedMenu) return;
     fetchOrders({ today: true, fulfilled: false })
       .then(orders => setHasPendingOrders(orders.length > 0))
       .catch(() => {});
-  }, []);
+  }, [onSharedMenu]);
 
   return (
     <Routes>

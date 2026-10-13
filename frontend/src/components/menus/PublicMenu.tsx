@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { fetchPublicMenu, createOrder, fetchOrders, cancelOrder } from '../../services/cocktailsApi';
+import { fetchPublicMenu, createGuestOrder, fetchGuestOrders, cancelGuestOrder } from '../../services/cocktailsApi';
 import type { Menu, Order } from '../../types/cocktails';
 import GlassIcon from '../ui/GlassIcon';
 import LoadingSpinner from '../ui/LoadingSpinner';
@@ -25,6 +25,7 @@ export default function PublicMenu() {
   const [pendingRecipeId, setPendingRecipeId] = useState<number | null>(null);
 
   const [lockedRecipes, setLockedRecipes] = useState<Set<number>>(new Set());
+  const [orderError, setOrderError] = useState<string | null>(null);
 
   const [showMyOrders, setShowMyOrders] = useState(false);
   const [myOrders, setMyOrders] = useState<Order[]>([]);
@@ -39,8 +40,14 @@ export default function PublicMenu() {
   }, [shareToken]);
 
   const placeOrder = async (recipeId: number, name: string) => {
-    if (!menu) return;
-    await createOrder(menu.id, recipeId, name);
+    if (!shareToken) return;
+    setOrderError(null);
+    try {
+      await createGuestOrder(shareToken, recipeId, name);
+    } catch (err) {
+      setOrderError(err instanceof Error ? err.message : 'Failed to place order');
+      return;
+    }
     setLockedRecipes(prev => new Set(prev).add(recipeId));
     setTimeout(() => {
       setLockedRecipes(prev => {
@@ -73,24 +80,32 @@ export default function PublicMenu() {
     }
   };
 
-  const openMyOrders = async () => {
-    setShowMyOrders(true);
-    if (!menu) return;
+  const loadMyOrders = async () => {
+    if (!shareToken) return;
     setMyOrdersLoading(true);
     try {
-      const name = localStorage.getItem(GUEST_NAME_KEY) || '';
-      const orders = name
-        ? await fetchOrders({ menu_id: menu.id, guest_name: name })
-        : [];
-      setMyOrders(orders);
+      setMyOrders(guestName ? await fetchGuestOrders(shareToken, guestName) : []);
+    } catch {
+      setMyOrders([]);
     } finally {
       setMyOrdersLoading(false);
     }
   };
 
+  const openMyOrders = () => {
+    setShowMyOrders(true);
+    loadMyOrders();
+  };
+
   const handleCancelMyOrder = async (orderId: number) => {
-    await cancelOrder(orderId);
-    setMyOrders(prev => prev.filter(o => o.id !== orderId));
+    if (!shareToken) return;
+    try {
+      await cancelGuestOrder(shareToken, orderId, guestName);
+      setMyOrders(prev => prev.filter(o => o.id !== orderId));
+    } catch {
+      // Most likely served in the meantime; show what the bar has now.
+      await loadMyOrders();
+    }
   };
 
   if (loading) return <LoadingSpinner />;
@@ -106,6 +121,8 @@ export default function PublicMenu() {
           My Orders
         </button>
       </div>
+
+      {orderError && <p className="public-menu-order-error" role="alert">{orderError}</p>}
 
       <ul className="public-menu-list">
         {menu.items.map((item) => (
@@ -125,13 +142,15 @@ export default function PublicMenu() {
               {item.recipe.description && (
                 <p className="public-menu-description">{item.recipe.description}</p>
               )}
-              <button
-                className={`public-menu-order-btn${lockedRecipes.has(item.recipe.id) ? ' ordered' : ''}`}
-                onClick={() => handleOrderClick(item.recipe.id)}
-                disabled={lockedRecipes.has(item.recipe.id)}
-              >
-                {lockedRecipes.has(item.recipe.id) ? 'Ordered!' : 'Order'}
-              </button>
+              {menu.is_active && (
+                <button
+                  className={`public-menu-order-btn${lockedRecipes.has(item.recipe.id) ? ' ordered' : ''}`}
+                  onClick={() => handleOrderClick(item.recipe.id)}
+                  disabled={lockedRecipes.has(item.recipe.id)}
+                >
+                  {lockedRecipes.has(item.recipe.id) ? 'Ordered!' : 'Order'}
+                </button>
+              )}
             </div>
           </li>
         ))}

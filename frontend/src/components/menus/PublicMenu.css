@@ -7,6 +7,12 @@
 }
 
 .public-menu-header,
+.public-menu-order-error {
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
 .public-menu-list {
   position: relative;
   z-index: 1;
