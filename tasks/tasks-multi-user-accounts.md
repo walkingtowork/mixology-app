@@ -49,10 +49,56 @@ logged in at `thebarcart.vercel.app/admin/`, the app is fully populated; signed 
 phone, the app shows zeros and a shared menu still opens. The user then placed and cancelled a real guest order signed
 out on a phone, which closes 6.6.
 
-**Next — 7.0, ownership phase one, and it is a different kind of task.** It is the first
-schema and data migration, on a platform where a failed migration is an outage. Before any
-code: the three deferred items below (branch protection, Python runtime pin, local Postgres),
-then 7.2/7.3 (restore a fresh `pg_dump` into local Postgres 18) and a rehearsal against it.
+**In flight — 7.0 code is written and rehearsed** on `feature/ownership-phase-one` (7.2–7.10
+done; 96 backend tests green on SQLite *and* on Postgres 18). Two migrations: `0010` adds a
+nullable `owner` to the five owned models, `0011` backfills every existing row to the
+`walkingtowork` account. Nothing reads `owner` yet, so the app behaves exactly as before.
+
+**Before merging 7.0 — these are the user's, and the first is not optional:**
+1. Take a fresh `pg_dump` (command in `PROJECT_CONTEXT.md`). The rehearsal used the
+   2026-10-13 11:24 JST dump, which is fine for rehearsing and stale as a rollback.
+2. Confirm the `walkingtowork` account still exists in production (Django admin → Users).
+   If it is missing, `0011` raises, `migrate` exits non-zero and gunicorn does not start.
+3. Still open from the deferred list: branch protection on `main`, and the Python runtime
+   pin. Neither blocks 7.0. The pin should be its own deploy, not bundled with a migration —
+   check which Python Railway's build log reports first, so the pin changes nothing.
+
+**After merging (7.11):** the app should look identical. Then confirm zero unowned rows —
+Django admin cannot show it until 8.12, so run the query below against
+`DATABASE_PUBLIC_URL`.
+
+```bash
+# zero unowned rows, per table
+psql "$DATABASE_PUBLIC_URL" -Atc "select 'categories', count(*) filter (where owner_id is null) from cocktails_ingredientcategory union all select 'ingredients', count(*) filter (where owner_id is null) from cocktails_ingredient union all select 'recipes', count(*) filter (where owner_id is null) from cocktails_recipe union all select 'menus', count(*) filter (where owner_id is null) from cocktails_menu union all select 'buy_list', count(*) filter (where owner_id is null) from cocktails_buylistitem"
+```
+
+**Rehearsal environment (reuse it for 8.13).** Docker container `mixology-pg18`
+(`postgres:18`, `127.0.0.1:5433`, password `localonly`); database `mixology` is the pristine
+restore, `rehearsal` and `rehearsal_fail` are scratch copies made with
+`create database … template mixology`. Port 5432 belongs to another project's container —
+leave it alone. `psql`/`pg_dump`/`pg_restore` are at `/opt/homebrew/opt/libpq/bin`, not on
+`PATH`. **The project venv is Python 3.9 and cannot build `psycopg2-binary`**, so anything
+touching Postgres needs a throwaway 3.12 venv:
+`/opt/homebrew/bin/python3.12 -m venv <dir> && <dir>/bin/pip install -r requirements.txt`.
+The local SQLite dev DB has only an `admin` user, so there the backfill needs
+`BACKFILL_OWNER_USERNAME=admin python manage.py migrate`.
+
+What the rehearsal showed, against a copy of production: both migrations apply cleanly;
+all 172 owned rows (11 categories, 107 ingredients, 49 recipes, 2 menus, 3 buy-list items)
+come out owned by `walkingtowork` with zero nulls; the 200 recipe-ingredients, 10 menu items
+and 9 orders are untouched; reversing to `0009` and re-applying works; and with the owner
+account missing, `0010` commits, `0011` raises, and the data stays intact and readable.
+
+**Two things 8.0 must deal with, both found here:**
+- **Rows created between the 7.0 and 8.0 deploys have no owner.** Nothing sets `owner` on
+  create until 8.5 (confirmed: a category created on the migrated copy has `owner = None`).
+  So 8.1 cannot simply add `NOT NULL` — it must re-run the backfill for null rows first, in
+  the same migration, or the deploy fails on the first row added in the meantime.
+- **The owner cannot log in until 11.0.** `walkingtowork` is not staff, so it cannot use
+  `/admin/`, which is the only way to get a session today — the user logs in as `admin`, who
+  owns nothing. The moment 8.4 scopes querysets, the app is empty for `admin` and unreachable
+  for the owner. Either give `walkingtowork` `is_staff` (no permissions needed: it can log in
+  at `/admin/` and see nothing there) before 8.0 deploys, or move the login UI ahead of 8.4.
 
 **What signed-out looks like until 11.0.** There is no login screen, so a signed-out visitor
 gets the app shell with "Failed to load …" and empty-state copy ("No menus yet"). No data is
@@ -82,8 +128,8 @@ to `CSRF_TRUSTED_ORIGINS`.
   handle 403 as well, or add an auth class that makes DRF return 401.
 - `/api/orders/` never reads the session, so it gets no `Vary: Cookie`. Harmless while
   uncached; tracked on the `OrderViewSet` entry in `backlog.md` for 8.0.
-**Deferred by choice, all due before 7.0:** branch protection on `main`; a Python runtime pin
-on Railway; local Postgres plus `psycopg2-binary` in the venv. See `backlog.md`.
+**Deferred by choice:** branch protection on `main`; a Python runtime pin on Railway. See
+`backlog.md`. Local Postgres is done (above).
 
 ## Relevant Files
 
@@ -203,15 +249,15 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
 
 - [ ] 7.0 Ownership, phase one — add nullable owner and backfill
   - [x] 7.1 Use **`pg_dump`, not `manage.py dumpdata`** — first dump taken 2026-10-12, verified with `pg_restore -l` (18 `TABLE DATA` entries). Repeat immediately before 7.6 and 7.8; this one will be stale by then. A Django fixture is schema-coupled: a fixture taken before this work cannot be loaded back once `owner` is required, because the rows carry no owner. `pg_dump` captures schema *and* data, so restoring it is a genuine point-in-time rollback. `pg_dump "$DATABASE_URL" -Fc -f backup.dump`
-  - [ ] 7.2 Stand up a **local Postgres** to restore into. Confirmed 2026-10-12 that `psql` and `pg_dump` are **not installed** locally, and the venv is missing `psycopg2-binary` and `gunicorn` despite both being in `requirements.txt` — so neither the dump nor a Django run against Postgres works from this machine yet — local dev is SQLite (`dj_database_url` falls back when `DATABASE_URL` is unset), so there is nowhere to `pg_restore` to until one exists. Use **Docker with `postgres:18`** — production is Postgres **18.6**, and a rehearsal is only meaningful against the same major version. Local `libpq` 18.6 is installed and matches, so there is no version-skew risk on the dump side
-  - [ ] 7.3 Restore into that local Postgres and confirm the app runs against it, before trusting the dump as a rollback
+  - [x] 7.2 Stand up a **local Postgres** to restore into. Confirmed 2026-10-12 that `psql` and `pg_dump` are **not installed** locally, and the venv is missing `psycopg2-binary` and `gunicorn` despite both being in `requirements.txt` — so neither the dump nor a Django run against Postgres works from this machine yet — local dev is SQLite (`dj_database_url` falls back when `DATABASE_URL` is unset), so there is nowhere to `pg_restore` to until one exists. Use **Docker with `postgres:18`** — production is Postgres **18.6**, and a rehearsal is only meaningful against the same major version. Local `libpq` 18.6 is installed and matches, so there is no version-skew risk on the dump side — done 2026-10-13: container `mixology-pg18` on port 5433. `psql`/`pg_dump` turned out to be installed with `libpq`, just not on `PATH`. The venv is Python 3.9 and cannot build `psycopg2-binary`; a throwaway 3.12 venv was used instead (see Current state)
+  - [x] 7.3 Restore into that local Postgres and confirm the app runs against it, before trusting the dump as a rollback — restore exits 0; every list endpoint returns the production row counts; the full test suite passes on Postgres 18
   - [x] 7.4 Check whether Railway's Postgres service offers scheduled backups — **answered 2026-10-12: this plan does not include them.** Backups are manual only, which makes 7.1 load-bearing rather than belt-and-braces. Tracked in `backlog.md`
-  - [ ] 7.5 Rehearse every step below against the restored copy before touching production
-  - [ ] 7.6 Add a nullable `owner` FK to `IngredientCategory`, `Ingredient`, `Recipe`, `Menu` and `BuyListItem`
-  - [ ] 7.7 Decide `on_delete` per model — deleting a user should not silently orphan or cascade away a menu with order history
-  - [ ] 7.8 Write a data migration backfilling every existing row to your admin account. **Target the dedicated non-admin account, not the superuser** (decided 2026-10-12): the superuser administers and owns nothing, so day-to-day use has a small blast radius and you travel the same signup/login/reset paths your friends will. Look the account up **by email**, never a hardcoded id. Note this had no account to point at at all until 2026-10-12 — `data.json` held zero user records, so production had no users at all. Resolved by 2.5.4; the migration must look the account up rather than assume a hardcoded id
-  - [ ] 7.9 Verify against the restored dump that all 304 records come out owned, with zero nulls remaining
-  - [ ] 7.10 Note that `Order` and `MenuItem` derive ownership through `menu`, so they get no `owner` column of their own
+  - [x] 7.5 Rehearse every step below against the restored copy before touching production — apply, verify, reverse, re-apply, and the missing-owner failure mode; results under Current state
+  - [x] 7.6 Add a nullable `owner` FK to `IngredientCategory`, `Ingredient`, `Recipe`, `Menu` and `BuyListItem`
+  - [x] 7.7 Decide `on_delete` per model — deleting a user should not silently orphan or cascade away a menu with order history — `PROTECT` on all five: deleting a user who still owns anything is refused. Chosen by Claude as the conservative default and not yet explicitly confirmed by the user; changing it later is a state-only migration
+  - [x] 7.8 Write a data migration backfilling every existing row to your admin account. **Target the dedicated non-admin account, not the superuser** (decided 2026-10-12): the superuser administers and owns nothing, so day-to-day use has a small blast radius and you travel the same signup/login/reset paths your friends will. Look the account up **by email**, never a hardcoded id. Note this had no account to point at at all until 2026-10-12 — `data.json` held zero user records, so production had no users at all. Resolved by 2.5.4; the migration must look the account up rather than assume a hardcoded id — done, with one deviation: it looks up by **username** (`walkingtowork`), not email, because this repo is public and the email would be committed. `BACKFILL_OWNER_USERNAME` overrides it for databases whose original user has another name. If rows need an owner and the account is missing it raises rather than skips
+  - [x] 7.9 Verify against the restored dump that all 304 records come out owned, with zero nulls remaining — zero nulls across 172 owned rows. (304 was a count of every record at planning time; only five tables carry an owner)
+  - [x] 7.10 Note that `Order` and `MenuItem` derive ownership through `menu`, so they get no `owner` column of their own
   - [ ] 7.11 Deploy this phase alone and confirm the app still works before starting 8.0
 
 - [ ] 8.0 Ownership, phase two — enforce and scope
