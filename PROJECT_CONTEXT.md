@@ -4,7 +4,7 @@ Decisions, plans, and environment details for the mixology app ("The Bar Cart") 
 aren't derivable from the code or git history. Companion to `PROJECT_REFERENCE.md`
 (what exists) and `backlog.md` (what's queued) — this file captures *why* and *what's agreed*.
 
-Last updated: 2026-09-21
+Last updated: 2026-10-13
 
 ---
 
@@ -18,6 +18,8 @@ Last updated: 2026-09-21
 - Env vars: `SECRET_KEY`, `ALLOWED_HOSTS=.railway.app`, `DEBUG=False`,
   `CORS_ALLOWED_ORIGINS=https://thebarcart.vercel.app,https://mixology-app-eight.vercel.app`,
   `SECURE_SSL_REDIRECT=True`, `DATABASE_URL` (auto)
+- Static files (the Django admin's CSS/JS) are served by WhiteNoise in finders mode since
+  2026-10-13 — no `collectstatic`, so the start command above is unchanged
 - `SECRET_KEY` has **no fallback** since 2026-09-21 — the app raises `ImproperlyConfigured`
   at startup if it is missing while `DEBUG=False`, rather than silently using the
   `django-insecure-` literal committed in `ade7f58`. Local dev needs `DEBUG=True` in
@@ -28,10 +30,16 @@ Last updated: 2026-09-21
 the old `mixology-app-eight.vercel.app` stays as a 307 redirect, which keeps already-printed
 QR codes working). Share URLs are built from `window.location.origin`
 (`MenuDetail.tsx:273`, `:384`), so nothing is hardcoded and new QR codes pick up the new
-domain automatically. **Renaming the Vercel domain breaks the API until
-`CORS_ALLOWED_ORIGINS` is updated in Railway** — it is an env var, so no redeploy is needed.
+domain automatically.
 - Repo: `walkingtowork/mixology-app`, root directory: `frontend/`
-- Env var: `VITE_API_BASE_URL=https://mixology-app-production.up.railway.app`
+- **Same-origin since 2026-10-13.** `frontend/vercel.json` rewrites `/api`, `/admin` and
+  `/static` to Railway, so the browser only talks to `thebarcart.vercel.app` and the session
+  cookie is first-party. Django admin is at `https://thebarcart.vercel.app/admin/`.
+- **No env vars.** `VITE_API_BASE_URL` was deleted; unset means same-origin. Re-adding it with
+  the Railway URL and redeploying is the rollback to direct cross-origin calls.
+- **Renaming the Vercel domain now needs a code change:** the origin is a literal in
+  `CSRF_TRUSTED_ORIGINS` (`settings.py`), and without it every logged-in write is a 403 while
+  reads keep working. `CORS_ALLOWED_ORIGINS` in Railway only matters for direct calls now.
 - Vercel agent plugin is installed for Vercel-related tasks
 
 **Data** — there is no fixture in the repo. `backend/data.json` was a one-time export for the
@@ -160,7 +168,8 @@ Note `cancelOrder` hard-deletes, so cancelled drinks leave no trace — there is
 
 ## Multi-user accounts — agreed decisions
 
-**Status: planned**, not started. Full task breakdown in `tasks/tasks-multi-user-accounts.md`.
+**Status: in progress** — 1.0–5.0 shipped as of 2026-10-13. Full task breakdown, and a
+"Current state" block that is kept up to date, in `tasks/tasks-multi-user-accounts.md`.
 
 Motivation: the app was built single-user with no authentication at all. Sharing a menu link
 lets a guest truncate the URL and reach the full app, and — more seriously — the API has no
@@ -237,13 +246,16 @@ record without a browser. Decided in conversation on 2026-09-21:
   `.gitignore` has always covered it, so git history does *not* need rewriting — rotating the
   Railway value makes the old one worthless.
 
-**Interim posture since 2026-10-12** (task 2.5, added outside the original plan): the API is
-`IsAuthenticatedOrReadOnly`. Anonymous writes are refused, so the `curl -X DELETE` exposure is
-closed; anonymous reads remain open, which is a privacy gap and not a destructive one, and
-closes in task 6.0. Editing happens through Django admin until the real auth UI lands — which
-is why `Menu`, `MenuItem`, `Order` and `BuyListItem` were registered there. Note production had
-**no user accounts at all** until a superuser was created on 2026-10-12: `data.json` (since
-deleted) seeded only cocktails data.
+**Posture since task 6.0 (2026-10-13):** the API is `IsAuthenticated` by default. Anonymous
+callers can do exactly two things — read a menu by its share token and use `/api/orders/` —
+so both the `curl -X DELETE` exposure (closed 2026-10-12, task 2.5) and the "truncate the
+share URL and browse the whole bar" exposure are gone. `/api/orders/` remains fully open,
+including listing every order; scoping it is tracked in `backlog.md`. There is no login screen
+until task 11.0: sign in at `https://thebarcart.vercel.app/admin/`, which sets the session
+cookie the app then uses. Signed out, the app shows "Failed to load …" over empty-state copy,
+which looks like missing data and is not. Note production had **no user accounts at all**
+until a superuser was created on 2026-10-12: `data.json` (since deleted) seeded only
+cocktails data.
 
 **Deferred security work** is listed in `backlog.md` under "Security — deferred from
 multi-user planning". It is safe for a handful of invited friends and explicitly *not* safe

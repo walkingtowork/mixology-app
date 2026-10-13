@@ -34,42 +34,45 @@ never boots and the app is down until it is fixed.
 ## Current state — updated 2026-10-13
 
 **Shipped:** 1.0 (`SECRET_KEY` + deploy hardening), 2.0 (CI), 2.5 (interim API lockdown,
-PR #17), 3.0 + 4.0 + `data.json` deleted (PR #18). Preview deployments are off (5.8).
+PR #17), 3.0 + 4.0 + `data.json` deleted (PR #18), **5.0 (same-origin proxy + WhiteNoise for
+the admin, PR #19)**. Preview deployments are off (5.8).
 
-**In flight — 5.0 code is written** on `feature/vercel-same-origin-proxy` (5.1–5.6 done, 92
-backend tests green, lint still 8). What is left is the rollout and the three checks that can
-only be made against the deployed site: 5.7, 5.9 and the trailing-slash check below. Then 6.0
-as a small follow-up PR. Keep them apart: 6.1 locks the API to logged-in users, so it must not
-ship until 6.4 (logging in at `thebarcart.vercel.app/admin/` and using the app) has been shown
-to work over the proxy.
+**The app is same-origin in production as of 2026-10-13.** `VITE_API_BASE_URL` is deleted in
+Vercel, the live bundle contains no Railway URL, and every API call goes to
+`thebarcart.vercel.app/api/…`. The user logged in at `thebarcart.vercel.app/admin/`, edited
+through the app, and repeated it on a real iPhone. Rolling back is re-adding the variable
+(`https://mixology-app-production.up.railway.app`) in Vercel and redeploying.
 
-**Rollout order.** Vite inlines `VITE_API_BASE_URL` at build time, so the switch happens on
-the Vercel side, in two steps with a safe gap between them:
+**In flight — 6.0 code is written** on `feature/default-deny-api` (6.1–6.3 done, 92 backend
+tests green). The API default is now `IsAuthenticated`; `PublicMenuView` and `OrderViewSet`
+are untouched. Verified locally in headless Chrome through the dev proxy: signed out, the
+share page loads and a guest order can be placed, listed and cancelled; signed out, every
+other endpoint is a 403; signed in via `/admin/`, all 9 app routes load and a write works.
 
-1. Merge. Vercel still has the variable set to the Railway URL, so the app keeps calling
-   Railway directly and the rewrites sit unused — but they are live, so test them with `curl`
-   now (commands below) before anything depends on them.
-2. **Delete** `VITE_API_BASE_URL` in Vercel and redeploy. The default is now `''`, so the app
-   is same-origin. Rolling back is restoring the variable and redeploying.
+Left after merge, all against the live site: 6.4 (log in at `thebarcart.vercel.app/admin/`,
+use the app), 6.5 (signed-out reads *and* writes are 403 from `curl`), and 6.6 (share link and
+guest ordering signed out, on a phone — the regression that matters most).
 
-Locally no `frontend/.env` is needed any more; the Vite proxy forwards `/api`, `/admin` and
-`/static` to `localhost:8000`. `backend/.env` must have `DEBUG=True` (it already had to), which
-is what adds the dev origin to `CSRF_TRUSTED_ORIGINS`.
+**What signed-out looks like until 11.0.** There is no login screen, so a signed-out visitor
+gets the app shell with "Failed to load …" and empty-state copy ("No menus yet"). No data is
+exposed, but it reads as *empty*, not *locked* — including to the owner when the session
+expires (Django's default is two weeks). The way back in is `thebarcart.vercel.app/admin/`.
+Any device used behind the bar needs to be logged in there first; the Orders page alone still
+works signed out, because `/api/orders/` is open.
 
-**Verify after deploy.** After step 1:
+Locally no `frontend/.env` is needed; the Vite proxy forwards `/api`, `/admin` and `/static`
+to `localhost:8000`. `backend/.env` must have `DEBUG=True`, which is what adds the dev origin
+to `CSRF_TRUSTED_ORIGINS`.
 
-```bash
-V=https://thebarcart.vercel.app
-curl -s  $V/api/hello/                        # {"message":"Hello World"} -- JSON, not the HTML shell
-curl -sI $V/api/ingredients/ | head -1        # 200. A 301 here means the trailing slash was stripped
-curl -sI $V/admin/login/     | head -1        # 200, not 400 DisallowedHost (5.7)
-curl -sI $V/api/public/menu/<share-token>/ | grep -i cache-control   # public, max-age=30
-```
-
-The trailing-slash one matters most: if Vercel drops the slash, Django answers every GET with
-a redirect back to the slashed URL and every POST breaks. The rewrites use `(.*)`/`$1` to
-avoid that, but it could not be tested without a deploy. After step 2: log in at
-`thebarcart.vercel.app/admin/`, make one edit in the app, then 5.9 on a real iPhone.
+**Found in 5.0, worth knowing:**
+- Vercel rewrites written as `/api/(.*)` → `…/api/$1` keep the trailing slash Django needs
+  (verified live: `/api/ingredients/` is a 200 with no redirect). `:path*` was not tried.
+- Both proxies rewrite `Host` to the backend's while `Origin` stays the frontend's, so a
+  frontend origin missing from `CSRF_TRUSTED_ORIGINS` means every logged-in write is a 403
+  while reads keep working. The list is a literal in `settings.py`, so **renaming the Vercel
+  domain now needs a code change**, not just the `CORS_ALLOWED_ORIGINS` env var.
+- CORS is no longer load-bearing for the app itself; `CORS_ALLOWED_ORIGINS` only matters to
+  something calling Railway directly.
 
 **Known issues for later phases (found in 3.0/4.0):**
 - The stopgap returns **403, not 401**, to anonymous writes: `SessionAuthentication` sends no
@@ -78,12 +81,6 @@ avoid that, but it could not be tested without a deploy. After step 2: log in at
   handle 403 as well, or add an auth class that makes DRF return 401.
 - `/api/orders/` never reads the session, so it gets no `Vary: Cookie`. Harmless while
   uncached; tracked on the `OrderViewSet` entry in `backlog.md` for 8.0.
-- **Django admin was unstyled in production** (found in 5.0): `/static/admin/css/base.css` was a
-  404 on Railway. Fixed in the 5.0 PR with WhiteNoise in `WHITENOISE_USE_FINDERS` mode, which
-  needs no `collectstatic` and no change to Railway's start command. Pinned by
-  `AdminStaticFilesTests`. After deploy, check
-  `curl -sI https://mixology-app-production.up.railway.app/static/admin/css/base.css` is a 200.
-
 **Deferred by choice, all due before 7.0:** branch protection on `main`; a Python runtime pin
 on Railway; local Postgres plus `psycopg2-binary` in the venv. See `backlog.md`.
 
@@ -184,21 +181,21 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
   - [x] 4.3 Confirm `Cache-Control: public` now appears *only* on anonymous, share-token-keyed responses
   - [x] 4.4 Sanity-check that `Vary: Cookie` is present on authenticated responses — Django's `SessionMiddleware` adds it automatically once the session is accessed (`sessions/middleware.py:46`), but verify rather than assume — verified in `CacheHeaderTests`, and it was worth checking: **`/api/orders/` does not get it**, because `authentication_classes = []` means the session is never read. Harmless today (no `Cache-Control`, so nothing caches it); recorded on the `OrderViewSet` entry in `backlog.md` for 8.0
 
-- [ ] 5.0 Same-origin via the Vercel proxy
-  - [x] 5.1 Add `/api/:path*` → Railway rewrite to `frontend/vercel.json`, placed **before** the existing `"/(.*)"` SPA catch-all (Vercel matches top-down, first match wins; getting this wrong returns the HTML shell and surfaces as a confusing JSON parse error) — written as `/api/(.*)` → `…/api/$1`, not `:path*`: a named param does not capture a trailing slash, and every Django route ends in one. **Unverified until deployed** — see "Verify after deploy" under Current state
+- [x] 5.0 Same-origin via the Vercel proxy — merged as PR #19, switched on 2026-10-13
+  - [x] 5.1 Add `/api/:path*` → Railway rewrite to `frontend/vercel.json`, placed **before** the existing `"/(.*)"` SPA catch-all (Vercel matches top-down, first match wins; getting this wrong returns the HTML shell and surfaces as a confusing JSON parse error) — written as `/api/(.*)` → `…/api/$1`, not `:path*`: a named param does not capture a trailing slash, and every Django route ends in one. Verified live 2026-10-13
   - [x] 5.2 Add `/admin/:path*` → Railway rewrite as well — task 6.0 depends on being able to log into Django admin on the Vercel origin — plus bare `/admin`, and `/static/(.*)` for the admin's CSS (served by WhiteNoise as of this PR; see Known issues)
   - [x] 5.3 Point `VITE_API_BASE_URL` at a relative path and update `frontend/.env.example` — that means the **empty string**, since `request()` already prefixes `/api`. Change `cocktailsApi.ts:3` from `||` to `??` first, or `''` falls back to `http://localhost:8000` in production. See "Rollout order" under Current state — done as recommended: the default is now `''` with `??`, and `.env.example` leaves the variable commented out
   - [x] 5.4 Add a matching `server.proxy` entry to `vite.config.ts` so local dev is structurally identical and cookie bugs surface on your laptop — one did: the proxy rewrites `Host` to `localhost:8000`, so the admin login 403'd on the CSRF origin check exactly as production would have. `changeOrigin: true` is now explicit so that stays true. Verified 2026-10-13 in headless Chrome on a DB copy: log in at `localhost:5173/admin/`, then create/update/delete a category through the app's own API module
   - [x] 5.5 Add `CSRF_TRUSTED_ORIGINS = ['https://thebarcart.vercel.app']` — the browser's `Origin` says vercel.app while Django's `Host` says railway.app, and Django's CSRF check compares them — plus `localhost:5173` / `127.0.0.1:5173` under `DEBUG` only, for the dev proxy. Pinned by `ProxiedCsrfTests`, which was confirmed to fail with the setting emptied
   - [x] 5.6 Leave `SESSION_COOKIE_DOMAIN` unset; pinning it to the Railway host makes the browser reject the cookie outright — left unset, with a comment in `settings.py` saying why
-  - [ ] 5.7 Verify Vercel forwards the destination's `Host` so `ALLOWED_HOSTS=.railway.app` still passes — a mismatch appears as a 400 `DisallowedHost`
+  - [x] 5.7 Verify Vercel forwards the destination's `Host` so `ALLOWED_HOSTS=.railway.app` still passes — a mismatch appears as a 400 `DisallowedHost` — verified live 2026-10-13: `/admin/login/` and `/api/ingredients/` are 200 through Vercel with `ALLOWED_HOSTS` unchanged
   - [x] 5.8 **Done 2026-09-22 — preview deployments are off.** Behavior set to "Only build production". in the Vercel project settings before the `/api` rewrite lands, so no preview can ever reach production data. A second Vercel project is not what this needs — previews are automatic per-branch within one project, and the risk is which *backend* they reach. Proper preview isolation would need a second Railway environment with its own database plus a proxy function in place of the static rewrite, since `vercel.json` cannot interpolate env vars into a destination. Revisit only if previews start earning their keep. **More urgent than it first looked:** previews are already live — the CI PR produced a Vercel preview deployment on 2026-09-21 — and `VITE_API_BASE_URL` points them at production Railway, so a preview branch can write to real data *today*. This is not only a future-proxy concern. **How:** Vercel Project Settings → Git → *Ignored Build Step* → Behavior: **"Only build production"** (a preset dropdown; the raw shell-command field it replaced used the counterintuitive convention exit 1 = build, exit 0 = skip). Not "Don't build anything", which would stop production deploys too
-  - [ ] 5.9 Test on a real iOS device, since that is the browser this whole decision exists to satisfy
+  - [x] 5.9 Test on a real iOS device, since that is the browser this whole decision exists to satisfy — done by the user 2026-10-13: admin login and an edit through the app, on an iPhone
 
 - [ ] 6.0 Close the exposure — default-deny API
-  - [ ] 6.1 Change `DEFAULT_PERMISSION_CLASSES` from `IsAuthenticatedOrReadOnly` to `IsAuthenticated` — the block already exists as of task 2.5, so this is a one-word flip that closes the remaining read exposure
-  - [ ] 6.2 Keep `PublicMenuView` explicitly `AllowAny` with `authentication_classes = []` (`views.py:249`)
-  - [ ] 6.3 Keep `OrderViewSet` create reachable anonymously so guests can still order; full scoping of that endpoint is tracked in `backlog.md` and is **not** in this task
+  - [x] 6.1 Change `DEFAULT_PERMISSION_CLASSES` from `IsAuthenticatedOrReadOnly` to `IsAuthenticated` — the block already exists as of task 2.5, so this is a one-word flip that closes the remaining read exposure — `AnonymousAccessTests` now asserts 403 on 11 private read URLs (including `/api/hello/` and menu stats) in place of the three "reads stay open" tests
+  - [x] 6.2 Keep `PublicMenuView` explicitly `AllowAny` with `authentication_classes = []` (`views.py:249`)
+  - [x] 6.3 Keep `OrderViewSet` create reachable anonymously so guests can still order; full scoping of that endpoint is tracked in `backlog.md` and is **not** in this task — left entirely as it was, so anonymous list/fulfil/cancel of orders also still work. That is the one read still open to the internet
   - [ ] 6.4 Log in at `…vercel.app/admin/` and confirm the app works end to end with the session cookie, no login UI required yet
   - [ ] 6.5 Confirm from a signed-out browser and from `curl` that writes now return 403
   - [ ] 6.6 Confirm the public share link and guest ordering still work signed out — this is the regression that matters most
