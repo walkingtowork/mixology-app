@@ -85,6 +85,10 @@ deployed.** Decisions the user agreed in that session:
   unserved order. Two guests who type the same name share one order list and can cancel each
   other's drinks; the user is not worried about that for a party. The "guest name hint" item
   in `backlog.md` is the mitigation if it ever matters.
+- **A guest can change their name** from a pencil beside "Ordering as …" in the My Orders
+  drawer. It only changes the name saved on the phone: earlier orders stay under the old name
+  and drop out of that guest's list. Renaming existing orders was left out on purpose — it
+  needs a guest endpoint that would let anyone with the link rename another guest's orders.
 - **No compatibility shim for the old frontend bundle** — parties are months apart. The old
   `POST /api/orders/` shape is now a 403.
 - **The device behind the bar must be signed in.** The Orders page used to work signed out;

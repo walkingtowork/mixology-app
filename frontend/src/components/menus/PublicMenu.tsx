@@ -78,13 +78,21 @@ export default function PublicMenu() {
       await placeOrder(pendingRecipeId, name);
       setPendingRecipeId(null);
     }
+    // A changed name has its own order list; earlier orders stay under the old one.
+    if (showMyOrders) await loadMyOrders(name);
   };
 
-  const loadMyOrders = async () => {
+  const handleChangeNameClick = () => {
+    setPendingRecipeId(null);
+    setNameInput(guestName);
+    setShowNameModal(true);
+  };
+
+  const loadMyOrders = async (name = guestName) => {
     if (!shareToken) return;
     setMyOrdersLoading(true);
     try {
-      setMyOrders(guestName ? await fetchGuestOrders(shareToken, guestName) : []);
+      setMyOrders(name ? await fetchGuestOrders(shareToken, name) : []);
     } catch {
       setMyOrders([]);
     } finally {
@@ -160,8 +168,12 @@ export default function PublicMenu() {
       {showNameModal && (
         <div className="pm-modal-backdrop" onClick={() => setShowNameModal(false)}>
           <div className="pm-modal" onClick={e => e.stopPropagation()}>
-            <h2 className="pm-modal-title">What's your name?</h2>
-            <p className="pm-modal-hint">So the bartender knows who to hand it to.</p>
+            <h2 className="pm-modal-title">{guestName ? 'Change your name' : "What's your name?"}</h2>
+            <p className="pm-modal-hint">
+              {guestName
+                ? `Drinks you've already ordered stay under ${guestName}.`
+                : 'So the bartender knows who to hand it to.'}
+            </p>
             <input
               className="pm-modal-input"
               type="text"
@@ -177,7 +189,7 @@ export default function PublicMenu() {
                 onClick={handleNameSubmit}
                 disabled={!nameInput.trim()}
               >
-                Let's go
+                {guestName ? 'Save' : "Let's go"}
               </button>
               <button className="pm-modal-cancel" onClick={() => setShowNameModal(false)}>
                 Cancel
@@ -196,6 +208,23 @@ export default function PublicMenu() {
               <h2 className="pm-drawer-title">My Orders</h2>
               <button className="pm-drawer-close" onClick={() => setShowMyOrders(false)}>✕</button>
             </div>
+            {guestName && (
+              <p className="pm-drawer-guest">
+                Ordering as <strong>{guestName}</strong>
+                <button
+                  className="pm-drawer-edit-name"
+                  onClick={handleChangeNameClick}
+                  aria-label="Change your name"
+                  title="Change your name"
+                >
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M12 20h9" />
+                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                  </svg>
+                </button>
+              </p>
+            )}
             {myOrdersLoading ? (
               <LoadingSpinner />
             ) : myOrders.length === 0 ? (
