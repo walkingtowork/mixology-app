@@ -246,13 +246,16 @@ record without a browser. Decided in conversation on 2026-09-21:
   `.gitignore` has always covered it, so git history does *not* need rewriting — rotating the
   Railway value makes the old one worthless.
 
-**Interim posture since 2026-10-12** (task 2.5, added outside the original plan): the API is
-`IsAuthenticatedOrReadOnly`. Anonymous writes are refused, so the `curl -X DELETE` exposure is
-closed; anonymous reads remain open, which is a privacy gap and not a destructive one, and
-closes in task 6.0. Editing happens through Django admin until the real auth UI lands — which
-is why `Menu`, `MenuItem`, `Order` and `BuyListItem` were registered there. Note production had
-**no user accounts at all** until a superuser was created on 2026-10-12: `data.json` (since
-deleted) seeded only cocktails data.
+**Posture since task 6.0 (2026-10-13):** the API is `IsAuthenticated` by default. Anonymous
+callers can do exactly two things — read a menu by its share token and use `/api/orders/` —
+so both the `curl -X DELETE` exposure (closed 2026-10-12, task 2.5) and the "truncate the
+share URL and browse the whole bar" exposure are gone. `/api/orders/` remains fully open,
+including listing every order; scoping it is tracked in `backlog.md`. There is no login screen
+until task 11.0: sign in at `https://thebarcart.vercel.app/admin/`, which sets the session
+cookie the app then uses. Signed out, the app shows "Failed to load …" over empty-state copy,
+which looks like missing data and is not. Note production had **no user accounts at all**
+until a superuser was created on 2026-10-12: `data.json` (since deleted) seeded only
+cocktails data.
 
 **Deferred security work** is listed in `backlog.md` under "Security — deferred from
 multi-user planning". It is safe for a handful of invited friends and explicitly *not* safe

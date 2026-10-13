@@ -186,15 +186,11 @@ if DEBUG:
 
 
 # Django REST Framework
-# Default-deny for writes. Until this landed there was no REST_FRAMEWORK block at all, so
-# DRF fell back to AllowAny and anyone on the internet could `curl -X DELETE` any record --
-# no browser, no share link, no credentials. This is the interim step: anonymous reads stay
-# open so the app keeps rendering, anonymous writes are refused.
-#
-# Reads are still public, which is a privacy gap and not a destructive one. It closes in
-# task 6.0, which flips this to IsAuthenticated once the Vercel /api proxy makes the session
-# cookie first-party and the frontend can actually authenticate. Flipping it before then
-# would lock the owner out too.
+# Default-deny. Until 2026-10-12 there was no REST_FRAMEWORK block at all, so DRF fell back
+# to AllowAny and anyone on the internet could `curl -X DELETE` any record -- no browser,
+# no share link, no credentials. Writes were closed first (IsAuthenticatedOrReadOnly);
+# reads followed once the Vercel /api proxy made the session cookie first-party, so the
+# frontend could authenticate at all. Every endpoint now needs a session unless it opts out.
 #
 # Two endpoints opt out deliberately, in views.py: PublicMenuView (guests read a shared menu)
 # and OrderViewSet (guests order without accounts). Both set AllowAny AND
@@ -204,7 +200,7 @@ if DEBUG:
 # only way in, so there is no password-over-the-wire path to the API.
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+        'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',

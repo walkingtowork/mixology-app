@@ -11,8 +11,8 @@ from .models import (
 class AuthenticatedAPITestCase(APITestCase):
     """Base class for API tests that write.
 
-    The API is default-deny for unsafe methods (IsAuthenticatedOrReadOnly), so anything
-    that creates, updates or deletes has to act as a signed-in user. Authenticating here
+    The API is default-deny (IsAuthenticated), so every call to an owner-facing endpoint
+    has to act as a signed-in user. Authenticating here
     keeps that concern in one place, and means anonymous behaviour is asserted
     deliberately in AnonymousAccessTests rather than relied on by accident everywhere
     else. When ownership lands in task 8.0 this is where the owning user comes from.
@@ -1086,13 +1086,9 @@ class MenuStatsAPITests(AuthenticatedAPITestCase):
 class AnonymousAccessTests(APITestCase):
     """What an unauthenticated caller can and cannot do.
 
-    This is the interim security posture: reads stay open so the app keeps rendering,
-    writes are refused. Deliberately NOT inheriting AuthenticatedAPITestCase -- these
-    tests are about the anonymous client.
-
-    The reads being open is a known privacy gap, not an oversight; it closes in task 6.0
-    once the Vercel /api proxy lets the frontend hold a session. Until then, flipping to
-    IsAuthenticated would lock the owner out of their own app.
+    Nothing, except the two things guests need: reading a menu by its share token and
+    ordering from it. Deliberately NOT inheriting AuthenticatedAPITestCase -- these tests
+    are about the anonymous client.
     """
 
     def setUp(self):
@@ -1106,26 +1102,45 @@ class AnonymousAccessTests(APITestCase):
         self.menu = Menu.objects.create(name='Friday Night', is_published=True)
         self.menu_item = MenuItem.objects.create(menu=self.menu, recipe=self.recipe, order=1)
 
-    # --- reads stay open ---
-
-    def test_anonymous_can_list_ingredients(self):
-        """GET /api/ingredients/ still works without credentials."""
-        response = self.client.get('/api/ingredients/')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-    def test_anonymous_can_list_recipes(self):
-        """GET /api/recipes/ still works without credentials."""
-        response = self.client.get('/api/recipes/')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-    def test_anonymous_can_list_menus(self):
-        """GET /api/menus/ still works without credentials."""
-        response = self.client.get('/api/menus/')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-    # --- writes are refused ---
+    # --- reads are refused ---
     # 403 rather than 401: SessionAuthentication offers no WWW-Authenticate challenge,
     # so DRF reports forbidden rather than unauthorized.
+
+    def test_anonymous_cannot_read_anything_private(self):
+        """Truncating a share URL must not hand a guest the owner's whole bar."""
+        urls = [
+            '/api/ingredients/',
+            f'/api/ingredients/{self.ingredient.id}/',
+            '/api/recipes/',
+            f'/api/recipes/{self.recipe.id}/',
+            '/api/categories/',
+            f'/api/categories/{self.category.id}/',
+            '/api/menus/',
+            f'/api/menus/{self.menu.id}/',
+            f'/api/menus/{self.menu.id}/stats/',
+            '/api/buy-list/',
+            '/api/hello/',
+        ]
+        for url in urls:
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_menu_list_does_not_leak_share_tokens(self):
+        """A share token is the only credential a guest has; the menu list hands out all of them."""
+        response = self.client.get('/api/menus/')
+        self.assertNotIn(str(self.menu.share_token), response.content.decode())
+
+    def test_signed_in_user_can_read(self):
+        """The other half of the flip: a session is enough, with no login UI yet."""
+        self.client.force_login(
+            get_user_model().objects.create_user(username='owner', email='owner@example.com')
+        )
+        for url in ['/api/ingredients/', '/api/recipes/', '/api/menus/', '/api/buy-list/']:
+            with self.subTest(url=url):
+                self.assertEqual(self.client.get(url).status_code, status.HTTP_200_OK)
+
+    # --- writes are refused ---
 
     def test_anonymous_cannot_create_ingredient(self):
         """The destructive hole this whole change exists to close."""
@@ -1196,7 +1211,7 @@ class AnonymousAccessTests(APITestCase):
         """Fulfilment happens behind the bar on an unauthenticated device today.
 
         This documents current behaviour rather than endorsing it: OrderViewSet is wide
-        open to anyone who knows the URL, which is tracked in backlog.md for task 6.0.
+        open to anyone who knows the URL, which is tracked in backlog.md for task 8.0.
         """
         order = Order.objects.create(menu=self.menu, recipe=self.recipe, guest_name='Alex')
         response = self.client.patch(

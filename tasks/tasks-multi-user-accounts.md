@@ -43,12 +43,22 @@ Vercel, the live bundle contains no Railway URL, and every API call goes to
 through the app, and repeated it on a real iPhone. Rolling back is re-adding the variable
 (`https://mixology-app-production.up.railway.app`) in Vercel and redeploying.
 
-**Next PR — 6.0, and it is small.** 6.1 is a one-word flip to `IsAuthenticated` plus updating
-`AnonymousAccessTests`, whose "reads stay open" tests must become "reads are refused". Its
-precondition is already met: logging in over the proxy and writing through the app is exactly
-what 5.0's verification showed, so 6.4 is a re-check after the flip, not a first attempt.
-The regression that matters is 6.6 — the share page and guest ordering must still work signed
-out, on a phone.
+**In flight — 6.0 code is written** on `feature/default-deny-api` (6.1–6.3 done, 92 backend
+tests green). The API default is now `IsAuthenticated`; `PublicMenuView` and `OrderViewSet`
+are untouched. Verified locally in headless Chrome through the dev proxy: signed out, the
+share page loads and a guest order can be placed, listed and cancelled; signed out, every
+other endpoint is a 403; signed in via `/admin/`, all 9 app routes load and a write works.
+
+Left after merge, all against the live site: 6.4 (log in at `thebarcart.vercel.app/admin/`,
+use the app), 6.5 (signed-out reads *and* writes are 403 from `curl`), and 6.6 (share link and
+guest ordering signed out, on a phone — the regression that matters most).
+
+**What signed-out looks like until 11.0.** There is no login screen, so a signed-out visitor
+gets the app shell with "Failed to load …" and empty-state copy ("No menus yet"). No data is
+exposed, but it reads as *empty*, not *locked* — including to the owner when the session
+expires (Django's default is two weeks). The way back in is `thebarcart.vercel.app/admin/`.
+Any device used behind the bar needs to be logged in there first; the Orders page alone still
+works signed out, because `/api/orders/` is open.
 
 Locally no `frontend/.env` is needed; the Vite proxy forwards `/api`, `/admin` and `/static`
 to `localhost:8000`. `backend/.env` must have `DEBUG=True`, which is what adds the dev origin
@@ -183,9 +193,9 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
   - [x] 5.9 Test on a real iOS device, since that is the browser this whole decision exists to satisfy — done by the user 2026-10-13: admin login and an edit through the app, on an iPhone
 
 - [ ] 6.0 Close the exposure — default-deny API
-  - [ ] 6.1 Change `DEFAULT_PERMISSION_CLASSES` from `IsAuthenticatedOrReadOnly` to `IsAuthenticated` — the block already exists as of task 2.5, so this is a one-word flip that closes the remaining read exposure
-  - [ ] 6.2 Keep `PublicMenuView` explicitly `AllowAny` with `authentication_classes = []` (`views.py:249`)
-  - [ ] 6.3 Keep `OrderViewSet` create reachable anonymously so guests can still order; full scoping of that endpoint is tracked in `backlog.md` and is **not** in this task
+  - [x] 6.1 Change `DEFAULT_PERMISSION_CLASSES` from `IsAuthenticatedOrReadOnly` to `IsAuthenticated` — the block already exists as of task 2.5, so this is a one-word flip that closes the remaining read exposure — `AnonymousAccessTests` now asserts 403 on 11 private read URLs (including `/api/hello/` and menu stats) in place of the three "reads stay open" tests
+  - [x] 6.2 Keep `PublicMenuView` explicitly `AllowAny` with `authentication_classes = []` (`views.py:249`)
+  - [x] 6.3 Keep `OrderViewSet` create reachable anonymously so guests can still order; full scoping of that endpoint is tracked in `backlog.md` and is **not** in this task — left entirely as it was, so anonymous list/fulfil/cancel of orders also still work. That is the one read still open to the internet
   - [ ] 6.4 Log in at `…vercel.app/admin/` and confirm the app works end to end with the session cookie, no login UI required yet
   - [ ] 6.5 Confirm from a signed-out browser and from `curl` that writes now return 403
   - [ ] 6.6 Confirm the public share link and guest ordering still work signed out — this is the regression that matters most
