@@ -56,10 +56,26 @@ Railway deploy is active, and the zero-unowned-rows query below printed 0 for ev
 The site stayed up throughout. Nothing reads `owner` yet, so behaviour is unchanged. A
 pre-migration dump exists at `~/mixology-2026-10-13-pre-7.0.dump`.
 
-**In progress — 8.0, written and rehearsed 2026-10-13 on `feature/ownership-scope`; not yet
-committed, pushed or deployed.** One deploy, not the two the handoff notes suggested: the
-user decided this on 2026-10-13 because they will not be writing to production during it,
-and the split only protected writes made while Railway swaps containers.
+**8.0 is merged (PR #22, 2026-10-13) but not yet confirmed live.** Checked from outside,
+signed out, through Vercel and directly on Railway: seven private reads are 403, the admin
+login page loads, and the public menu is a 200 with `Cache-Control: max-age=30, public`.
+That proves the site is up and still closed; it does **not** prove the new release is the
+one serving, because a signed-out caller sees the same thing from the old release, and a
+failed migration would leave the old one running. Anonymous write probes were not sent.
+**Still to confirm, by the user:** Railway shows the PR #22 deployment as active; signed in
+as `walkingtowork` the app is fully populated, and as `admin` it is empty; and the query
+below prints `NO` five times. Once those hold, tick 8.0 and 8.13 and move this to Shipped.
+
+```bash
+psql "$DATABASE_PUBLIC_URL" -Atc "select table_name, is_nullable from information_schema.columns where column_name = 'owner_id' and table_name like 'cocktails_%' order by 1"
+```
+
+A pre-deploy dump exists at `~/mixology-2026-10-13.dump` (taken 23:15, replacing the 21:52
+one the rehearsal used). The branch is deleted locally and remotely.
+
+It shipped as one deploy, not the two the handoff notes suggested: the user decided this on
+2026-10-13 because they would not be writing to production during it, and the split only
+protected writes made while Railway swaps containers.
 
 - **What it does.** Every owner-bearing viewset is scoped to `request.user`
   (`OwnerScopedMixin`); every create path sets the owner; ids in request bodies are checked
@@ -326,7 +342,7 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
   - [x] 7.10 Note that `Order` and `MenuItem` derive ownership through `menu`, so they get no `owner` column of their own
   - [x] 7.11 Deploy this phase alone and confirm the app still works before starting 8.0 — 2026-10-13: no outage across the deploy window; the user confirmed the deployment is active and that every owned table has zero unowned rows in production
 
-- [ ] 8.0 Ownership, phase two — enforce and scope — written and rehearsed; deploy pending, see Current state
+- [ ] 8.0 Ownership, phase two — enforce and scope — merged as PR #22, 2026-10-13; live confirmation pending, see Current state
   - [x] 8.1 Migration making `owner` `NOT NULL` — `0013`, preceded by `0012` re-running the backfill. Two migrations because Postgres will not `ALTER` a table in the transaction that updated its rows
   - [x] 8.2 Replace the global `unique=True` on `Ingredient.name` (`models.py:57`) and `IngredientCategory.name` (`:63`) with per-owner uniqueness — two users must both be able to have "Rum" — `UniqueConstraint(owner, name)` on both, added before the global one is dropped
   - [x] 8.3 Fix `Menu.save()` (`models.py:150`): `Menu.objects.exclude(pk=self.pk).update(is_active=False)` currently deactivates every menu belonging to *every* user — filters on `owner=self.owner`; pinned by `test_activating_my_menu_leaves_another_users_active_menu_alone`
@@ -339,7 +355,7 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
   - [x] 8.10 Tests that the nested-write paths in 8.6 reject a foreign id — `ForeignIdTests`
   - [x] 8.11 First-ever tests for Menu, MenuItem, Order and BuyList, closing the gap noted in `backlog.md` — `MenuAPITests`, `OrderAPITests` (pins today's open behaviour), `BuyListAPITests`
   - [x] 8.12 Show `owner` in Django admin for every model, with a filter by user — `OwnedAdmin` base class; the owner is required in admin forms even while the column is nullable
-  - [ ] 8.13 Rehearse against the restored dump, then deploy — rehearsed 2026-10-13 (see Current state); deploy pending
+  - [ ] 8.13 Rehearse against the restored dump, then deploy — rehearsed and merged 2026-10-13 (see Current state); live confirmation pending
 
 - [ ] 9.0 Frontend test framework — before the auth UI, not after
   - [ ] 9.1 Add Vitest, React Testing Library, `@testing-library/jest-dom` and `jsdom`
