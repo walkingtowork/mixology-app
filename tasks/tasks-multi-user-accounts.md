@@ -69,13 +69,67 @@ would not be writing to production during it, and the split only protected such 
 
 **Sign in as `walkingtowork`, not `admin`** — `admin` owns nothing and sees an empty app.
 
-**Next — scope `OrderViewSet`, then 9.0.** `/api/orders/` is the last thing open to anonymous
-callers: anyone can list, fulfil or cancel every order and post one against any menu id.
-Claude's recommendation, not yet confirmed by the user: its own PR before 9.0, with guests
-sending the menu's share token and the owner's reads going through the session. It changes
-the guest flow and the frontend, and an old cached frontend bundle will not send the token,
-so plan the rollout. `CacheHeaderTests.test_orders_do_not_vary_on_cookie_yet` goes when it
-lands. The stats endpoint already refuses to name another user's recipe.
+**Next — scope `OrderViewSet`, then 9.0.** The user said on 2026-10-13 that the next session
+will work on `/api/orders/`. It is not in the numbered task list; treat it as 8.5. Everything
+under "Handoff notes for order scoping" is Claude's recommendation, **not a decision the user
+has made** — explain the reasoning and get agreement before writing it.
+
+**Handoff notes for order scoping** (written 2026-10-13 at the end of the 8.0 session):
+
+- **What is open today** (`views.py`, `OrderViewSet`: `AllowAny`, `authentication_classes = []`).
+  Anyone on the internet can list every order for every menu, fulfil or cancel any order by
+  id, and post an order naming any `menu_id` and any `recipe_id` — the recipe need not be on
+  that menu, and the menu need not be published. With one real user there is nobody to leak
+  to yet; it must be closed before invites (12.0).
+- **Recommended shape.** Two kinds of caller on one endpoint. *The owner*, through the
+  session: list, fulfil and cancel, scoped to `menu__owner=request.user`. *A guest*, with no
+  session: must present the menu's `share_token`, and may then place an order on that menu,
+  list orders for that menu filtered by their `guest_name`, and cancel one. The view has to
+  authenticate when a session is present but still admit anonymous callers, so it cannot
+  keep `authentication_classes = []`.
+- **Cheap integrity checks to add at the same time:** the recipe must be an item on the menu,
+  and the menu must be published. `OrderSerializer` still uses global `Recipe.objects.all()`
+  and `Menu.objects.all()` querysets; it was deliberately left out of
+  `OwnedPrimaryKeyRelatedField` in 8.0 because its callers are anonymous.
+- **Open questions for the user.** Guest identity is only a self-typed name, so "cancel your
+  own order" cannot really be enforced — a guest holding the share token can cancel any order
+  on that menu if they know its id. Is that acceptable for a party? Should a guest be able to
+  cancel a fulfilled order? Should the share token travel as a query param, a body field or
+  a header? Rate limiting stays where it is, in 15.5.
+- **Frontend call sites** (all in `frontend/src/services/cocktailsApi.ts`, "Orders" section):
+  `PublicMenu.tsx` calls `createOrder(menu.id, recipeId, name)`,
+  `fetchOrders({ menu_id, guest_name })` and `cancelOrder(id)` — these need the share token,
+  which that page already has from its route. `OrdersPage.tsx` calls `fetchOrders`,
+  `fulfillOrder` and `cancelOrder` as the owner. `App.tsx:27` calls
+  `fetchOrders({ today: true, fulfilled: false })` for the nav badge on every page load,
+  including signed out and on `/share/…`, where it will start returning 403.
+- **The rollout risk is the cached bundle.** Vercel and Railway deploy independently, and a
+  guest whose phone has the old page open will send no token and fail to order until they
+  reload. Do not merge close to a party; consider having the backend accept the old shape
+  for one release if that matters.
+- **Tests to change.** `OrderAPITests` pins today's open behaviour on purpose and gets
+  rewritten. `AnonymousAccessTests` has the guest-ordering exemptions.
+  `CacheHeaderTests.test_orders_do_not_vary_on_cookie_yet` should be deleted once the view
+  reads the session — and check that the guest responses still carry no `Cache-Control`.
+- **Docs that go stale when it lands:** the `OrderViewSet` entry in `backlog.md`; the
+  "Posture since task 6.0" paragraph in `PROJECT_CONTEXT.md`; and, below, "the Orders page
+  alone still works signed out".
+- **Verify with two users and a signed-out client**, on a DB copy, as 8.0 did — and in a real
+  browser this time, since the guest flow is UI. 8.0 was never clicked through locally.
+
+**Loose ends from 8.0:**
+- **No anonymous write was re-tested against production after the 8.0 deploy.** Claude's
+  POST/DELETE probes were blocked by the session's permission check (they would be real
+  writes if the lock had failed). Reads are confirmed 403 and the permission setting did not
+  change in PR #22. If wanted, the user can run one themselves; a 403 is the pass.
+- **Two docs commits are on local `main`, unpushed** (`6a16923`, `cbd5912`, plus this one).
+  They ride along with the next branch push, per the house rules.
+- **The local SQLite dev DB has not been migrated past `0011`.** If it has unowned rows it
+  needs `BACKFILL_OWNER_USERNAME=admin python manage.py migrate` (there is no
+  `walkingtowork` locally); a plain `migrate` will raise.
+- **In `mixology-pg18`**, `prod_1013_2152` is a restore of the 21:52 dump at migration `0009`
+  and makes a good template for the next rehearsal. Order scoping needs no migration, so a
+  rehearsal is only for a two-user check against real data.
 
 What 8.0 did, for reference:
 
