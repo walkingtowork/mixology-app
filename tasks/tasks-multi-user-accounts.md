@@ -67,7 +67,8 @@ rehearsal against it (8.13) before deploying, exactly as 7.0 did.
 psql "$DATABASE_PUBLIC_URL" -Atc "select 'categories', count(*) filter (where owner_id is null) from cocktails_ingredientcategory union all select 'ingredients', count(*) filter (where owner_id is null) from cocktails_ingredient union all select 'recipes', count(*) filter (where owner_id is null) from cocktails_recipe union all select 'menus', count(*) filter (where owner_id is null) from cocktails_menu union all select 'buy_list', count(*) filter (where owner_id is null) from cocktails_buylistitem"
 ```
 
-**Rehearsal environment (reuse it for 8.13).** Docker container `mixology-pg18`
+**Rehearsal environment (reuse it for 8.13).** Docker container `mixology-pg18` — stopped
+as of 2026-10-13, data intact; bring it back with `docker start mixology-pg18`. It is
 (`postgres:18`, `127.0.0.1:5433`, password `localonly`); database `mixology` is the pristine
 restore, `rehearsal` and `rehearsal_fail` are scratch copies made with
 `create database … template mixology`. Port 5432 belongs to another project's container —
