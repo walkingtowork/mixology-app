@@ -87,7 +87,7 @@ accurate throttling and any Vercel shared-secret gate are deferred until there i
       rotate the Railway value now while there are no real sessions to invalidate. No real `.env`
       was ever committed and `.gitignore` has always covered it, so history does not need rewriting.
 
-- [ ] **`OrderViewSet` is unauthenticated by design but under-scoped.** `views.py:249` is
+- [ ] **`OrderViewSet` is unauthenticated by design but under-scoped.** `views.py:257` is
       `AllowAny` with `authentication_classes = []` so guests can order without accounts.
       But anyone can POST an order against *any* menu id, and GET returns every order for
       every user. Needs splitting: anonymous create gated on possession of the menu's

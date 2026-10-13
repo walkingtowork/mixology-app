@@ -34,25 +34,38 @@ never boots and the app is down until it is fixed.
 ## Current state — updated 2026-10-13
 
 **Shipped:** 1.0 (`SECRET_KEY` + deploy hardening), 2.0 (CI), 2.5 (interim API lockdown,
-PR #17). Preview deployments are off (5.8).
+PR #17), 3.0 + 4.0 + `data.json` deleted (PR #18). Preview deployments are off (5.8).
 
-**In review:** 3.0 + 4.0 + the `data.json` deletion — branch `feature/request-helper-and-cache`.
+**Next PR — 5.0 on its own**, then deploy and verify, then 6.0 as a small follow-up PR. Keep
+them apart: 6.1 locks the API to logged-in users, so it must not ship until 6.4 (logging in
+at `thebarcart.vercel.app/admin/` and using the app) has been shown to work over the proxy.
 
-**Next after that:** 5.0, the Vercel proxy. Until 5.5 lands, a write from the local dev
-frontend while logged into `localhost:8000/admin` fails with `CSRF Failed: Origin checking
-failed` — expected, not a regression (the same write was a 403 anonymously before 3.0).
+5.0 contents: `/api/:path*` and `/admin/:path*` rewrites in `frontend/vercel.json` **before**
+the SPA catch-all; a matching `server.proxy` in `vite.config.ts`; `CSRF_TRUSTED_ORIGINS` in
+`settings.py`; `.env.example` updated. Two things that are easy to get wrong:
 
-**This PR — 3.0 and 4.0 together**, both small and behaviour-neutral, plus one deletion:
-- 3.0 — extract one `request()` helper from the ~30 hand-written `fetch` calls
-- 4.0 — invert the cache headers
-- **Delete `backend/data.json`** (decided 2026-10-12). Nothing in the codebase reads it; it is
-  referenced only in docs. It was a one-time export for the May 2026 Postgres migration
-  (`6fd0968`), is five months stale, and stops loading entirely once `owner` is `NOT NULL` in
-  8.0. The local dev database is already more current than it. **Do not regenerate it from
-  production:** a current fixture would put real guest names — and after 10.0, password hashes
-  — into a *public* repo. It is only harmless today because it predates orders and users.
-  Update the `PROJECT_CONTEXT.md` "Data" note to point at the `pg_dump` → local Postgres path
-  from 7.2/7.3 instead.
+- **Base URL trap (5.3).** `request()` builds `${API_BASE_URL}/api/...`, so same-origin means
+  `VITE_API_BASE_URL` becomes the **empty string**, not `/api`. But `cocktailsApi.ts:3` uses
+  `|| 'http://localhost:8000'`, and `''` is falsy, so production would silently call
+  localhost. Change it to `??` in the same PR. It is the only place the variable is read.
+- **Rollout order.** Vite inlines the variable at build time, so the switch happens on the
+  Vercel side. (1) Merge the code. With the Vercel env var still set to the Railway URL,
+  nothing changes and the rewrites sit unused. (2) Set `VITE_API_BASE_URL` to empty in Vercel
+  and redeploy. Now same-origin. Rolling back is just restoring the env var and redeploying.
+  The local, gitignored `frontend/.env` needs the same change to exercise the dev proxy.
+
+Verify after deploy: 5.7 (no 400 `DisallowedHost`), 5.9 (a real iPhone), and that the share
+page still returns `Cache-Control: public, max-age=30` through Vercel.
+
+**Known issues for later phases (found in 3.0/4.0):**
+- The stopgap returns **403, not 401**, to anonymous writes: `SessionAuthentication` sends no
+  `WWW-Authenticate` header, so DRF downgrades it. The 401 hook from 3.3
+  (`setUnauthorizedHandler`) therefore will not fire for logged-out users. Decide in 9.0+:
+  handle 403 as well, or add an auth class that makes DRF return 401.
+- `/api/orders/` never reads the session, so it gets no `Vary: Cookie`. Harmless while
+  uncached; tracked on the `OrderViewSet` entry in `backlog.md` for 8.0.
+- Until 5.5 lands, a local-dev write while logged into `localhost:8000/admin` fails with
+  `CSRF Failed: Origin checking failed`. Expected, not a regression.
 
 **Deferred by choice, all due before 7.0:** branch protection on `main`; a Python runtime pin
 on Railway; local Postgres plus `psycopg2-binary` in the venv. See `backlog.md`.
@@ -69,7 +82,7 @@ on Railway; local Postgres plus `psycopg2-binary` in the venv. See `backlog.md`.
 - `frontend/vercel.json` - `/api/:path*` and `/admin/:path*` rewrites, ordered *before* the SPA catch-all
 - `frontend/vite.config.ts` - matching dev proxy so local and prod behave identically
 - `frontend/.env.example` - `VITE_API_BASE_URL` becomes a relative path
-- `backend/cocktails/views.py` - `CacheReadsMixin` (line 11) inverted; `PublicMenuView` (line 241) gains caching
+- `backend/cocktails/views.py` - done in 4.0: `CacheReadsMixin` replaced by `PublicCacheMixin`, applied only to `PublicMenuView` (line 249)
 - `backend/backend/settings.py` - `REST_FRAMEWORK` block, `CSRF_TRUSTED_ORIGINS`, cookie flags
 
 ### Ownership (tasks 7.0–8.0)
@@ -157,7 +170,7 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
 - [ ] 5.0 Same-origin via the Vercel proxy
   - [ ] 5.1 Add `/api/:path*` → Railway rewrite to `frontend/vercel.json`, placed **before** the existing `"/(.*)"` SPA catch-all (Vercel matches top-down, first match wins; getting this wrong returns the HTML shell and surfaces as a confusing JSON parse error)
   - [ ] 5.2 Add `/admin/:path*` → Railway rewrite as well — task 6.0 depends on being able to log into Django admin on the Vercel origin
-  - [ ] 5.3 Point `VITE_API_BASE_URL` at a relative path and update `frontend/.env.example`
+  - [ ] 5.3 Point `VITE_API_BASE_URL` at a relative path and update `frontend/.env.example` — that means the **empty string**, since `request()` already prefixes `/api`. Change `cocktailsApi.ts:3` from `||` to `??` first, or `''` falls back to `http://localhost:8000` in production. See "Rollout order" under Current state
   - [ ] 5.4 Add a matching `server.proxy` entry to `vite.config.ts` so local dev is structurally identical and cookie bugs surface on your laptop
   - [ ] 5.5 Add `CSRF_TRUSTED_ORIGINS = ['https://thebarcart.vercel.app']` — the browser's `Origin` says vercel.app while Django's `Host` says railway.app, and Django's CSRF check compares them
   - [ ] 5.6 Leave `SESSION_COOKIE_DOMAIN` unset; pinning it to the Railway host makes the browser reject the cookie outright
@@ -167,7 +180,7 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
 
 - [ ] 6.0 Close the exposure — default-deny API
   - [ ] 6.1 Change `DEFAULT_PERMISSION_CLASSES` from `IsAuthenticatedOrReadOnly` to `IsAuthenticated` — the block already exists as of task 2.5, so this is a one-word flip that closes the remaining read exposure
-  - [ ] 6.2 Keep `PublicMenuView` explicitly `AllowAny` with `authentication_classes = []` (`views.py:241`)
+  - [ ] 6.2 Keep `PublicMenuView` explicitly `AllowAny` with `authentication_classes = []` (`views.py:249`)
   - [ ] 6.3 Keep `OrderViewSet` create reachable anonymously so guests can still order; full scoping of that endpoint is tracked in `backlog.md` and is **not** in this task
   - [ ] 6.4 Log in at `…vercel.app/admin/` and confirm the app works end to end with the session cookie, no login UI required yet
   - [ ] 6.5 Confirm from a signed-out browser and from `curl` that writes now return 403

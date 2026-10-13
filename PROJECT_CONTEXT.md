@@ -228,7 +228,8 @@ record without a browser. Decided in conversation on 2026-09-21:
   caching at all. Putting a CDN in front of `public` responses is how one user gets served
   another's data. The fix is to invert it: drop caching from the owner-scoped viewsets and
   move it to the public menu (short max-age, so a late typo fix still propagates fast). This
-  must land *with or before* the proxy.
+  must land *with or before* the proxy. **Fixed 2026-10-13 (PR #18):** now `PublicCacheMixin`
+  on `PublicMenuView` only, `max-age=30`, pinned by `CacheHeaderTests`.
 - `backend/.env.example` documents `DJANGO_SECRET_KEY` while `settings.py:36` reads
   `SECRET_KEY`, falling back to the committed `django-insecure-…` placeholder from commit
   `ade7f58`. Following the repo's own example file lands you silently on a public key, at
