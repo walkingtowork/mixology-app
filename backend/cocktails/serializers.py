@@ -2,7 +2,43 @@ from rest_framework import serializers
 from .models import Ingredient, Recipe, RecipeIngredient, IngredientCategory, Menu, MenuItem, BuyListItem, Order
 
 
-class IngredientCategorySerializer(serializers.ModelSerializer):
+class OwnedPrimaryKeyRelatedField(serializers.PrimaryKeyRelatedField):
+    """An id in a request body that must name one of the requester's own rows.
+
+    Scoping a viewset's queryset only guards the object in the URL. Without this, user A
+    could put user B's recipe on their menu, or B's ingredient in their recipe, by id.
+    Someone else's id fails validation exactly as a nonexistent one does.
+
+    Reads `request` from the serializer context and raises without it, so a serializer
+    built with no context cannot quietly fall back to every user's rows.
+    """
+
+    def get_queryset(self):
+        return super().get_queryset().filter(owner=self.context['request'].user)
+
+
+class UniqueNamePerOwnerMixin:
+    """Reject a name the requester already uses, with a 400 rather than a database error.
+
+    The model's constraint is on (owner, name), and `owner` is never a serializer field,
+    so DRF cannot build this check itself. Other users' names are deliberately not looked
+    at: the same name in someone else's account is neither a conflict nor any of the
+    requester's business.
+    """
+
+    def validate_name(self, value):
+        model = self.Meta.model
+        taken = model.objects.filter(owner=self.context['request'].user, name=value)
+        if self.instance is not None:
+            taken = taken.exclude(pk=self.instance.pk)
+        if taken.exists():
+            raise serializers.ValidationError(
+                f'{model._meta.verbose_name} with this name already exists.'
+            )
+        return value
+
+
+class IngredientCategorySerializer(UniqueNamePerOwnerMixin, serializers.ModelSerializer):
     ingredients = serializers.SerializerMethodField()
     generic_ingredient = serializers.SerializerMethodField()
 
@@ -29,9 +65,9 @@ class IngredientCategorySimpleSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'notes']
 
 
-class IngredientSerializer(serializers.ModelSerializer):
+class IngredientSerializer(UniqueNamePerOwnerMixin, serializers.ModelSerializer):
     category = IngredientCategorySimpleSerializer(read_only=True)
-    category_id = serializers.PrimaryKeyRelatedField(
+    category_id = OwnedPrimaryKeyRelatedField(
         queryset=IngredientCategory.objects.all(),
         source='category',
         write_only=True,
@@ -46,7 +82,7 @@ class IngredientSerializer(serializers.ModelSerializer):
 
 class RecipeIngredientSerializer(serializers.ModelSerializer):
     ingredient = IngredientSerializer(read_only=True)
-    ingredient_id = serializers.PrimaryKeyRelatedField(
+    ingredient_id = OwnedPrimaryKeyRelatedField(
         queryset=Ingredient.objects.all(),
         source='ingredient',
         write_only=True,
@@ -99,7 +135,7 @@ class RecipeSerializer(serializers.ModelSerializer):
 
 class MenuItemSerializer(serializers.ModelSerializer):
     recipe = RecipeSerializer(read_only=True)
-    recipe_id = serializers.PrimaryKeyRelatedField(
+    recipe_id = OwnedPrimaryKeyRelatedField(
         queryset=Recipe.objects.all(),
         source='recipe',
         write_only=True,
@@ -163,7 +199,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
 class BuyListItemSerializer(serializers.ModelSerializer):
     ingredient = IngredientSerializer(read_only=True)
-    ingredient_id = serializers.PrimaryKeyRelatedField(
+    ingredient_id = OwnedPrimaryKeyRelatedField(
         queryset=Ingredient.objects.all(),
         source='ingredient',
         write_only=True,

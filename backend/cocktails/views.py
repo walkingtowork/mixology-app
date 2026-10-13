@@ -31,7 +31,23 @@ from .serializers import (
 )
 
 
-class IngredientViewSet(viewsets.ModelViewSet):
+class OwnerScopedMixin:
+    """Every row a viewset can see or create belongs to the signed-in user.
+
+    Scoping `get_queryset` makes another user's object a 404 for read, update and delete
+    alike, since `get_object` looks it up in the same queryset. It does NOT cover ids that
+    arrive in a request body: those are checked by `OwnedPrimaryKeyRelatedField` in the
+    serializers.
+    """
+
+    def get_queryset(self):
+        return super().get_queryset().filter(owner=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
+
+class IngredientViewSet(OwnerScopedMixin, viewsets.ModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
@@ -42,12 +58,12 @@ class IngredientViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'], url_path='recipes')
     def recipes(self, request, pk=None):
         ingredient = self.get_object()
-        recipes = Recipe.objects.filter(ingredients=ingredient).prefetch_related('recipe_ingredients__ingredient')
+        recipes = Recipe.objects.filter(owner=request.user, ingredients=ingredient).prefetch_related('recipe_ingredients__ingredient')
         serializer = RecipeSerializer(recipes, many=True)
         return Response(serializer.data)
 
 
-class RecipeViewSet(viewsets.ModelViewSet):
+class RecipeViewSet(OwnerScopedMixin, viewsets.ModelViewSet):
     queryset = Recipe.objects.prefetch_related('recipe_ingredients__ingredient').all()
     serializer_class = RecipeSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
@@ -59,15 +75,20 @@ class RecipeViewSet(viewsets.ModelViewSet):
         queryset = super().get_queryset()
         ingredient_id = self.request.query_params.get('ingredient')
         category_id = self.request.query_params.get('category')
+        # Both ids are looked up among the requester's own rows, so someone else's id
+        # matches nothing rather than filtering by an ingredient the requester cannot see.
+        owned_ingredients = Ingredient.objects.filter(owner=self.request.user)
         if ingredient_id:
-            queryset = queryset.filter(ingredients__id=ingredient_id).distinct()
+            queryset = queryset.filter(
+                ingredients__in=owned_ingredients.filter(id=ingredient_id)
+            ).distinct()
         if category_id:
-            category_ingredients = Ingredient.objects.filter(category_id=category_id)
+            category_ingredients = owned_ingredients.filter(category_id=category_id)
             queryset = queryset.filter(ingredients__in=category_ingredients).distinct()
         return queryset
 
 
-class IngredientCategoryViewSet(viewsets.ModelViewSet):
+class IngredientCategoryViewSet(OwnerScopedMixin, viewsets.ModelViewSet):
     queryset = IngredientCategory.objects.prefetch_related('ingredients').all()
     serializer_class = IngredientCategorySerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
@@ -79,16 +100,18 @@ class IngredientCategoryViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         create_generic = request.data.get('create_generic_ingredient', True)
-        category = serializer.save()
+        category = serializer.save(owner=request.user)
         if create_generic:
-            existing = Ingredient.objects.filter(name=category.name).first()
+            existing = Ingredient.objects.filter(owner=request.user, name=category.name).first()
             if existing:
                 if existing.category is None:
                     existing.category = category
                     existing.is_generic = True
                     existing.save()
             else:
-                Ingredient.objects.create(name=category.name, category=category, is_generic=True)
+                Ingredient.objects.create(
+                    owner=request.user, name=category.name, category=category, is_generic=True,
+                )
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
@@ -99,7 +122,9 @@ class IngredientCategoryViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
         if 'name' in request.data:
-            generic = Ingredient.objects.filter(category=instance, is_generic=True).first()
+            generic = Ingredient.objects.filter(
+                owner=request.user, category=instance, is_generic=True,
+            ).first()
             if generic:
                 generic.name = request.data['name']
                 generic.save()
@@ -108,7 +133,9 @@ class IngredientCategoryViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def ingredients(self, request, pk=None):
         category = self.get_object()
-        serializer = IngredientSerializer(Ingredient.objects.filter(category=category), many=True)
+        serializer = IngredientSerializer(
+            Ingredient.objects.filter(owner=request.user, category=category), many=True,
+        )
         return Response(serializer.data)
 
     def destroy(self, request, *args, **kwargs):
@@ -122,7 +149,7 @@ class IngredientCategoryViewSet(viewsets.ModelViewSet):
         return super().destroy(request, *args, **kwargs)
 
 
-class MenuViewSet(viewsets.ModelViewSet):
+class MenuViewSet(OwnerScopedMixin, viewsets.ModelViewSet):
     queryset = Menu.objects.prefetch_related('items__recipe__recipe_ingredients__ingredient').all()
 
     def get_serializer_class(self):
@@ -170,7 +197,7 @@ class MenuViewSet(viewsets.ModelViewSet):
                 'on_menu': True,
             })
 
-        for recipe in Recipe.objects.filter(id__in=set(counts) - set(names)):
+        for recipe in Recipe.objects.filter(owner=request.user, id__in=set(counts) - set(names)):
             names[recipe.id] = recipe.name
             drinks.append({
                 'recipe_id': recipe.id,
@@ -214,7 +241,7 @@ class MenuViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='add-item')
     def add_item(self, request, pk=None):
         menu = self.get_object()
-        serializer = MenuItemSerializer(data=request.data)
+        serializer = MenuItemSerializer(data=request.data, context=self.get_serializer_context())
         serializer.is_valid(raise_exception=True)
         max_order = menu.items.aggregate(Max('order'))['order__max'] or 0
         try:
@@ -239,6 +266,10 @@ class MenuViewSet(viewsets.ModelViewSet):
 class MenuItemViewSet(viewsets.GenericViewSet):
     queryset = MenuItem.objects.all()
     serializer_class = MenuItemSerializer
+
+    def get_queryset(self):
+        # A menu item has no owner of its own; it belongs to whoever owns its menu.
+        return super().get_queryset().filter(menu__owner=self.request.user)
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -280,14 +311,14 @@ class OrderViewSet(viewsets.ModelViewSet):
         return queryset
 
 
-class BuyListViewSet(viewsets.ModelViewSet):
+class BuyListViewSet(OwnerScopedMixin, viewsets.ModelViewSet):
     queryset = BuyListItem.objects.select_related('ingredient__category').all()
     serializer_class = BuyListItemSerializer
     http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
 
     def create(self, request, *args, **kwargs):
         ingredient_id = request.data.get('ingredient_id')
-        existing = BuyListItem.objects.filter(ingredient_id=ingredient_id).first()
+        existing = self.get_queryset().filter(ingredient_id=ingredient_id).first()
         if existing:
             return Response(BuyListItemSerializer(existing).data, status=status.HTTP_200_OK)
         return super().create(request, *args, **kwargs)

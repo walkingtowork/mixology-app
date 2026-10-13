@@ -38,11 +38,19 @@ UNIT_CHOICES = [
     ('pinch', 'pinch'),
 ]
 
+def unique_name_per_owner(model_name):
+    """Names are unique within one user's data, not across users: two people can both
+    have "Rum"."""
+    return models.UniqueConstraint(
+        fields=['owner', 'name'], name=f'{model_name}_unique_name_per_owner',
+    )
+
+
 def owner_field(related_name):
     """The user a row belongs to.
 
-    Nullable for now: ownership is rolled out in phases, and this is phase one (add the
-    column, backfill existing rows). Phase two makes it NOT NULL and scopes every query.
+    Required: every row belongs to exactly one user, every query is scoped by it, and
+    nothing is shared between accounts.
 
     PROTECT, not CASCADE or SET_NULL: deleting a user must never silently take their
     recipes and a menu's order history with it, nor leave rows that belong to nobody.
@@ -51,8 +59,6 @@ def owner_field(related_name):
     return models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
-        null=True,
-        blank=True,
         related_name=related_name,
     )
 
@@ -68,12 +74,13 @@ STOCK_LEVEL_CHOICES = [
 
 class IngredientCategory(models.Model):
     owner = owner_field('ingredient_categories')
-    name = models.CharField(max_length=200, unique=True)
+    name = models.CharField(max_length=200)
     notes = models.TextField(blank=True)
 
     class Meta:
         ordering = ['name']
         verbose_name_plural = 'Ingredient Categories'
+        constraints = [unique_name_per_owner('ingredientcategory')]
 
     def __str__(self):
         return self.name
@@ -81,7 +88,7 @@ class IngredientCategory(models.Model):
 
 class Ingredient(models.Model):
     owner = owner_field('ingredients')
-    name = models.CharField(max_length=200, unique=True)
+    name = models.CharField(max_length=200)
     category = models.ForeignKey(
         IngredientCategory,
         on_delete=models.SET_NULL,
@@ -97,6 +104,7 @@ class Ingredient(models.Model):
 
     class Meta:
         ordering = ['name']
+        constraints = [unique_name_per_owner('ingredient')]
 
     def __str__(self):
         return self.name
@@ -160,8 +168,9 @@ class Menu(models.Model):
         return self.name
 
     def save(self, *args, **kwargs):
+        # One active menu per owner: activating this one must not switch off anybody else's.
         if self.is_active:
-            Menu.objects.exclude(pk=self.pk).update(is_active=False)
+            Menu.objects.filter(owner=self.owner).exclude(pk=self.pk).update(is_active=False)
         super().save(*args, **kwargs)
 
 

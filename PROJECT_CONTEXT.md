@@ -168,7 +168,7 @@ Note `cancelOrder` hard-deletes, so cancelled drinks leave no trace — there is
 
 ## Multi-user accounts — agreed decisions
 
-**Status: in progress** — 1.0–5.0 shipped as of 2026-10-13. Full task breakdown, and a
+**Status: in progress** — 1.0–7.0 shipped as of 2026-10-13; 8.0 (enforce and scope ownership) is next. Full task breakdown, and a
 "Current state" block that is kept up to date, in `tasks/tasks-multi-user-accounts.md`.
 
 Motivation: the app was built single-user with no authentication at all. Sharing a menu link
@@ -256,6 +256,14 @@ cookie the app then uses. Signed out, the app shows "Failed to load …" over em
 which looks like missing data and is not. Note production had **no user accounts at all**
 until a superuser was created on 2026-10-12: `data.json` (since deleted) seeded only
 cocktails data.
+
+**Ownership, phase one (task 7.0, 2026-10-13):** `IngredientCategory`, `Ingredient`, `Recipe`,
+`Menu` and `BuyListItem` each have a nullable `owner`, `on_delete=PROTECT` — deleting a user
+who still owns anything is refused (the user's choice, "fine for now"). Every production row
+belongs to the non-admin `walkingtowork` account; the superuser `admin` owns nothing by
+design. `walkingtowork` was made staff so it can get a session through `/admin/` until the
+login screen exists. Nothing reads `owner` yet. `MenuItem` and `Order` have no owner column;
+they belong to whoever owns their menu.
 
 **Deferred security work** is listed in `backlog.md` under "Security — deferred from
 multi-user planning". It is safe for a handful of invited friends and explicitly *not* safe
