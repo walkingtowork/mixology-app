@@ -6,12 +6,20 @@ from django.db.models import Count, Max, Min
 from django.utils.cache import patch_cache_control
 
 
-class CacheReadsMixin:
-    """Add browser cache headers to safe (read-only) responses."""
+class PublicCacheMixin:
+    """Mark successful reads as publicly cacheable for a short time.
+
+    Only for anonymous responses keyed by an unguessable URL. Once the proxy puts a CDN in
+    front of the API, `public` on anything per-user is how one user gets served another's
+    data, so this must never go back on the recipe, ingredient or category viewsets.
+
+    No stale-while-revalidate: a last-minute fix to a party menu should reach guests'
+    phones within seconds, not after a stale copy has been served for minutes.
+    """
     def finalize_response(self, request, response, *args, **kwargs):
         response = super().finalize_response(request, response, *args, **kwargs)
         if request.method in ('GET', 'HEAD') and response.status_code == 200:
-            patch_cache_control(response, max_age=60, stale_while_revalidate=300, public=True)
+            patch_cache_control(response, max_age=30, public=True)
         return response
 
 from django.utils import timezone
@@ -23,7 +31,7 @@ from .serializers import (
 )
 
 
-class IngredientViewSet(CacheReadsMixin, viewsets.ModelViewSet):
+class IngredientViewSet(viewsets.ModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
@@ -39,7 +47,7 @@ class IngredientViewSet(CacheReadsMixin, viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class RecipeViewSet(CacheReadsMixin, viewsets.ModelViewSet):
+class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.prefetch_related('recipe_ingredients__ingredient').all()
     serializer_class = RecipeSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
@@ -59,7 +67,7 @@ class RecipeViewSet(CacheReadsMixin, viewsets.ModelViewSet):
         return queryset
 
 
-class IngredientCategoryViewSet(CacheReadsMixin, viewsets.ModelViewSet):
+class IngredientCategoryViewSet(viewsets.ModelViewSet):
     queryset = IngredientCategory.objects.prefetch_related('ingredients').all()
     serializer_class = IngredientCategorySerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
@@ -238,7 +246,7 @@ class MenuItemViewSet(viewsets.GenericViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class PublicMenuView(generics.RetrieveAPIView):
+class PublicMenuView(PublicCacheMixin, generics.RetrieveAPIView):
     queryset = Menu.objects.prefetch_related('items__recipe__recipe_ingredients__ingredient').all()
     serializer_class = MenuSerializer
     permission_classes = [AllowAny]

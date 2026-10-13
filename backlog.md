@@ -92,7 +92,10 @@ accurate throttling and any Vercel shared-secret gate are deferred until there i
       But anyone can POST an order against *any* menu id, and GET returns every order for
       every user. Needs splitting: anonymous create gated on possession of the menu's
       `share_token`, owner-only read and fulfil. No rate limiting either — it is a spam
-      target by construction.
+      target by construction. Found in 4.4: because it never reads the session, its
+      responses carry no `Vary: Cookie`. Harmless while they carry no `Cache-Control`, but
+      the owner-only read must authenticate — `CacheHeaderTests.test_orders_do_not_vary_on_cookie_yet`
+      will fail when it does, and should then be deleted.
 - [ ] **IDOR risk on nested writes.** Scoping `get_queryset` is not enough when an id
       arrives in a request body or query string. Three concrete spots: `MenuViewSet.add_item`
       (recipe id), `BuyListViewSet.create` (`ingredient_id`), and `RecipeViewSet.get_queryset`

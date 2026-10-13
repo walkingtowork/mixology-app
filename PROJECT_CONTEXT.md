@@ -34,9 +34,13 @@ domain automatically. **Renaming the Vercel domain breaks the API until
 - Env var: `VITE_API_BASE_URL=https://mixology-app-production.up.railway.app`
 - Vercel agent plugin is installed for Vercel-related tasks
 
-**Data** — `backend/data.json` fixture holds 304 records (recipes, ingredients, categories),
-already loaded into production Postgres. Restore a local SQLite DB with
-`python manage.py loaddata data.json`.
+**Data** — there is no fixture in the repo. `backend/data.json` was a one-time export for the
+May 2026 Postgres migration and was deleted on 2026-10-13 (decision and reasoning in
+`tasks/tasks-multi-user-accounts.md`, "Current state"). **Do not regenerate it from
+production:** this repo is public, and a current fixture would commit real guest names and,
+once accounts exist, password hashes. To get real data locally, restore a `pg_dump` into a
+local Postgres (tasks 7.2/7.3, and the backup commands under Deployment below); the local
+SQLite DB is otherwise its own seed.
 
 **Local dev** — still SQLite automatically (`dj_database_url` falls back when `DATABASE_URL`
 is unset). Run the backend with:
@@ -237,8 +241,8 @@ record without a browser. Decided in conversation on 2026-09-21:
 closed; anonymous reads remain open, which is a privacy gap and not a destructive one, and
 closes in task 6.0. Editing happens through Django admin until the real auth UI lands — which
 is why `Menu`, `MenuItem`, `Order` and `BuyListItem` were registered there. Note production had
-**no user accounts at all** until a superuser was created on 2026-10-12: `data.json` seeded only
-cocktails data.
+**no user accounts at all** until a superuser was created on 2026-10-12: `data.json` (since
+deleted) seeded only cocktails data.
 
 **Deferred security work** is listed in `backlog.md` under "Security — deferred from
 multi-user planning". It is safe for a handful of invited friends and explicitly *not* safe
@@ -301,9 +305,9 @@ menu visual polish — SVG decorations, QR code modal, drag-and-drop menu planni
   Fix some and lower `BASELINE` in that file — it should only ratchet downwards.
 - **Backups are entirely manual — this Railway plan has no automatic backups** (confirmed
   2026-10-12). Nothing is backing up production unless you run it yourself.
-  **`backend/data.json` is NOT a backup**: it was last touched 2026-05-06, holds one menu
-  and *zero* orders, and predates ordering, decorations and stock levels. Restoring it would
-  silently destroy months of data.
+  **A Django fixture is NOT a backup**: the old `backend/data.json` (deleted 2026-10-13) was
+  last touched 2026-05-06, held one menu and *zero* orders, and predated ordering, decorations
+  and stock levels. Restoring anything like it would silently destroy months of data.
   Production Postgres is **18.6**, and local `libpq` is 18.6, so `pg_dump` matches the server
   exactly — no version-skew risk. Take a dump **periodically, and always immediately before
   any schema or data migration**:

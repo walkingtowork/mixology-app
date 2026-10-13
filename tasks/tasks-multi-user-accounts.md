@@ -31,6 +31,32 @@ data. Today that header is on exactly the three viewsets about to become per-use
 `migrate` inside its start command, so a migration that fails partway does not warn — gunicorn
 never boots and the app is down until it is fixed.
 
+## Current state — updated 2026-10-13
+
+**Shipped:** 1.0 (`SECRET_KEY` + deploy hardening), 2.0 (CI), 2.5 (interim API lockdown,
+PR #17). Preview deployments are off (5.8).
+
+**In review:** 3.0 + 4.0 + the `data.json` deletion — branch `feature/request-helper-and-cache`.
+
+**Next after that:** 5.0, the Vercel proxy. Until 5.5 lands, a write from the local dev
+frontend while logged into `localhost:8000/admin` fails with `CSRF Failed: Origin checking
+failed` — expected, not a regression (the same write was a 403 anonymously before 3.0).
+
+**This PR — 3.0 and 4.0 together**, both small and behaviour-neutral, plus one deletion:
+- 3.0 — extract one `request()` helper from the ~30 hand-written `fetch` calls
+- 4.0 — invert the cache headers
+- **Delete `backend/data.json`** (decided 2026-10-12). Nothing in the codebase reads it; it is
+  referenced only in docs. It was a one-time export for the May 2026 Postgres migration
+  (`6fd0968`), is five months stale, and stops loading entirely once `owner` is `NOT NULL` in
+  8.0. The local dev database is already more current than it. **Do not regenerate it from
+  production:** a current fixture would put real guest names — and after 10.0, password hashes
+  — into a *public* repo. It is only harmless today because it predates orders and users.
+  Update the `PROJECT_CONTEXT.md` "Data" note to point at the `pg_dump` → local Postgres path
+  from 7.2/7.3 instead.
+
+**Deferred by choice, all due before 7.0:** branch protection on `main`; a Python runtime pin
+on Railway; local Postgres plus `psycopg2-binary` in the venv. See `backlog.md`.
+
 ## Relevant Files
 
 ### Safety net (tasks 1.0–2.0)
@@ -116,17 +142,17 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
   - [x] 2.5.5 `AuthenticatedAPITestCase` base class: all 34 write calls across the 6 existing test classes were anonymous and would now 403. Uses `force_authenticate` with no password — hashing one per test added ~9s to the suite for nothing
   - [x] 2.5.6 `AnonymousAccessTests`: 14 tests covering reads open, writes refused (403, not 401 — `SessionAuthentication` offers no `WWW-Authenticate` challenge), and both deliberate exemptions still working
 
-- [ ] 3.0 Extract a single request helper in `cocktailsApi.ts`
-  - [ ] 3.1 Write one `request()` helper handling base URL, JSON headers, `credentials: 'include'`, error shaping, and reading the `csrftoken` cookie into an `X-CSRFToken` header for unsafe methods
-  - [ ] 3.2 Migrate all ~30 `fetch` call sites in the 670-line module onto it, preserving each function's existing error messages and return types
-  - [ ] 3.3 Add a single place for 401 handling, to be wired to a redirect once auth exists
-  - [ ] 3.4 Verify every page still works against the unchanged backend — this task must be behaviour-neutral
+- [x] 3.0 Extract a single request helper in `cocktailsApi.ts`
+  - [x] 3.1 Write one `request()` helper handling base URL, JSON headers, `credentials: 'include'`, error shaping, and reading the `csrftoken` cookie into an `X-CSRFToken` header for unsafe methods
+  - [x] 3.2 Migrate all ~30 `fetch` call sites in the 670-line module onto it, preserving each function's existing error messages and return types — 36 functions; endpoint, method, body and every error message checked by script against the old file, zero mismatches. Each call site passes its own `error` callback so messages stay verbatim. Only intended differences: `fetchMenuStats` now sends the JSON `Content-Type` like every other call, and a 204 body is no longer parsed
+  - [x] 3.3 Add a single place for 401 handling, to be wired to a redirect once auth exists
+  - [x] 3.4 Verify every page still works against the unchanged backend — this task must be behaviour-neutral — 2026-10-13, headless Chrome against a copy of the dev DB: all 14 routes load with every API call 200; order create/fulfil/cancel round-trip (incl. 204); 404 and anonymous-403 messages surface as before. Note the stopgap returns **403**, not 401, for anonymous writes (`SessionAuthentication` sends no `WWW-Authenticate`), so the 3.3 hook will not fire for them
 
-- [ ] 4.0 Invert the cache headers — must precede the proxy
-  - [ ] 4.1 Remove `CacheReadsMixin` from `IngredientViewSet`, `RecipeViewSet` and `IngredientCategoryViewSet` (`views.py:26`, `:42`, `:62`)
-  - [ ] 4.2 Apply caching to `PublicMenuView` (`views.py:241`) instead, with a short `max-age` (~30s) and no `stale-while-revalidate`, so a last-minute menu fix still propagates within seconds
-  - [ ] 4.3 Confirm `Cache-Control: public` now appears *only* on anonymous, share-token-keyed responses
-  - [ ] 4.4 Sanity-check that `Vary: Cookie` is present on authenticated responses — Django's `SessionMiddleware` adds it automatically once the session is accessed (`sessions/middleware.py:46`), but verify rather than assume
+- [x] 4.0 Invert the cache headers — must precede the proxy
+  - [x] 4.1 Remove `CacheReadsMixin` from `IngredientViewSet`, `RecipeViewSet` and `IngredientCategoryViewSet` (`views.py:26`, `:42`, `:62`)
+  - [x] 4.2 Apply caching to `PublicMenuView` (`views.py:241`) instead, with a short `max-age` (~30s) and no `stale-while-revalidate`, so a last-minute menu fix still propagates within seconds
+  - [x] 4.3 Confirm `Cache-Control: public` now appears *only* on anonymous, share-token-keyed responses
+  - [x] 4.4 Sanity-check that `Vary: Cookie` is present on authenticated responses — Django's `SessionMiddleware` adds it automatically once the session is accessed (`sessions/middleware.py:46`), but verify rather than assume — verified in `CacheHeaderTests`, and it was worth checking: **`/api/orders/` does not get it**, because `authentication_classes = []` means the session is never read. Harmless today (no `Cache-Control`, so nothing caches it); recorded on the `OrderViewSet` entry in `backlog.md` for 8.0
 
 - [ ] 5.0 Same-origin via the Vercel proxy
   - [ ] 5.1 Add `/api/:path*` → Railway rewrite to `frontend/vercel.json`, placed **before** the existing `"/(.*)"` SPA catch-all (Vercel matches top-down, first match wins; getting this wrong returns the HTML shell and surfaces as a confusing JSON parse error)
@@ -136,7 +162,7 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
   - [ ] 5.5 Add `CSRF_TRUSTED_ORIGINS = ['https://thebarcart.vercel.app']` — the browser's `Origin` says vercel.app while Django's `Host` says railway.app, and Django's CSRF check compares them
   - [ ] 5.6 Leave `SESSION_COOKIE_DOMAIN` unset; pinning it to the Railway host makes the browser reject the cookie outright
   - [ ] 5.7 Verify Vercel forwards the destination's `Host` so `ALLOWED_HOSTS=.railway.app` still passes — a mismatch appears as a 400 `DisallowedHost`
-  - [ ] 5.8 **Decided 2026-09-21: turn preview deployments off** in the Vercel project settings before the `/api` rewrite lands, so no preview can ever reach production data. A second Vercel project is not what this needs — previews are automatic per-branch within one project, and the risk is which *backend* they reach. Proper preview isolation would need a second Railway environment with its own database plus a proxy function in place of the static rewrite, since `vercel.json` cannot interpolate env vars into a destination. Revisit only if previews start earning their keep. **More urgent than it first looked:** previews are already live — the CI PR produced a Vercel preview deployment on 2026-09-21 — and `VITE_API_BASE_URL` points them at production Railway, so a preview branch can write to real data *today*. This is not only a future-proxy concern. **How:** Vercel Project Settings → Git → *Ignored Build Step* → Behavior: **"Only build production"** (a preset dropdown; the raw shell-command field it replaced used the counterintuitive convention exit 1 = build, exit 0 = skip). Not "Don't build anything", which would stop production deploys too
+  - [x] 5.8 **Done 2026-09-22 — preview deployments are off.** Behavior set to "Only build production". in the Vercel project settings before the `/api` rewrite lands, so no preview can ever reach production data. A second Vercel project is not what this needs — previews are automatic per-branch within one project, and the risk is which *backend* they reach. Proper preview isolation would need a second Railway environment with its own database plus a proxy function in place of the static rewrite, since `vercel.json` cannot interpolate env vars into a destination. Revisit only if previews start earning their keep. **More urgent than it first looked:** previews are already live — the CI PR produced a Vercel preview deployment on 2026-09-21 — and `VITE_API_BASE_URL` points them at production Railway, so a preview branch can write to real data *today*. This is not only a future-proxy concern. **How:** Vercel Project Settings → Git → *Ignored Build Step* → Behavior: **"Only build production"** (a preset dropdown; the raw shell-command field it replaced used the counterintuitive convention exit 1 = build, exit 0 = skip). Not "Don't build anything", which would stop production deploys too
   - [ ] 5.9 Test on a real iOS device, since that is the browser this whole decision exists to satisfy
 
 - [ ] 6.0 Close the exposure — default-deny API
