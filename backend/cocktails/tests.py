@@ -1,4 +1,7 @@
-from django.test import TestCase, override_settings
+from django.core.management import call_command
+from django.db import connection
+from django.db.migrations.executor import MigrationExecutor
+from django.test import TestCase, TransactionTestCase, override_settings
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient, APITestCase
 from rest_framework import status
@@ -1363,3 +1366,73 @@ class AdminStaticFilesTests(TestCase):
     def test_unknown_static_path_is_a_404(self):
         response = self.client.get('/static/admin/css/does-not-exist.css')
         self.assertEqual(response.status_code, 404)
+
+
+class OwnerBackfillMigrationTests(TransactionTestCase):
+    """Migration 0011 hands every pre-existing row to the app's original user.
+
+    Runs the real migration against rows created at the 0010 schema, because the thing
+    worth pinning is what happens to a database that already has data in it.
+    """
+
+    BEFORE = [('cocktails', '0010_add_nullable_owner')]
+    AFTER = [('cocktails', '0011_backfill_owner')]
+
+    def setUp(self):
+        self.executor = MigrationExecutor(connection)
+        self.executor.migrate(self.BEFORE)
+        self.old_apps = self.executor.loader.project_state(self.BEFORE).apps
+
+    def tearDown(self):
+        # Leave the schema fully migrated for whatever test runs next. Flush first: rows a
+        # test left unowned would make the backfill refuse to run here too.
+        call_command('flush', verbosity=0, interactive=False)
+        executor = MigrationExecutor(connection)
+        executor.migrate(executor.loader.graph.leaf_nodes())
+
+    def create_unowned_rows(self):
+        get = lambda name: self.old_apps.get_model('cocktails', name)
+        category = get('IngredientCategory').objects.create(name='Gin')
+        ingredient = get('Ingredient').objects.create(name='Plymouth Gin', category=category)
+        get('Recipe').objects.create(name='Martini')
+        get('Menu').objects.create(name='Friday Night')
+        get('BuyListItem').objects.create(ingredient=ingredient)
+
+    def run_backfill(self):
+        executor = MigrationExecutor(connection)
+        executor.migrate(self.AFTER)
+        return executor.loader.project_state(self.AFTER).apps
+
+    def test_existing_rows_go_to_the_original_user_not_the_superuser(self):
+        User = self.old_apps.get_model('accounts', 'User')
+        User.objects.create(username='admin', is_superuser=True, is_staff=True)
+        owner = User.objects.create(username='walkingtowork')
+        self.create_unowned_rows()
+
+        new_apps = self.run_backfill()
+
+        for name in ['IngredientCategory', 'Ingredient', 'Recipe', 'Menu', 'BuyListItem']:
+            with self.subTest(model=name):
+                rows = new_apps.get_model('cocktails', name).objects
+                self.assertEqual(rows.count(), 1)
+                self.assertEqual(rows.filter(owner_id=owner.id).count(), 1)
+
+    def test_rows_that_already_have_an_owner_are_left_alone(self):
+        User = self.old_apps.get_model('accounts', 'User')
+        User.objects.create(username='walkingtowork')
+        friend = User.objects.create(username='friend')
+        self.old_apps.get_model('cocktails', 'Recipe').objects.create(name='Negroni', owner=friend)
+
+        new_apps = self.run_backfill()
+
+        recipe = new_apps.get_model('cocktails', 'Recipe').objects.get(name='Negroni')
+        self.assertEqual(recipe.owner_id, friend.id)
+
+    def test_empty_database_needs_no_account(self):
+        """CI and fresh checkouts have no rows and no users; migrate must still succeed."""
+        self.run_backfill()
+
+    def test_missing_account_fails_loudly_instead_of_skipping(self):
+        self.create_unowned_rows()
+        with self.assertRaisesMessage(RuntimeError, "no user named 'walkingtowork'"):
+            self.run_backfill()
