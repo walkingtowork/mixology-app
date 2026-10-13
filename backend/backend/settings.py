@@ -67,6 +67,7 @@ AUTH_USER_MODEL = 'accounts.User'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -143,6 +144,17 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
+
+# WhiteNoise serves the Django admin's CSS and JS. Without it gunicorn serves no static
+# files at all and the admin renders as bare HTML -- which matters, because the admin is
+# the only editing UI until the real auth screens exist.
+#
+# USE_FINDERS reads the files straight out of each app's static/ directory at startup, so
+# there is no `collectstatic` step and no STATIC_ROOT. That is deliberate: Railway's start
+# command lives in its dashboard, not this repo, and a start command that fails stops
+# gunicorn from booting at all. The cost is no hashed filenames, so files are cached for
+# WhiteNoise's default 60 seconds rather than forever -- irrelevant for one admin user.
+WHITENOISE_USE_FINDERS = True
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field

@@ -36,7 +36,7 @@ never boots and the app is down until it is fixed.
 **Shipped:** 1.0 (`SECRET_KEY` + deploy hardening), 2.0 (CI), 2.5 (interim API lockdown,
 PR #17), 3.0 + 4.0 + `data.json` deleted (PR #18). Preview deployments are off (5.8).
 
-**In flight — 5.0 code is written** on `feature/vercel-same-origin-proxy` (5.1–5.6 done, 90
+**In flight — 5.0 code is written** on `feature/vercel-same-origin-proxy` (5.1–5.6 done, 92
 backend tests green, lint still 8). What is left is the rollout and the three checks that can
 only be made against the deployed site: 5.7, 5.9 and the trailing-slash check below. Then 6.0
 as a small follow-up PR. Keep them apart: 6.1 locks the API to logged-in users, so it must not
@@ -78,11 +78,11 @@ avoid that, but it could not be tested without a deploy. After step 2: log in at
   handle 403 as well, or add an auth class that makes DRF return 401.
 - `/api/orders/` never reads the session, so it gets no `Vary: Cookie`. Harmless while
   uncached; tracked on the `OrderViewSet` entry in `backlog.md` for 8.0.
-- **Django admin is unstyled in production** (found in 5.0): `/static/admin/css/base.css` is a
-  404 on Railway — there is no WhiteNoise and no `collectstatic`. The admin works but is bare
-  HTML, and it is the only editing UI until 11.0. The `/static` rewrite is already in place,
-  so adding WhiteNoise on the backend is all it needs. Not done in 5.0: it is a new dependency
-  and a start-command change.
+- **Django admin was unstyled in production** (found in 5.0): `/static/admin/css/base.css` was a
+  404 on Railway. Fixed in the 5.0 PR with WhiteNoise in `WHITENOISE_USE_FINDERS` mode, which
+  needs no `collectstatic` and no change to Railway's start command. Pinned by
+  `AdminStaticFilesTests`. After deploy, check
+  `curl -sI https://mixology-app-production.up.railway.app/static/admin/css/base.css` is a 200.
 
 **Deferred by choice, all due before 7.0:** branch protection on `main`; a Python runtime pin
 on Railway; local Postgres plus `psycopg2-binary` in the venv. See `backlog.md`.
@@ -186,7 +186,7 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
 
 - [ ] 5.0 Same-origin via the Vercel proxy
   - [x] 5.1 Add `/api/:path*` → Railway rewrite to `frontend/vercel.json`, placed **before** the existing `"/(.*)"` SPA catch-all (Vercel matches top-down, first match wins; getting this wrong returns the HTML shell and surfaces as a confusing JSON parse error) — written as `/api/(.*)` → `…/api/$1`, not `:path*`: a named param does not capture a trailing slash, and every Django route ends in one. **Unverified until deployed** — see "Verify after deploy" under Current state
-  - [x] 5.2 Add `/admin/:path*` → Railway rewrite as well — task 6.0 depends on being able to log into Django admin on the Vercel origin — plus bare `/admin`, and `/static/(.*)` for the admin's CSS (which production does not serve yet; see Known issues)
+  - [x] 5.2 Add `/admin/:path*` → Railway rewrite as well — task 6.0 depends on being able to log into Django admin on the Vercel origin — plus bare `/admin`, and `/static/(.*)` for the admin's CSS (served by WhiteNoise as of this PR; see Known issues)
   - [x] 5.3 Point `VITE_API_BASE_URL` at a relative path and update `frontend/.env.example` — that means the **empty string**, since `request()` already prefixes `/api`. Change `cocktailsApi.ts:3` from `||` to `??` first, or `''` falls back to `http://localhost:8000` in production. See "Rollout order" under Current state — done as recommended: the default is now `''` with `??`, and `.env.example` leaves the variable commented out
   - [x] 5.4 Add a matching `server.proxy` entry to `vite.config.ts` so local dev is structurally identical and cookie bugs surface on your laptop — one did: the proxy rewrites `Host` to `localhost:8000`, so the admin login 403'd on the CSRF origin check exactly as production would have. `changeOrigin: true` is now explicit so that stays true. Verified 2026-10-13 in headless Chrome on a DB copy: log in at `localhost:5173/admin/`, then create/update/delete a category through the app's own API module
   - [x] 5.5 Add `CSRF_TRUSTED_ORIGINS = ['https://thebarcart.vercel.app']` — the browser's `Origin` says vercel.app while Django's `Host` says railway.app, and Django's CSRF check compares them — plus `localhost:5173` / `127.0.0.1:5173` under `DEBUG` only, for the dev proxy. Pinned by `ProxiedCsrfTests`, which was confirmed to fail with the setting emptied

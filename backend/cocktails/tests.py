@@ -1331,3 +1331,20 @@ class ProxiedCsrfTests(APITestCase):
         response = self.post_category('https://evil.example')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertIn('Origin checking failed', response.data['detail'])
+
+
+class AdminStaticFilesTests(TestCase):
+    """The admin's stylesheet must be served with DEBUG off, as it is in production.
+
+    The test runner forces DEBUG off, so this exercises the same path gunicorn does. Until
+    WhiteNoise was added this was a 404 and the production admin was unstyled HTML.
+    """
+
+    def test_admin_stylesheet_is_served(self):
+        response = self.client.get('/static/admin/css/base.css')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'].split(';')[0], 'text/css')
+
+    def test_unknown_static_path_is_a_404(self):
+        response = self.client.get('/static/admin/css/does-not-exist.css')
+        self.assertEqual(response.status_code, 404)
