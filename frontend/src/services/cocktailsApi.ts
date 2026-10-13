@@ -2,25 +2,75 @@ import type { Ingredient, Recipe, IngredientCategory, Menu, BuyListItem, StockLe
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
+/** The fields DRF error bodies use that call sites read messages from. */
+interface ApiErrorBody {
+  detail?: string;
+  name?: string[];
+  ingredients?: string[];
+}
+
+interface RequestOptions {
+  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  body?: unknown;
+  /** Builds the thrown message from the failed response and its parsed body ({} if unparseable). */
+  error: (response: Response, body: ApiErrorBody) => string;
+}
+
+const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+let onUnauthorized: () => void = () => {};
+
+/**
+ * Registers what happens when any request comes back 401. A no-op until the auth UI
+ * exists; the auth context wires this to a redirect to the login page.
+ */
+export function setUnauthorizedHandler(handler: () => void): void {
+  onUnauthorized = handler;
+}
+
+function readCookie(name: string): string | undefined {
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : undefined;
+}
+
+/**
+ * The single path every API call goes through: base URL, JSON headers, session
+ * cookies, CSRF token on unsafe methods, 401 handling and error shaping.
+ * Resolves to the parsed JSON body, or undefined for an empty one (e.g. 204).
+ */
+async function request<T>(path: string, { method = 'GET', body, error }: RequestOptions): Promise<T> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (UNSAFE_METHODS.has(method)) {
+    const csrfToken = readCookie('csrftoken');
+    if (csrfToken) headers['X-CSRFToken'] = csrfToken;
+  }
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method,
+    headers,
+    credentials: 'include',
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) onUnauthorized();
+    const errorBody: ApiErrorBody = await response.json().catch(() => ({}));
+    throw new Error(error(response, errorBody));
+  }
+
+  const text = await response.text();
+  return (text ? JSON.parse(text) : undefined) as T;
+}
+
 /**
  * Fetches all ingredients from the API
  * @returns Promise resolving to an array of Ingredient objects
  * @throws Error if the API request fails
  */
 export async function fetchIngredients(): Promise<Ingredient[]> {
-  const response = await fetch(`${API_BASE_URL}/api/ingredients/`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+  return request<Ingredient[]>('/api/ingredients/', {
+    error: (res) => `Failed to fetch ingredients: ${res.status} ${res.statusText}`,
   });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch ingredients: ${response.status} ${response.statusText}`);
-  }
-
-  const data: Ingredient[] = await response.json();
-  return data;
 }
 
 /**
@@ -30,22 +80,12 @@ export async function fetchIngredients(): Promise<Ingredient[]> {
  * @throws Error if the API request fails
  */
 export async function fetchIngredient(id: number): Promise<Ingredient> {
-  const response = await fetch(`${API_BASE_URL}/api/ingredients/${id}/`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+  return request<Ingredient>(`/api/ingredients/${id}/`, {
+    error: (res) =>
+      res.status === 404
+        ? `Ingredient with ID ${id} not found`
+        : `Failed to fetch ingredient: ${res.status} ${res.statusText}`,
   });
-
-  if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error(`Ingredient with ID ${id} not found`);
-    }
-    throw new Error(`Failed to fetch ingredient: ${response.status} ${response.statusText}`);
-  }
-
-  const data: Ingredient = await response.json();
-  return data;
 }
 
 /**
@@ -58,21 +98,12 @@ export async function createIngredient(
   name: string,
   options: { stock_level?: StockLevel; category_id?: number | null } = {}
 ): Promise<Ingredient> {
-  const response = await fetch(`${API_BASE_URL}/api/ingredients/`, {
+  return request<Ingredient>('/api/ingredients/', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ name, ...options }),
+    body: { name, ...options },
+    error: (res, data) =>
+      data.detail || data.name?.[0] || `Failed to create ingredient: ${res.status} ${res.statusText}`,
   });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || errorData.name?.[0] || `Failed to create ingredient: ${response.status} ${response.statusText}`);
-  }
-
-  const data: Ingredient = await response.json();
-  return data;
 }
 
 /**
@@ -91,24 +122,12 @@ export async function updateIngredient(
   if (ingredient.category_id !== undefined) ingredientData.category_id = ingredient.category_id;
   if (ingredient.stock_level !== undefined) ingredientData.stock_level = ingredient.stock_level;
 
-  const response = await fetch(`${API_BASE_URL}/api/ingredients/${id}/`, {
+  return request<Ingredient>(`/api/ingredients/${id}/`, {
     method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(ingredientData),
+    body: ingredientData,
+    error: (res, data) =>
+      data.detail || data.name?.[0] || `Failed to update ingredient: ${res.status} ${res.statusText}`,
   });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    const errorMessage = errorData.detail || 
-                        errorData.name?.[0] || 
-                        `Failed to update ingredient: ${response.status} ${response.statusText}`;
-    throw new Error(errorMessage);
-  }
-
-  const data: Ingredient = await response.json();
-  return data;
 }
 
 /**
@@ -118,19 +137,13 @@ export async function updateIngredient(
  * @throws Error if the API request fails
  */
 export async function deleteIngredient(id: number): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/api/ingredients/${id}/`, {
+  return request<void>(`/api/ingredients/${id}/`, {
     method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    error: (res) =>
+      res.status === 404
+        ? `Ingredient with ID ${id} not found`
+        : `Failed to delete ingredient: ${res.status} ${res.statusText}`,
   });
-
-  if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error(`Ingredient with ID ${id} not found`);
-    }
-    throw new Error(`Failed to delete ingredient: ${response.status} ${response.statusText}`);
-  }
 }
 
 /**
@@ -141,7 +154,7 @@ export async function deleteIngredient(id: number): Promise<void> {
  * @throws Error if the API request fails
  */
 export async function fetchRecipes(ingredientId?: number, categoryId?: number): Promise<Recipe[]> {
-  let url = `${API_BASE_URL}/api/recipes/`;
+  let path = '/api/recipes/';
   const params = new URLSearchParams();
   if (ingredientId) {
     params.append('ingredient', ingredientId.toString());
@@ -150,22 +163,12 @@ export async function fetchRecipes(ingredientId?: number, categoryId?: number): 
     params.append('category', categoryId.toString());
   }
   if (params.toString()) {
-    url += `?${params.toString()}`;
+    path += `?${params.toString()}`;
   }
 
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+  return request<Recipe[]>(path, {
+    error: (res) => `Failed to fetch recipes: ${res.status} ${res.statusText}`,
   });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch recipes: ${response.status} ${response.statusText}`);
-  }
-
-  const data: Recipe[] = await response.json();
-  return data;
 }
 
 /**
@@ -175,22 +178,12 @@ export async function fetchRecipes(ingredientId?: number, categoryId?: number): 
  * @throws Error if the API request fails
  */
 export async function fetchRecipe(id: number): Promise<Recipe> {
-  const response = await fetch(`${API_BASE_URL}/api/recipes/${id}/`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+  return request<Recipe>(`/api/recipes/${id}/`, {
+    error: (res) =>
+      res.status === 404
+        ? `Recipe with ID ${id} not found`
+        : `Failed to fetch recipe: ${res.status} ${res.statusText}`,
   });
-
-  if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error(`Recipe with ID ${id} not found`);
-    }
-    throw new Error(`Failed to fetch recipe: ${response.status} ${response.statusText}`);
-  }
-
-  const data: Recipe = await response.json();
-  return data;
 }
 
 /**
@@ -214,25 +207,15 @@ export async function createRecipe(recipe: Omit<Recipe, 'id'>): Promise<Recipe> 
     })),
   };
 
-  const response = await fetch(`${API_BASE_URL}/api/recipes/`, {
+  return request<Recipe>('/api/recipes/', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(recipeData),
+    body: recipeData,
+    error: (res, data) =>
+      data.detail ||
+      data.name?.[0] ||
+      data.ingredients?.[0] ||
+      `Failed to create recipe: ${res.status} ${res.statusText}`,
   });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    const errorMessage = errorData.detail || 
-                        errorData.name?.[0] || 
-                        errorData.ingredients?.[0] || 
-                        `Failed to create recipe: ${response.status} ${response.statusText}`;
-    throw new Error(errorMessage);
-  }
-
-  const data: Recipe = await response.json();
-  return data;
 }
 
 /**
@@ -245,13 +228,13 @@ export async function createRecipe(recipe: Omit<Recipe, 'id'>): Promise<Recipe> 
 export async function updateRecipe(id: number, recipe: Partial<Recipe>): Promise<Recipe> {
   // Transform the recipe data to match API expectations
   const recipeData: any = {};
-  
+
   if (recipe.name !== undefined) recipeData.name = recipe.name;
   if (recipe.description !== undefined) recipeData.description = recipe.description || '';
   if (recipe.notes !== undefined) recipeData.notes = recipe.notes || '';
   if (recipe.garnish !== undefined) recipeData.garnish = recipe.garnish || '';
   if (recipe.glass !== undefined) recipeData.glass = recipe.glass || '';
-  
+
   if (recipe.ingredients !== undefined) {
     recipeData.ingredients = recipe.ingredients.map(ri => ({
       ingredient_id: ri.ingredient.id,
@@ -260,25 +243,15 @@ export async function updateRecipe(id: number, recipe: Partial<Recipe>): Promise
     }));
   }
 
-  const response = await fetch(`${API_BASE_URL}/api/recipes/${id}/`, {
+  return request<Recipe>(`/api/recipes/${id}/`, {
     method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(recipeData),
+    body: recipeData,
+    error: (res, data) =>
+      data.detail ||
+      data.name?.[0] ||
+      data.ingredients?.[0] ||
+      `Failed to update recipe: ${res.status} ${res.statusText}`,
   });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    const errorMessage = errorData.detail || 
-                        errorData.name?.[0] || 
-                        errorData.ingredients?.[0] || 
-                        `Failed to update recipe: ${response.status} ${response.statusText}`;
-    throw new Error(errorMessage);
-  }
-
-  const data: Recipe = await response.json();
-  return data;
 }
 
 /**
@@ -288,19 +261,13 @@ export async function updateRecipe(id: number, recipe: Partial<Recipe>): Promise
  * @throws Error if the API request fails
  */
 export async function deleteRecipe(id: number): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/api/recipes/${id}/`, {
+  return request<void>(`/api/recipes/${id}/`, {
     method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    error: (res) =>
+      res.status === 404
+        ? `Recipe with ID ${id} not found`
+        : `Failed to delete recipe: ${res.status} ${res.statusText}`,
   });
-
-  if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error(`Recipe with ID ${id} not found`);
-    }
-    throw new Error(`Failed to delete recipe: ${response.status} ${response.statusText}`);
-  }
 }
 
 /**
@@ -309,19 +276,9 @@ export async function deleteRecipe(id: number): Promise<void> {
  * @throws Error if the API request fails
  */
 export async function fetchCategories(): Promise<IngredientCategory[]> {
-  const response = await fetch(`${API_BASE_URL}/api/categories/`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+  return request<IngredientCategory[]>('/api/categories/', {
+    error: (res) => `Failed to fetch categories: ${res.status} ${res.statusText}`,
   });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch categories: ${response.status} ${response.statusText}`);
-  }
-
-  const data: IngredientCategory[] = await response.json();
-  return data;
 }
 
 /**
@@ -331,22 +288,12 @@ export async function fetchCategories(): Promise<IngredientCategory[]> {
  * @throws Error if the API request fails
  */
 export async function fetchCategory(id: number): Promise<IngredientCategory> {
-  const response = await fetch(`${API_BASE_URL}/api/categories/${id}/`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+  return request<IngredientCategory>(`/api/categories/${id}/`, {
+    error: (res) =>
+      res.status === 404
+        ? `Category with ID ${id} not found`
+        : `Failed to fetch category: ${res.status} ${res.statusText}`,
   });
-
-  if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error(`Category with ID ${id} not found`);
-    }
-    throw new Error(`Failed to fetch category: ${response.status} ${response.statusText}`);
-  }
-
-  const data: IngredientCategory = await response.json();
-  return data;
 }
 
 /**
@@ -366,24 +313,12 @@ export async function createCategory(
     create_generic_ingredient: createGenericIngredient,
   };
 
-  const response = await fetch(`${API_BASE_URL}/api/categories/`, {
+  return request<IngredientCategory>('/api/categories/', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(categoryData),
+    body: categoryData,
+    error: (res, data) =>
+      data.detail || data.name?.[0] || `Failed to create category: ${res.status} ${res.statusText}`,
   });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    const errorMessage = errorData.detail || 
-                        errorData.name?.[0] || 
-                        `Failed to create category: ${response.status} ${response.statusText}`;
-    throw new Error(errorMessage);
-  }
-
-  const data: IngredientCategory = await response.json();
-  return data;
 }
 
 /**
@@ -398,28 +333,16 @@ export async function updateCategory(
   category: Partial<Omit<IngredientCategory, 'id' | 'ingredients' | 'generic_ingredient'>>
 ): Promise<IngredientCategory> {
   const categoryData: any = {};
-  
+
   if (category.name !== undefined) categoryData.name = category.name;
   if (category.notes !== undefined) categoryData.notes = category.notes || '';
 
-  const response = await fetch(`${API_BASE_URL}/api/categories/${id}/`, {
+  return request<IngredientCategory>(`/api/categories/${id}/`, {
     method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(categoryData),
+    body: categoryData,
+    error: (res, data) =>
+      data.detail || data.name?.[0] || `Failed to update category: ${res.status} ${res.statusText}`,
   });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    const errorMessage = errorData.detail || 
-                        errorData.name?.[0] || 
-                        `Failed to update category: ${response.status} ${response.statusText}`;
-    throw new Error(errorMessage);
-  }
-
-  const data: IngredientCategory = await response.json();
-  return data;
 }
 
 /**
@@ -429,22 +352,13 @@ export async function updateCategory(
  * @throws Error if the API request fails
  */
 export async function deleteCategory(id: number): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/api/categories/${id}/`, {
+  return request<void>(`/api/categories/${id}/`, {
     method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    error: (res, data) =>
+      res.status === 404
+        ? `Category with ID ${id} not found`
+        : data.detail || `Failed to delete category: ${res.status} ${res.statusText}`,
   });
-
-  if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error(`Category with ID ${id} not found`);
-    }
-    const errorData = await response.json().catch(() => ({}));
-    const errorMessage = errorData.detail || 
-                        `Failed to delete category: ${response.status} ${response.statusText}`;
-    throw new Error(errorMessage);
-  }
 }
 
 /**
@@ -454,59 +368,46 @@ export async function deleteCategory(id: number): Promise<void> {
  * @throws Error if the API request fails
  */
 export async function fetchCategoryIngredients(categoryId: number): Promise<Ingredient[]> {
-  const response = await fetch(`${API_BASE_URL}/api/categories/${categoryId}/ingredients/`, {
-    method: 'GET',
-    headers: { 'Content-Type': 'application/json' },
+  return request<Ingredient[]>(`/api/categories/${categoryId}/ingredients/`, {
+    error: (res) => `Failed to fetch category ingredients: ${res.status}`,
   });
-  if (!response.ok) throw new Error(`Failed to fetch category ingredients: ${response.status}`);
-  return response.json();
 }
 
 export async function fetchIngredientRecipes(ingredientId: number): Promise<Recipe[]> {
-  const response = await fetch(`${API_BASE_URL}/api/ingredients/${ingredientId}/recipes/`, {
-    headers: { 'Content-Type': 'application/json' },
+  return request<Recipe[]>(`/api/ingredients/${ingredientId}/recipes/`, {
+    error: (res) => `Failed to fetch ingredient recipes: ${res.status}`,
   });
-  if (!response.ok) throw new Error(`Failed to fetch ingredient recipes: ${response.status}`);
-  return response.json();
 }
 
 // ── Menus ──────────────────────────────────────────────────────────────────
 
 export async function fetchMenus(): Promise<Menu[]> {
-  const response = await fetch(`${API_BASE_URL}/api/menus/`, {
-    headers: { 'Content-Type': 'application/json' },
+  return request<Menu[]>('/api/menus/', {
+    error: (res) => `Failed to fetch menus: ${res.status}`,
   });
-  if (!response.ok) throw new Error(`Failed to fetch menus: ${response.status}`);
-  return response.json();
 }
 
 export async function fetchMenu(id: number): Promise<Menu> {
-  const response = await fetch(`${API_BASE_URL}/api/menus/${id}/`, {
-    headers: { 'Content-Type': 'application/json' },
+  return request<Menu>(`/api/menus/${id}/`, {
+    error: (res) => `Failed to fetch menu: ${res.status}`,
   });
-  if (!response.ok) throw new Error(`Failed to fetch menu: ${response.status}`);
-  return response.json();
 }
 
 export async function fetchPublicMenu(shareToken: string): Promise<Menu> {
-  const response = await fetch(`${API_BASE_URL}/api/public/menu/${shareToken}/`, {
-    headers: { 'Content-Type': 'application/json' },
+  return request<Menu>(`/api/public/menu/${shareToken}/`, {
+    error: (res) => `Failed to fetch menu: ${res.status}`,
   });
-  if (!response.ok) throw new Error(`Failed to fetch menu: ${response.status}`);
-  return response.json();
 }
 
 export async function createMenu(
   name: string,
   decorations?: { top_decoration?: DecorationKey; bottom_decoration?: DecorationKey },
 ): Promise<Menu> {
-  const response = await fetch(`${API_BASE_URL}/api/menus/`, {
+  return request<Menu>('/api/menus/', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, ...decorations }),
+    body: { name, ...decorations },
+    error: (res) => `Failed to create menu: ${res.status}`,
   });
-  if (!response.ok) throw new Error(`Failed to create menu: ${response.status}`);
-  return response.json();
 }
 
 export async function updateMenu(
@@ -519,117 +420,95 @@ export async function updateMenu(
     bottom_decoration?: DecorationKey;
   },
 ): Promise<Menu> {
-  const response = await fetch(`${API_BASE_URL}/api/menus/${id}/`, {
+  return request<Menu>(`/api/menus/${id}/`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
+    body: data,
+    error: (res) => `Failed to update menu: ${res.status}`,
   });
-  if (!response.ok) throw new Error(`Failed to update menu: ${response.status}`);
-  return response.json();
 }
 
 export async function deleteMenu(id: number): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/api/menus/${id}/`, {
+  return request<void>(`/api/menus/${id}/`, {
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
+    error: (res) => `Failed to delete menu: ${res.status}`,
   });
-  if (!response.ok) throw new Error(`Failed to delete menu: ${response.status}`);
 }
 
 export async function activateMenu(id: number): Promise<Menu> {
-  const response = await fetch(`${API_BASE_URL}/api/menus/${id}/activate/`, {
+  return request<Menu>(`/api/menus/${id}/activate/`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    error: (res) => `Failed to activate menu: ${res.status}`,
   });
-  if (!response.ok) throw new Error(`Failed to activate menu: ${response.status}`);
-  return response.json();
 }
 
 export async function fetchMenuStats(menuId: number): Promise<MenuStats> {
-  const response = await fetch(`${API_BASE_URL}/api/menus/${menuId}/stats/`);
-  if (!response.ok) throw new Error(`Failed to fetch menu stats: ${response.status}`);
-  return response.json();
+  return request<MenuStats>(`/api/menus/${menuId}/stats/`, {
+    error: (res) => `Failed to fetch menu stats: ${res.status}`,
+  });
 }
 
 export async function addMenuItem(menuId: number, recipeId: number): Promise<Menu> {
-  const response = await fetch(`${API_BASE_URL}/api/menus/${menuId}/add-item/`, {
+  return request<Menu>(`/api/menus/${menuId}/add-item/`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ recipe_id: recipeId }),
+    body: { recipe_id: recipeId },
+    error: (res, data) => data.detail || `Failed to add item: ${res.status}`,
   });
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err.detail || `Failed to add item: ${response.status}`);
-  }
-  return response.json();
 }
 
 export async function removeMenuItem(menuItemId: number): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/api/menu-items/${menuItemId}/`, {
+  return request<void>(`/api/menu-items/${menuItemId}/`, {
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
+    error: (res) => `Failed to remove menu item: ${res.status}`,
   });
-  if (!response.ok) throw new Error(`Failed to remove menu item: ${response.status}`);
 }
 
 export async function reorderMenuItems(menuId: number, items: { id: number; order: number }[]): Promise<Menu> {
-  const response = await fetch(`${API_BASE_URL}/api/menus/${menuId}/reorder-items/`, {
+  return request<Menu>(`/api/menus/${menuId}/reorder-items/`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(items),
+    body: items,
+    error: (res) => `Failed to reorder menu items: ${res.status}`,
   });
-  if (!response.ok) throw new Error(`Failed to reorder menu items: ${response.status}`);
-  return response.json();
 }
 
 // ── Buy List ───────────────────────────────────────────────────────────────
 
 export async function fetchBuyList(): Promise<BuyListItem[]> {
-  const response = await fetch(`${API_BASE_URL}/api/buy-list/`, {
-    headers: { 'Content-Type': 'application/json' },
+  return request<BuyListItem[]>('/api/buy-list/', {
+    error: (res) => `Failed to fetch buy list: ${res.status}`,
   });
-  if (!response.ok) throw new Error(`Failed to fetch buy list: ${response.status}`);
-  return response.json();
 }
 
 export async function addToBuyList(ingredientId: number, notes = ''): Promise<BuyListItem> {
-  const response = await fetch(`${API_BASE_URL}/api/buy-list/`, {
+  return request<BuyListItem>('/api/buy-list/', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ingredient_id: ingredientId, notes }),
+    body: { ingredient_id: ingredientId, notes },
+    error: (res) => `Failed to add to buy list: ${res.status}`,
   });
-  if (!response.ok) throw new Error(`Failed to add to buy list: ${response.status}`);
-  return response.json();
 }
 
 export async function removeBuyListItem(id: number): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/api/buy-list/${id}/`, {
+  return request<void>(`/api/buy-list/${id}/`, {
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
+    error: (res) => `Failed to remove buy list item: ${res.status}`,
   });
-  if (!response.ok) throw new Error(`Failed to remove buy list item: ${response.status}`);
 }
 
 export async function updateBuyListItem(id: number, notes: string): Promise<BuyListItem> {
-  const response = await fetch(`${API_BASE_URL}/api/buy-list/${id}/`, {
+  return request<BuyListItem>(`/api/buy-list/${id}/`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ notes }),
+    body: { notes },
+    error: (res) => `Failed to update buy list item: ${res.status}`,
   });
-  if (!response.ok) throw new Error(`Failed to update buy list item: ${response.status}`);
-  return response.json();
 }
 
 // ── Orders ─────────────────────────────────────────────────────────────────
 
 export async function createOrder(menuId: number, recipeId: number, guestName: string): Promise<Order> {
-  const res = await fetch(`${API_BASE_URL}/api/orders/`, {
+  return request<Order>('/api/orders/', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ recipe_id: recipeId, menu_id: menuId, guest_name: guestName }),
+    body: { recipe_id: recipeId, menu_id: menuId, guest_name: guestName },
+    error: () => 'Failed to place order',
   });
-  if (!res.ok) throw new Error('Failed to place order');
-  return res.json();
 }
 
 export async function fetchOrders(params?: {
@@ -643,28 +522,22 @@ export async function fetchOrders(params?: {
   if (params?.fulfilled !== undefined) qs.set('fulfilled', String(params.fulfilled));
   if (params?.menu_id !== undefined) qs.set('menu_id', String(params.menu_id));
   if (params?.guest_name) qs.set('guest_name', params.guest_name);
-  const res = await fetch(`${API_BASE_URL}/api/orders/?${qs}`, {
-    headers: { 'Content-Type': 'application/json' },
+  return request<Order[]>(`/api/orders/?${qs}`, {
+    error: () => 'Failed to fetch orders',
   });
-  if (!res.ok) throw new Error('Failed to fetch orders');
-  return res.json();
 }
 
 export async function fulfillOrder(id: number): Promise<Order> {
-  const res = await fetch(`${API_BASE_URL}/api/orders/${id}/`, {
+  return request<Order>(`/api/orders/${id}/`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ is_fulfilled: true }),
+    body: { is_fulfilled: true },
+    error: () => 'Failed to fulfill order',
   });
-  if (!res.ok) throw new Error('Failed to fulfill order');
-  return res.json();
 }
 
 export async function cancelOrder(id: number): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/api/orders/${id}/`, {
+  return request<void>(`/api/orders/${id}/`, {
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
+    error: () => 'Failed to cancel order',
   });
-  if (!res.ok) throw new Error('Failed to cancel order');
 }
-
