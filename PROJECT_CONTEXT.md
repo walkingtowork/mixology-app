@@ -299,6 +299,22 @@ menu visual polish — SVG decorations, QR code modal, drag-and-drop menu planni
   `frontend/scripts/check-lint-baseline.mjs`: the build fails only when the count goes *up*,
   since a bare `eslint .` exits non-zero on any error and could never gate anything here.
   Fix some and lower `BASELINE` in that file — it should only ratchet downwards.
+- **Backups are entirely manual — this Railway plan has no automatic backups** (confirmed
+  2026-10-12). Nothing is backing up production unless you run it yourself.
+  **`backend/data.json` is NOT a backup**: it was last touched 2026-05-06, holds one menu
+  and *zero* orders, and predates ordering, decorations and stock levels. Restoring it would
+  silently destroy months of data.
+  Production Postgres is **18.6**, and local `libpq` is 18.6, so `pg_dump` matches the server
+  exactly — no version-skew risk. Take a dump **periodically, and always immediately before
+  any schema or data migration**:
+  ```bash
+  pg_dump "<DATABASE_PUBLIC_URL>" -Fc -f ~/mixology-$(date +%F).dump
+  pg_restore -l ~/mixology-<date>.dump | grep -c "TABLE DATA"   # expect ~18
+  ```
+  `DATABASE_PUBLIC_URL` is in the Postgres service's Variables tab — the `*.proxy.rlwy.net`
+  host, not `postgres.railway.internal`, which does not resolve off-platform. Use
+  `manage.py dumpdata` for seeding a dev database, never as a rollback: a fixture is
+  schema-coupled and cannot be loaded back across a migration that changes the schema.
 - **Confirming a deploy landed:** for the frontend, read the bundle name from the root HTML,
   then download it to a *file* and grep the file — capturing a ~370KB bundle into a shell
   variable produced a truncated, confidently wrong "not deployed" reading once. Vercel's
