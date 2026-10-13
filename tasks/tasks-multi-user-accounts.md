@@ -31,14 +31,18 @@ data. Today that header is on exactly the three viewsets about to become per-use
 `migrate` inside its start command, so a migration that fails partway does not warn — gunicorn
 never boots and the app is down until it is fixed.
 
-## Current state — updated 2026-10-12
+## Current state — updated 2026-10-13
 
-**Shipped:** 1.0 (`SECRET_KEY` + deploy hardening), 2.0 (CI). Preview deployments are off (5.8).
+**Shipped:** 1.0 (`SECRET_KEY` + deploy hardening), 2.0 (CI), 2.5 (interim API lockdown,
+PR #17). Preview deployments are off (5.8).
 
-**In review:** 2.5, the interim API lockdown — branch `feature/api-read-only-stopgap`, PR open
-and not yet merged. Merge it before starting anything else; it is the actual security fix.
+**In review:** 3.0 + 4.0 + the `data.json` deletion — branch `feature/request-helper-and-cache`.
 
-**Next PR — 3.0 and 4.0 together**, both small and behaviour-neutral, plus one deletion:
+**Next after that:** 5.0, the Vercel proxy. Until 5.5 lands, a write from the local dev
+frontend while logged into `localhost:8000/admin` fails with `CSRF Failed: Origin checking
+failed` — expected, not a regression (the same write was a 403 anonymously before 3.0).
+
+**This PR — 3.0 and 4.0 together**, both small and behaviour-neutral, plus one deletion:
 - 3.0 — extract one `request()` helper from the ~30 hand-written `fetch` calls
 - 4.0 — invert the cache headers
 - **Delete `backend/data.json`** (decided 2026-10-12). Nothing in the codebase reads it; it is
@@ -138,17 +142,17 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
   - [x] 2.5.5 `AuthenticatedAPITestCase` base class: all 34 write calls across the 6 existing test classes were anonymous and would now 403. Uses `force_authenticate` with no password — hashing one per test added ~9s to the suite for nothing
   - [x] 2.5.6 `AnonymousAccessTests`: 14 tests covering reads open, writes refused (403, not 401 — `SessionAuthentication` offers no `WWW-Authenticate` challenge), and both deliberate exemptions still working
 
-- [ ] 3.0 Extract a single request helper in `cocktailsApi.ts`
-  - [ ] 3.1 Write one `request()` helper handling base URL, JSON headers, `credentials: 'include'`, error shaping, and reading the `csrftoken` cookie into an `X-CSRFToken` header for unsafe methods
-  - [ ] 3.2 Migrate all ~30 `fetch` call sites in the 670-line module onto it, preserving each function's existing error messages and return types
-  - [ ] 3.3 Add a single place for 401 handling, to be wired to a redirect once auth exists
-  - [ ] 3.4 Verify every page still works against the unchanged backend — this task must be behaviour-neutral
+- [x] 3.0 Extract a single request helper in `cocktailsApi.ts`
+  - [x] 3.1 Write one `request()` helper handling base URL, JSON headers, `credentials: 'include'`, error shaping, and reading the `csrftoken` cookie into an `X-CSRFToken` header for unsafe methods
+  - [x] 3.2 Migrate all ~30 `fetch` call sites in the 670-line module onto it, preserving each function's existing error messages and return types — 36 functions; endpoint, method, body and every error message checked by script against the old file, zero mismatches. Each call site passes its own `error` callback so messages stay verbatim. Only intended differences: `fetchMenuStats` now sends the JSON `Content-Type` like every other call, and a 204 body is no longer parsed
+  - [x] 3.3 Add a single place for 401 handling, to be wired to a redirect once auth exists
+  - [x] 3.4 Verify every page still works against the unchanged backend — this task must be behaviour-neutral — 2026-10-13, headless Chrome against a copy of the dev DB: all 14 routes load with every API call 200; order create/fulfil/cancel round-trip (incl. 204); 404 and anonymous-403 messages surface as before. Note the stopgap returns **403**, not 401, for anonymous writes (`SessionAuthentication` sends no `WWW-Authenticate`), so the 3.3 hook will not fire for them
 
-- [ ] 4.0 Invert the cache headers — must precede the proxy
-  - [ ] 4.1 Remove `CacheReadsMixin` from `IngredientViewSet`, `RecipeViewSet` and `IngredientCategoryViewSet` (`views.py:26`, `:42`, `:62`)
-  - [ ] 4.2 Apply caching to `PublicMenuView` (`views.py:241`) instead, with a short `max-age` (~30s) and no `stale-while-revalidate`, so a last-minute menu fix still propagates within seconds
-  - [ ] 4.3 Confirm `Cache-Control: public` now appears *only* on anonymous, share-token-keyed responses
-  - [ ] 4.4 Sanity-check that `Vary: Cookie` is present on authenticated responses — Django's `SessionMiddleware` adds it automatically once the session is accessed (`sessions/middleware.py:46`), but verify rather than assume
+- [x] 4.0 Invert the cache headers — must precede the proxy
+  - [x] 4.1 Remove `CacheReadsMixin` from `IngredientViewSet`, `RecipeViewSet` and `IngredientCategoryViewSet` (`views.py:26`, `:42`, `:62`)
+  - [x] 4.2 Apply caching to `PublicMenuView` (`views.py:241`) instead, with a short `max-age` (~30s) and no `stale-while-revalidate`, so a last-minute menu fix still propagates within seconds
+  - [x] 4.3 Confirm `Cache-Control: public` now appears *only* on anonymous, share-token-keyed responses
+  - [x] 4.4 Sanity-check that `Vary: Cookie` is present on authenticated responses — Django's `SessionMiddleware` adds it automatically once the session is accessed (`sessions/middleware.py:46`), but verify rather than assume — verified in `CacheHeaderTests`, and it was worth checking: **`/api/orders/` does not get it**, because `authentication_classes = []` means the session is never read. Harmless today (no `Cache-Control`, so nothing caches it); recorded on the `OrderViewSet` entry in `backlog.md` for 8.0
 
 - [ ] 5.0 Same-origin via the Vercel proxy
   - [ ] 5.1 Add `/api/:path*` → Railway rewrite to `frontend/vercel.json`, placed **before** the existing `"/(.*)"` SPA catch-all (Vercel matches top-down, first match wins; getting this wrong returns the HTML shell and surfaces as a confusing JSON parse error)
