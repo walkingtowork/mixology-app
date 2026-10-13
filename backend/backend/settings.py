@@ -161,6 +161,33 @@ CORS_ALLOWED_ORIGINS = [
 CORS_ALLOW_CREDENTIALS = True
 
 
+# Django REST Framework
+# Default-deny for writes. Until this landed there was no REST_FRAMEWORK block at all, so
+# DRF fell back to AllowAny and anyone on the internet could `curl -X DELETE` any record --
+# no browser, no share link, no credentials. This is the interim step: anonymous reads stay
+# open so the app keeps rendering, anonymous writes are refused.
+#
+# Reads are still public, which is a privacy gap and not a destructive one. It closes in
+# task 6.0, which flips this to IsAuthenticated once the Vercel /api proxy makes the session
+# cookie first-party and the frontend can actually authenticate. Flipping it before then
+# would lock the owner out too.
+#
+# Two endpoints opt out deliberately, in views.py: PublicMenuView (guests read a shared menu)
+# and OrderViewSet (guests order without accounts). Both set AllowAny AND
+# authentication_classes = [] explicitly.
+#
+# BasicAuthentication is deliberately dropped from DRF's defaults -- session cookies are the
+# only way in, so there is no password-over-the-wire path to the API.
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+    ],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+}
+
+
 # Security
 # SameSite=Lax is already Django's default for both cookies. It is set explicitly so it
 # reads as a decision rather than an inherited default, and so a future Django upgrade

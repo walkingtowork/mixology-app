@@ -110,6 +110,12 @@ accurate throttling and any Vercel shared-secret gate are deferred until there i
       it no longer receives security patches. Fine for a private app; a blocker for opening
       to the public. Note `requirements.txt` claims "Python 3.12+ required" while the local
       venv runs Python 3.9.6, itself EOL since October 2025.
+- [ ] **No backup routine exists.** The Railway plan has no automatic backups, so production
+      is only ever backed up when someone runs `pg_dump` by hand. One dump was taken
+      2026-10-12. Worth deciding on a cadence and, eventually, automating it — a scheduled
+      job, or upgrading the Railway plan. Until then the rule is: dump before every schema or
+      data migration. See the backup note in `PROJECT_CONTEXT.md`.
+
 - [ ] **CI detects but does not gate — nothing actually blocks a bad merge or deploy.**
       Verified 2026-09-21 by deliberately breaking a test: the backend check went red, and
       GitHub still offered a green "Merge pull request" button. Two separate gaps:
