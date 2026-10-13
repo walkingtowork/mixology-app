@@ -139,19 +139,9 @@ npm install
 
 ### 3. Configure Environment Variables
 
-Copy the example environment file:
-
-```bash
-cp .env.example .env
-```
-
-The `.env` file should contain:
-
-```
-VITE_API_BASE_URL=http://localhost:8000
-```
-
-**Note**: If you're using Create React App instead of Vite, use `REACT_APP_API_BASE_URL` instead of `VITE_API_BASE_URL`.
+None needed. The app calls `/api` on its own origin and the Vite dev server proxies that to
+Django on `http://localhost:8000` (see `frontend/vite.config.ts`). `frontend/.env.example`
+documents `VITE_API_BASE_URL`, which exists only to bypass the proxy.
 
 ## Running the Application
 

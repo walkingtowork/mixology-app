@@ -20,7 +20,7 @@ python manage.py makemigrations   # Generate new migrations
 python manage.py createsuperuser  # Create admin user
 ```
 
-Both servers must run simultaneously for the app to work. Frontend proxies API calls to `http://localhost:8000` via `VITE_API_BASE_URL`.
+Both servers must run simultaneously for the app to work. The Vite dev server proxies `/api`, `/admin` and `/static` to `http://localhost:8000` (`vite.config.ts`), mirroring the Vercel rewrites in `frontend/vercel.json`, so the browser only ever talks to one origin.
 
 ## Architecture
 
@@ -49,7 +49,7 @@ When a category is created, a generic ingredient is auto-created for it (e.g., c
 ### Key Patterns
 - The `RecipeForm` component handles both create and edit via the same route wrapper
 - Inline styles are used throughout `App.tsx` nav; component-level CSS is minimal
-- API base URL is set via `VITE_API_BASE_URL` env var (defaults to `http://localhost:8000`)
+- API calls are same-origin by default (`VITE_API_BASE_URL` defaults to empty); set it only to bypass the proxy and call a backend directly
 
 ## Project Context
 

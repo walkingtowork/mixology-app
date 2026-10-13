@@ -1,6 +1,10 @@
 import type { Ingredient, Recipe, IngredientCategory, Menu, BuyListItem, StockLevel, Order, DecorationKey, MenuStats } from '../types/cocktails';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+// Empty by default: every path below already starts with /api, which the Vercel rewrite
+// (and the Vite dev proxy) forwards to Django, so the app is same-origin with no
+// configuration. Setting the variable bypasses the proxy and talks to a backend directly.
+// `??`, not `||` -- an explicitly empty value must not fall back to anything.
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
 
 /** The fields DRF error bodies use that call sites read messages from. */
 interface ApiErrorBody {

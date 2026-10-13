@@ -67,6 +67,7 @@ AUTH_USER_MODEL = 'accounts.User'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -144,6 +145,17 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# WhiteNoise serves the Django admin's CSS and JS. Without it gunicorn serves no static
+# files at all and the admin renders as bare HTML -- which matters, because the admin is
+# the only editing UI until the real auth screens exist.
+#
+# USE_FINDERS reads the files straight out of each app's static/ directory at startup, so
+# there is no `collectstatic` step and no STATIC_ROOT. That is deliberate: Railway's start
+# command lives in its dashboard, not this repo, and a start command that fails stops
+# gunicorn from booting at all. The cost is no hashed filenames, so files are cached for
+# WhiteNoise's default 60 seconds rather than forever -- irrelevant for one admin user.
+WHITENOISE_USE_FINDERS = True
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
@@ -159,6 +171,18 @@ CORS_ALLOWED_ORIGINS = [
 ] + _extra_cors
 
 CORS_ALLOW_CREDENTIALS = True
+
+# The browser reaches this API through a rewrite on the Vercel origin, so on unsafe
+# requests its Origin header says vercel.app while Host says railway.app. Django's CSRF
+# check compares the two and refuses the mismatch unless the origin is listed here.
+CSRF_TRUSTED_ORIGINS = ['https://thebarcart.vercel.app']
+if DEBUG:
+    # The Vite dev proxy produces the same mismatch: Origin localhost:5173, Host localhost:8000.
+    CSRF_TRUSTED_ORIGINS += ['http://localhost:5173', 'http://127.0.0.1:5173']
+
+# SESSION_COOKIE_DOMAIN is deliberately unset. A host-only cookie set through the proxy
+# belongs to the Vercel origin; pinning it to the Railway host would make the browser
+# reject it outright.
 
 
 # Django REST Framework
