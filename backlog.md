@@ -13,6 +13,16 @@ per-feature task breakdowns.
       hole where the API has no authentication at all.
       → `tasks/tasks-multi-user-accounts.md`, decisions in `PROJECT_CONTEXT.md`
 
+## Up next — first thing after multi-user accounts ships
+
+- [ ] **Rebuild `backend/venv` on Python 3.12.** It is Python 3.9.6 (the macOS system
+      Python), while `requirements.txt` says 3.12+, CI runs 3.12, and the venv is missing
+      `psycopg2-binary` and `gunicorn` — `psycopg2-binary` will not build on 3.9 here at all.
+      So local dev cannot talk to Postgres or run under gunicorn, and every migration
+      rehearsal needs a throwaway 3.12 venv. `/opt/homebrew/bin/python3.12` is already
+      installed: delete `backend/venv`, `python3.12 -m venv venv`,
+      `pip install -r requirements.txt`, run the tests. Prioritised by the user 2026-10-13.
+
 - [ ] **Menu theming — decoration selector** (deadline 2026-09-20)
       `top_decoration` / `bottom_decoration` on `Menu`, a thumbnail picker, a fall SVG set,
       and the menu edit UI it depends on.
