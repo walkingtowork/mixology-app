@@ -122,11 +122,14 @@ context), but **the user still sees the bug in production**, so it is not fixed.
 tracked in `backlog.md` under "Up next". **CI still gates nothing** (see the deployment
 notes), so a red run does not block a merge.
 
-**12.0 is built on `feature/invites` (2026-10-14), not yet merged.** Reshaped for a coding
-meetup that evening: besides admin-made invites, the host can show a QR invite from the
-account menu. Decisions are under "Invites" in `PROJECT_CONTEXT.md`. **After deploying, grant
-`walkingtowork` "accounts | invite | Can add invite"** in Django admin (signed in as `admin`),
-or the menu item does not appear.
+**12.0 is live as of 2026-10-14 (PR #27).** Reshaped for a coding meetup that evening:
+besides admin-made invites, the host can show a QR invite from the account menu. Decisions
+are under "Invites" in `PROJECT_CONTEXT.md`. The user granted `walkingtowork` "Can add
+invite" in Django admin and opened the invite QR in production; a forged token answers 404
+from outside. A full scan-and-signup in production had not been reported when this was
+written. Any other account that should invite needs the same permission.
+
+**Next: 13.0 (password reset).**
 
 **10.0 is live as of 2026-10-14 (PR #24)** — the user confirmed Railway booted and `/admin/`
 signs in by username and by email. What follows describes how it was built and rehearsed.
@@ -403,7 +406,7 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
   - [x] 9.5 Mocking convention written in `src/test/render.tsx` and summarised in `CLAUDE.md`: mock `services/cocktailsApi`, never `fetch`
   - [x] 9.6 Auth UI tests deferred from 11.6, plus `PublicMenu` (ordering, inactive menu, rename) and the request helper (CSRF, 401)
 
-- [x] 12.0 Invites — built on `feature/invites`, 2026-10-14 (reshaped that day for a coding meetup: QR invites from the app)
+- [x] 12.0 Invites — live 2026-10-14 (PR #27) (reshaped that day for a coding meetup: QR invites from the app)
   - [x] 12.1 `Invite` model — token, note (who it's for; **no email**, decided 2026-10-14), created/used timestamps, issuing user, used-by, expiry
   - [x] 12.2 Signup-via-invite endpoint validating the token, then creating an owned, empty account — `GET/POST /api/auth/signup/<token>/`; row-locked so one link can't make two accounts
   - [x] 12.3 Django admin: an Invite page showing the copyable link once saved (7-day default) — a page field rather than a list action, since an action can't show a link to copy
