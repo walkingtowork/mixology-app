@@ -1,4 +1,4 @@
-import type { Ingredient, Recipe, IngredientCategory, Menu, BuyListItem, StockLevel, Order, DecorationKey, MenuStats } from '../types/cocktails';
+import type { Ingredient, Recipe, IngredientCategory, Menu, BuyListItem, StockLevel, Order, DecorationKey, MenuStats, User } from '../types/cocktails';
 
 // Empty by default: every path below already starts with /api, which the Vercel rewrite
 // (and the Vite dev proxy) forwards to Django, so the app is same-origin with no
@@ -25,8 +25,9 @@ const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 let onUnauthorized: () => void = () => {};
 
 /**
- * Registers what happens when any request comes back 401. A no-op until the auth UI
- * exists; the auth context wires this to a redirect to the login page.
+ * Registers what happens when any request comes back 401, which the API sends only when
+ * nobody is signed in. The auth provider uses it to drop back to the login page when a
+ * session expires mid-visit.
  */
 export function setUnauthorizedHandler(handler: () => void): void {
   onUnauthorized = handler;
@@ -559,5 +560,33 @@ export async function cancelGuestOrder(shareToken: string, id: number, guestName
   return request<void>(`/api/public/menu/${shareToken}/orders/${id}/?${qs}`, {
     method: 'DELETE',
     error: (_res, body) => body.detail ?? 'Failed to cancel order',
+  });
+}
+
+// ── Auth ───────────────────────────────────────────────────────────────────
+
+/** Who is signed in, or null. Also makes the server set the csrftoken cookie login needs. */
+export async function fetchSession(): Promise<User | null> {
+  const { user } = await request<{ user: User | null }>('/api/auth/session/', {
+    error: () => 'Failed to check sign-in',
+  });
+  return user;
+}
+
+export async function login(identifier: string, password: string): Promise<User> {
+  const { user } = await request<{ user: User }>('/api/auth/login/', {
+    method: 'POST',
+    body: { identifier, password },
+    // Only a 400 carries a message meant for the person signing in.
+    error: (res, body) =>
+      (res.status === 400 && body.detail) || 'Could not sign in. Reload the page and try again.',
+  });
+  return user;
+}
+
+export async function logout(): Promise<void> {
+  return request<void>('/api/auth/logout/', {
+    method: 'POST',
+    error: () => 'Failed to sign out',
   });
 }

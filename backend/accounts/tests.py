@@ -240,7 +240,7 @@ class AuthAPITests(APITestCase):
         self.assertEqual(self.client.get('/api/auth/session/').data['user']['id'], self.user.id)
 
     def test_login_opens_the_rest_of_the_api(self):
-        self.assertEqual(self.client.get('/api/recipes/').status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(self.client.get('/api/recipes/').status_code, status.HTTP_401_UNAUTHORIZED)
         self.login()
         self.assertEqual(self.client.get('/api/recipes/').status_code, status.HTTP_200_OK)
 
@@ -277,7 +277,7 @@ class AuthAPITests(APITestCase):
         response = self.client.post('/api/auth/logout/')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(self.client.get('/api/auth/session/').data, {'user': None})
-        self.assertEqual(self.client.get('/api/recipes/').status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(self.client.get('/api/recipes/').status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_logout_when_signed_out_is_not_an_error(self):
         self.assertEqual(self.client.post('/api/auth/logout/').status_code, status.HTTP_204_NO_CONTENT)
@@ -340,6 +340,14 @@ class AuthCsrfTests(APITestCase):
         self.assertEqual(self.post('/api/auth/logout/').status_code, status.HTTP_403_FORBIDDEN)
         response = self.post('/api/auth/logout/', token=self.csrf_token())
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_a_csrf_failure_is_a_403_not_a_401(self):
+        """The frontend treats 401 as "signed out"; a CSRF failure must not log anyone out."""
+        self.client.get('/api/auth/session/', secure=True)
+        self.post('/api/auth/login/', self.credentials(), token=self.csrf_token())
+        response = self.post('/api/categories/', {'name': 'Gin'})
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIsNotNone(self.client.get('/api/auth/session/', secure=True).data['user'])
 
     def test_writes_after_login_still_need_the_token(self):
         self.client.get('/api/auth/session/', secure=True)

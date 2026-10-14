@@ -1906,8 +1906,9 @@ class AnonymousAccessTests(APITestCase):
         self.menu_item = MenuItem.objects.create(menu=self.menu, recipe=self.recipe, order=1)
 
     # --- reads are refused ---
-    # 403 rather than 401: SessionAuthentication offers no WWW-Authenticate challenge,
-    # so DRF reports forbidden rather than unauthorized.
+    # 401, not 403: accounts.authentication.SessionAuthentication offers a WWW-Authenticate
+    # value so that "not signed in" is distinguishable from "not allowed". The frontend
+    # sends a 401 to the login page.
 
     def test_anonymous_cannot_read_anything_private(self):
         """Truncating a share URL must not hand a guest the owner's whole bar."""
@@ -1927,7 +1928,7 @@ class AnonymousAccessTests(APITestCase):
         for url in urls:
             with self.subTest(url=url):
                 response = self.client.get(url)
-                self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+                self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_menu_list_does_not_leak_share_tokens(self):
         """A share token is the only credential a guest has; the menu list hands out all of them."""
@@ -1948,48 +1949,48 @@ class AnonymousAccessTests(APITestCase):
     def test_anonymous_cannot_create_ingredient(self):
         """The destructive hole this whole change exists to close."""
         response = self.client.post('/api/ingredients/', {'name': 'Rye'}, format='json')
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertFalse(Ingredient.objects.filter(name='Rye').exists())
 
     def test_anonymous_cannot_update_ingredient(self):
         response = self.client.patch(
             f'/api/ingredients/{self.ingredient.id}/', {'name': 'Vandalised'}, format='json'
         )
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.ingredient.refresh_from_db()
         self.assertEqual(self.ingredient.name, 'Plymouth Gin')
 
     def test_anonymous_cannot_delete_recipe(self):
         """`curl -X DELETE .../api/recipes/12/` was the exact exposure."""
         response = self.client.delete(f'/api/recipes/{self.recipe.id}/')
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertTrue(Recipe.objects.filter(pk=self.recipe.pk).exists())
 
     def test_anonymous_cannot_create_category(self):
         response = self.client.post('/api/categories/', {'name': 'Mezcal'}, format='json')
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_anonymous_cannot_create_menu(self):
         response = self.client.post('/api/menus/', {'name': 'Hijacked'}, format='json')
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_anonymous_cannot_activate_menu(self):
         """Activation is a POST action, so it falls under the same default."""
         response = self.client.post(f'/api/menus/{self.menu.id}/activate/')
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.menu.refresh_from_db()
         self.assertFalse(self.menu.is_active)
 
     def test_anonymous_cannot_remove_menu_item(self):
         response = self.client.delete(f'/api/menu-items/{self.menu_item.id}/')
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertTrue(MenuItem.objects.filter(pk=self.menu_item.pk).exists())
 
     def test_anonymous_cannot_add_to_buy_list(self):
         response = self.client.post(
             '/api/buy-list/', {'ingredient_id': self.ingredient.id}, format='json'
         )
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertFalse(BuyListItem.objects.exists())
 
     # --- the two deliberate exemptions must keep working ---
@@ -2016,10 +2017,10 @@ class AnonymousAccessTests(APITestCase):
         """Listing, fulfilling and cancelling by bare order id all need the owner's session."""
         order = Order.objects.create(menu=self.menu, recipe=self.recipe, guest_name='Alex')
         url = f'/api/orders/{order.id}/'
-        self.assertEqual(self.client.get('/api/orders/').status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(self.client.get('/api/orders/').status_code, status.HTTP_401_UNAUTHORIZED)
         response = self.client.patch(url, {'is_fulfilled': True}, format='json')
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(self.client.delete(url).status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(self.client.delete(url).status_code, status.HTTP_401_UNAUTHORIZED)
         order.refresh_from_db()
         self.assertFalse(order.is_fulfilled)
 
