@@ -76,8 +76,8 @@ would not be writing to production during it, and the split only protected such 
 
 **Sign in as `walkingtowork`, not `admin`** — `admin` owns nothing and sees an empty app.
 
-**Order scoping (8.5) is built on `feature/order-scoping`, 2026-10-13 — not yet merged or
-deployed.** Decisions the user agreed in that session:
+**Order scoping (8.5) is live as of 2026-10-14 (PR #23).** Decisions the user agreed in that
+session:
 
 - **Guests and the bartender no longer share an endpoint.** Guests use
   `/api/public/menu/<share_token>/orders/` (place, list by `guest_name`) and
@@ -103,9 +103,11 @@ deployed.** Decisions the user agreed in that session:
   a party (next one: 2026-10-31).
 
 Verified locally in headless Chrome on a DB copy with two hosts and a signed-out guest (27
-checks, UI and raw requests). **Still to do after merge:** confirm in production that a
-signed-out phone can order from the active menu's link and that the Orders page works signed
-in. Then 10.0 and 11.0 (login), then 9.0 — reordered 2026-10-14, see Sequencing.
+checks, UI and raw requests). The user confirmed both production checks on 2026-10-14: a
+signed-out phone can order from the active menu's link, and the Orders page works signed in.
+
+**Next — 10.0 and 11.0 (login), then 9.0** (reordered 2026-10-14, see Sequencing). The user
+wants to talk 10.0 through before any code is written.
 
 **Loose ends from 8.0:**
 - **No anonymous write was re-tested against production after the 8.0 deploy.** Claude's
@@ -171,7 +173,7 @@ gets the app shell with "Failed to load …" and empty-state copy ("No menus yet
 exposed, but it reads as *empty*, not *locked* — including to the owner when the session
 expires (Django's default is two weeks). The way back in is `thebarcart.vercel.app/admin/`.
 Any device used behind the bar needs to be logged in there first — including for the Orders
-page, once order scoping (8.5) is deployed.
+page, since order scoping (8.5).
 
 Locally no `frontend/.env` is needed; the Vite proxy forwards `/api`, `/admin` and `/static`
 to `localhost:8000`. `backend/.env` must have `DEBUG=True`, which is what adds the dev origin

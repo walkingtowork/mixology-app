@@ -168,7 +168,7 @@ Note `cancelOrder` hard-deletes, so cancelled drinks leave no trace — there is
 
 ## Multi-user accounts — agreed decisions
 
-**Status: in progress** — 1.0–8.0 shipped as of 2026-10-13; order scoping is built on `feature/order-scoping`; then 10.0–11.0 (login), moved ahead of 9.0 (frontend tests) on 2026-10-14 so a login screen exists before the 2026-10-31 party. Full task breakdown, and a
+**Status: in progress** — 1.0–8.0 shipped as of 2026-10-13; order scoping is live as of 2026-10-14 (PR #23); next is 10.0–11.0 (login), moved ahead of 9.0 (frontend tests) on 2026-10-14 so a login screen exists before the 2026-10-31 party. Full task breakdown, and a
 "Current state" block that is kept up to date, in `tasks/tasks-multi-user-accounts.md`.
 
 Motivation: the app was built single-user with no authentication at all. Sharing a menu link
