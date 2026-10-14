@@ -93,6 +93,23 @@ export interface User {
   username: string;
   email: string;
   fullname: string;
+  /** Granted "Can add invite" in Django admin, so the account menu offers invites. */
+  can_invite: boolean;
+}
+
+/** A single-use signup link made from the account menu. */
+export interface Invite {
+  id: number;
+  url: string;
+  expires_at: string;
+  /** Username of whoever signed up with it, or null while unused. */
+  used_by: string | null;
+}
+
+export interface SignupDetails {
+  username: string;
+  email: string;
+  password: string;
 }
 
 export interface BuyListItem {

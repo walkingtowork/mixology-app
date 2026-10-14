@@ -183,6 +183,12 @@ if DEBUG:
     # The Vite dev proxy produces the same mismatch: Origin localhost:5173, Host localhost:8000.
     CSRF_TRUSTED_ORIGINS += ['http://localhost:5173', 'http://127.0.0.1:5173']
 
+# Where people reach the app, for links the backend hands out (invites). Not derived from the
+# request: admin is reached through the Vercel proxy, so the Host Django sees can be Railway's.
+SITE_URL = os.getenv(
+    'SITE_URL', 'http://localhost:5173' if DEBUG else 'https://thebarcart.vercel.app',
+).rstrip('/')
+
 # SESSION_COOKIE_DOMAIN is deliberately unset. A host-only cookie set through the proxy
 # belongs to the Vercel origin; pinning it to the Railway host would make the browser
 # reject it outright.

@@ -1,0 +1,116 @@
+/* Full screen, so the code is big enough to scan from across a table. */
+.invite-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-6) var(--space-4);
+  background: var(--color-surface);
+  overflow-y: auto;
+}
+
+.invite-close {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  width: 44px;
+  height: 44px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  font-size: var(--text-xl);
+  cursor: pointer;
+}
+
+.invite-close:hover {
+  background-color: var(--color-surface-alt);
+}
+
+.invite-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  text-align: center;
+}
+
+.invite-qr {
+  padding: var(--space-3);
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  line-height: 0;
+  transition: opacity 0.2s;
+}
+
+.invite-qr svg {
+  width: min(240px, 70vw);
+  height: auto;
+}
+
+.invite-qr.is-spent {
+  opacity: 0.18;
+}
+
+.invite-qr-placeholder {
+  width: min(240px, 70vw);
+  aspect-ratio: 1;
+}
+
+.invite-hint {
+  margin: 0;
+  max-width: 30ch;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  text-align: center;
+}
+
+.invite-joined {
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
+  background: var(--color-success-light);
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+.invite-error {
+  margin: 0;
+  color: var(--color-danger);
+}
+
+.invite-link {
+  display: flex;
+  width: 100%;
+  max-width: 340px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.invite-link input {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
+.invite-link button {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface-alt);
+  border: none;
+  border-left: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+}

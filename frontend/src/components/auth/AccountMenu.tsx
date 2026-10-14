@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../auth/AuthContext';
+import InviteDialog from './InviteDialog';
 import './AccountMenu.css';
 
 /** The signed-in user's chip in the top bar, opening a small menu. */
 export default function AccountMenu() {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
+  const [inviting, setInviting] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -41,9 +43,19 @@ export default function AccountMenu() {
       {open && (
         <div className="account-dropdown" role="menu">
           <p className="account-who">Signed in as <strong>{user.username}</strong></p>
+          {user.can_invite && (
+            <button
+              className="account-item"
+              role="menuitem"
+              onClick={() => { setOpen(false); setInviting(true); }}
+            >
+              Invite someone
+            </button>
+          )}
           <button className="account-item" role="menuitem" onClick={logout}>Log out</button>
         </div>
       )}
+      {inviting && <InviteDialog onClose={() => setInviting(false)} />}
     </div>
   );
 }

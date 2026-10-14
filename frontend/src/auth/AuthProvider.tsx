@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import * as api from '../services/cocktailsApi';
-import type { User } from '../types/cocktails';
+import type { SignupDetails, User } from '../types/cocktails';
 import { AuthContext } from './AuthContext';
 
 export default function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -37,9 +37,14 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     setUser(null);
   }, []);
 
+  const signup = useCallback(async (token: string, details: SignupDetails) => {
+    setUser(await api.signup(token, details));
+    setReturnAfterLogin(true);
+  }, []);
+
   const value = useMemo(
-    () => ({ user, loading, returnAfterLogin, login, logout }),
-    [user, loading, returnAfterLogin, login, logout],
+    () => ({ user, loading, returnAfterLogin, login, logout, signup }),
+    [user, loading, returnAfterLogin, login, logout, signup],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

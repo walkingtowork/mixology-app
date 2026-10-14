@@ -122,7 +122,11 @@ context), but **the user still sees the bug in production**, so it is not fixed.
 tracked in `backlog.md` under "Up next". **CI still gates nothing** (see the deployment
 notes), so a red run does not block a merge.
 
-**Next: 12.0 (invites).**
+**12.0 is built on `feature/invites` (2026-10-14), not yet merged.** Reshaped for a coding
+meetup that evening: besides admin-made invites, the host can show a QR invite from the
+account menu. Decisions are under "Invites" in `PROJECT_CONTEXT.md`. **After deploying, grant
+`walkingtowork` "accounts | invite | Can add invite"** in Django admin (signed in as `admin`),
+or the menu item does not appear.
 
 **10.0 is live as of 2026-10-14 (PR #24)** — the user confirmed Railway booted and `/admin/`
 signs in by username and by email. What follows describes how it was built and rehearsed.
@@ -399,13 +403,14 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
   - [x] 9.5 Mocking convention written in `src/test/render.tsx` and summarised in `CLAUDE.md`: mock `services/cocktailsApi`, never `fetch`
   - [x] 9.6 Auth UI tests deferred from 11.6, plus `PublicMenu` (ordering, inactive menu, rename) and the request helper (CSRF, 401)
 
-- [ ] 12.0 Invites
-  - [ ] 12.1 `Invite` model — token, email, created/used timestamps, issuing user, expiry
-  - [ ] 12.2 Signup-via-invite endpoint validating the token, then creating an owned, empty account
-  - [ ] 12.3 Django admin action generating a copyable invite link
-  - [ ] 12.4 Signup page consuming the token from the URL
-  - [ ] 12.5 Confirm no signup path exists without a valid token
-  - [ ] 12.6 Tests: valid, expired, already-used and forged tokens
+- [x] 12.0 Invites — built on `feature/invites`, 2026-10-14 (reshaped that day for a coding meetup: QR invites from the app)
+  - [x] 12.1 `Invite` model — token, note (who it's for; **no email**, decided 2026-10-14), created/used timestamps, issuing user, used-by, expiry
+  - [x] 12.2 Signup-via-invite endpoint validating the token, then creating an owned, empty account — `GET/POST /api/auth/signup/<token>/`; row-locked so one link can't make two accounts
+  - [x] 12.3 Django admin: an Invite page showing the copyable link once saved (7-day default) — a page field rather than a list action, since an action can't show a link to copy
+  - [x] 12.4 Signup page at `/invite/<token>` — username, email, password with Show/Hide, confirm password
+  - [x] 12.5 Confirm no signup path exists without a valid token — the only `create_user` outside admin is behind the token check
+  - [x] 12.6 Tests: valid, expired, already-used and forged tokens, case-only clashes, weak passwords, CSRF, and the race (Postgres only)
+  - [x] 12.7 "Invite someone" in the account menu: a full-screen QR for a fresh 24-hour single-use invite, which notices when it is used and makes the next one. Offered only to accounts with Django's "Can add invite" permission (`can_invite` in the session payload)
 
 - [ ] 13.0 Password reset — full flow, manual delivery
   - [ ] 13.1 Forgot-password endpoint using Django's `default_token_generator`
