@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { fetchPublicMenu, createOrder, fetchOrders, cancelOrder } from '../../services/cocktailsApi';
+import { fetchPublicMenu, createGuestOrder, fetchGuestOrders, cancelGuestOrder } from '../../services/cocktailsApi';
 import type { Menu, Order } from '../../types/cocktails';
 import GlassIcon from '../ui/GlassIcon';
 import LoadingSpinner from '../ui/LoadingSpinner';
@@ -25,6 +25,7 @@ export default function PublicMenu() {
   const [pendingRecipeId, setPendingRecipeId] = useState<number | null>(null);
 
   const [lockedRecipes, setLockedRecipes] = useState<Set<number>>(new Set());
+  const [orderError, setOrderError] = useState<string | null>(null);
 
   const [showMyOrders, setShowMyOrders] = useState(false);
   const [myOrders, setMyOrders] = useState<Order[]>([]);
@@ -39,8 +40,14 @@ export default function PublicMenu() {
   }, [shareToken]);
 
   const placeOrder = async (recipeId: number, name: string) => {
-    if (!menu) return;
-    await createOrder(menu.id, recipeId, name);
+    if (!shareToken) return;
+    setOrderError(null);
+    try {
+      await createGuestOrder(shareToken, recipeId, name);
+    } catch (err) {
+      setOrderError(err instanceof Error ? err.message : 'Failed to place order');
+      return;
+    }
     setLockedRecipes(prev => new Set(prev).add(recipeId));
     setTimeout(() => {
       setLockedRecipes(prev => {
@@ -71,26 +78,42 @@ export default function PublicMenu() {
       await placeOrder(pendingRecipeId, name);
       setPendingRecipeId(null);
     }
+    // A changed name has its own order list; earlier orders stay under the old one.
+    if (showMyOrders) await loadMyOrders(name);
   };
 
-  const openMyOrders = async () => {
-    setShowMyOrders(true);
-    if (!menu) return;
+  const handleChangeNameClick = () => {
+    setPendingRecipeId(null);
+    setNameInput(guestName);
+    setShowNameModal(true);
+  };
+
+  const loadMyOrders = async (name = guestName) => {
+    if (!shareToken) return;
     setMyOrdersLoading(true);
     try {
-      const name = localStorage.getItem(GUEST_NAME_KEY) || '';
-      const orders = name
-        ? await fetchOrders({ menu_id: menu.id, guest_name: name })
-        : [];
-      setMyOrders(orders);
+      setMyOrders(name ? await fetchGuestOrders(shareToken, name) : []);
+    } catch {
+      setMyOrders([]);
     } finally {
       setMyOrdersLoading(false);
     }
   };
 
+  const openMyOrders = () => {
+    setShowMyOrders(true);
+    loadMyOrders();
+  };
+
   const handleCancelMyOrder = async (orderId: number) => {
-    await cancelOrder(orderId);
-    setMyOrders(prev => prev.filter(o => o.id !== orderId));
+    if (!shareToken) return;
+    try {
+      await cancelGuestOrder(shareToken, orderId, guestName);
+      setMyOrders(prev => prev.filter(o => o.id !== orderId));
+    } catch {
+      // Most likely served in the meantime; show what the bar has now.
+      await loadMyOrders();
+    }
   };
 
   if (loading) return <LoadingSpinner />;
@@ -106,6 +129,8 @@ export default function PublicMenu() {
           My Orders
         </button>
       </div>
+
+      {orderError && <p className="public-menu-order-error" role="alert">{orderError}</p>}
 
       <ul className="public-menu-list">
         {menu.items.map((item) => (
@@ -125,13 +150,15 @@ export default function PublicMenu() {
               {item.recipe.description && (
                 <p className="public-menu-description">{item.recipe.description}</p>
               )}
-              <button
-                className={`public-menu-order-btn${lockedRecipes.has(item.recipe.id) ? ' ordered' : ''}`}
-                onClick={() => handleOrderClick(item.recipe.id)}
-                disabled={lockedRecipes.has(item.recipe.id)}
-              >
-                {lockedRecipes.has(item.recipe.id) ? 'Ordered!' : 'Order'}
-              </button>
+              {menu.is_active && (
+                <button
+                  className={`public-menu-order-btn${lockedRecipes.has(item.recipe.id) ? ' ordered' : ''}`}
+                  onClick={() => handleOrderClick(item.recipe.id)}
+                  disabled={lockedRecipes.has(item.recipe.id)}
+                >
+                  {lockedRecipes.has(item.recipe.id) ? 'Ordered!' : 'Order'}
+                </button>
+              )}
             </div>
           </li>
         ))}
@@ -141,8 +168,12 @@ export default function PublicMenu() {
       {showNameModal && (
         <div className="pm-modal-backdrop" onClick={() => setShowNameModal(false)}>
           <div className="pm-modal" onClick={e => e.stopPropagation()}>
-            <h2 className="pm-modal-title">What's your name?</h2>
-            <p className="pm-modal-hint">So the bartender knows who to hand it to.</p>
+            <h2 className="pm-modal-title">{guestName ? 'Change your name' : "What's your name?"}</h2>
+            <p className="pm-modal-hint">
+              {guestName
+                ? `Drinks you've already ordered stay under ${guestName}.`
+                : 'So the bartender knows who to hand it to.'}
+            </p>
             <input
               className="pm-modal-input"
               type="text"
@@ -158,7 +189,7 @@ export default function PublicMenu() {
                 onClick={handleNameSubmit}
                 disabled={!nameInput.trim()}
               >
-                Let's go
+                {guestName ? 'Save' : "Let's go"}
               </button>
               <button className="pm-modal-cancel" onClick={() => setShowNameModal(false)}>
                 Cancel
@@ -177,6 +208,23 @@ export default function PublicMenu() {
               <h2 className="pm-drawer-title">My Orders</h2>
               <button className="pm-drawer-close" onClick={() => setShowMyOrders(false)}>✕</button>
             </div>
+            {guestName && (
+              <p className="pm-drawer-guest">
+                Ordering as <strong>{guestName}</strong>
+                <button
+                  className="pm-drawer-edit-name"
+                  onClick={handleChangeNameClick}
+                  aria-label="Change your name"
+                  title="Change your name"
+                >
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M12 20h9" />
+                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                  </svg>
+                </button>
+              </p>
+            )}
             {myOrdersLoading ? (
               <LoadingSpinner />
             ) : myOrders.length === 0 ? (

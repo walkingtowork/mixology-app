@@ -168,7 +168,7 @@ Note `cancelOrder` hard-deletes, so cancelled drinks leave no trace — there is
 
 ## Multi-user accounts — agreed decisions
 
-**Status: in progress** — 1.0–7.0 shipped as of 2026-10-13; 8.0 (enforce and scope ownership) is next. Full task breakdown, and a
+**Status: in progress** — 1.0–8.0 shipped as of 2026-10-13; order scoping is built on `feature/order-scoping`; then 10.0–11.0 (login), moved ahead of 9.0 (frontend tests) on 2026-10-14 so a login screen exists before the 2026-10-31 party. Full task breakdown, and a
 "Current state" block that is kept up to date, in `tasks/tasks-multi-user-accounts.md`.
 
 Motivation: the app was built single-user with no authentication at all. Sharing a menu link
@@ -247,10 +247,12 @@ record without a browser. Decided in conversation on 2026-09-21:
   Railway value makes the old one worthless.
 
 **Posture since task 6.0 (2026-10-13):** the API is `IsAuthenticated` by default. Anonymous
-callers can do exactly two things — read a menu by its share token and use `/api/orders/` —
-so both the `curl -X DELETE` exposure (closed 2026-10-12, task 2.5) and the "truncate the
-share URL and browse the whole bar" exposure are gone. `/api/orders/` remains fully open,
-including listing every order; scoping it is tracked in `backlog.md`. There is no login screen
+callers can do exactly two things, both keyed by a menu's share token — read the menu, and
+place, list or cancel their own orders on it (`/api/public/menu/<token>/orders/`, since order
+scoping, 2026-10-13) — so the `curl -X DELETE` exposure (closed 2026-10-12, task 2.5), the
+"truncate the share URL and browse the whole bar" exposure and the open `/api/orders/` are
+all gone. `/api/orders/` is now the owner's, so the Orders page needs a session like every
+other page. Only the active menu accepts orders. There is no login screen
 until task 11.0: sign in at `https://thebarcart.vercel.app/admin/`, which sets the session
 cookie the app then uses. Signed out, the app shows "Failed to load …" over empty-state copy,
 which looks like missing data and is not. Note production had **no user accounts at all**
@@ -264,6 +266,14 @@ belongs to the non-admin `walkingtowork` account; the superuser `admin` owns not
 design. `walkingtowork` was made staff so it can get a session through `/admin/` until the
 login screen exists. Nothing reads `owner` yet. `MenuItem` and `Order` have no owner column;
 they belong to whoever owns their menu.
+
+**Ownership, phase two (task 8.0, 2026-10-13):** `owner` is `NOT NULL`, every viewset is
+scoped to the signed-in user, and ids in request bodies must name the requester's own rows —
+another user's row is a 404, never a 403. Category and ingredient names are unique per owner,
+not globally. It shipped as one deploy rather than two at the user's call, since they would
+not be writing to production during it. Day-to-day use is as `walkingtowork`; `admin` sees an
+empty app by design. `/api/orders/` was the one endpoint left open; it was scoped next (see
+"Posture" above).
 
 **Deferred security work** is listed in `backlog.md` under "Security — deferred from
 multi-user planning". It is safe for a handful of invited friends and explicitly *not* safe

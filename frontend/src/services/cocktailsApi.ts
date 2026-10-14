@@ -507,25 +507,15 @@ export async function updateBuyListItem(id: number, notes: string): Promise<BuyL
 
 // ── Orders ─────────────────────────────────────────────────────────────────
 
-export async function createOrder(menuId: number, recipeId: number, guestName: string): Promise<Order> {
-  return request<Order>('/api/orders/', {
-    method: 'POST',
-    body: { recipe_id: recipeId, menu_id: menuId, guest_name: guestName },
-    error: () => 'Failed to place order',
-  });
-}
+// The bartender's side: needs the owner's session.
 
 export async function fetchOrders(params?: {
   today?: boolean;
   fulfilled?: boolean;
-  menu_id?: number;
-  guest_name?: string;
 }): Promise<Order[]> {
   const qs = new URLSearchParams();
   if (params?.today) qs.set('today', 'true');
   if (params?.fulfilled !== undefined) qs.set('fulfilled', String(params.fulfilled));
-  if (params?.menu_id !== undefined) qs.set('menu_id', String(params.menu_id));
-  if (params?.guest_name) qs.set('guest_name', params.guest_name);
   return request<Order[]>(`/api/orders/?${qs}`, {
     error: () => 'Failed to fetch orders',
   });
@@ -543,5 +533,31 @@ export async function cancelOrder(id: number): Promise<void> {
   return request<void>(`/api/orders/${id}/`, {
     method: 'DELETE',
     error: () => 'Failed to cancel order',
+  });
+}
+
+// The guest's side: no session. The menu's share token is the credential, and a guest's
+// orders are the ones on that menu under the name they typed.
+
+export async function createGuestOrder(shareToken: string, recipeId: number, guestName: string): Promise<Order> {
+  return request<Order>(`/api/public/menu/${shareToken}/orders/`, {
+    method: 'POST',
+    body: { recipe_id: recipeId, guest_name: guestName },
+    error: (_res, body) => body.detail ?? 'Failed to place order',
+  });
+}
+
+export async function fetchGuestOrders(shareToken: string, guestName: string): Promise<Order[]> {
+  const qs = new URLSearchParams({ guest_name: guestName });
+  return request<Order[]>(`/api/public/menu/${shareToken}/orders/?${qs}`, {
+    error: () => 'Failed to fetch orders',
+  });
+}
+
+export async function cancelGuestOrder(shareToken: string, id: number, guestName: string): Promise<void> {
+  const qs = new URLSearchParams({ guest_name: guestName });
+  return request<void>(`/api/public/menu/${shareToken}/orders/${id}/?${qs}`, {
+    method: 'DELETE',
+    error: (_res, body) => body.detail ?? 'Failed to cancel order',
   });
 }

@@ -180,21 +180,40 @@ class MenuListSerializer(serializers.ModelSerializer):
 
 
 class OrderSerializer(serializers.ModelSerializer):
+    """An order as its menu's owner sees it. Fulfilling it is the only thing they can change.
+
+    The recipe and menu are read-only on purpose: a writable id here would let a PATCH move
+    an order onto somebody else's menu, or read their recipe back through the nested one.
+    """
     recipe = RecipeSerializer(read_only=True)
-    recipe_id = serializers.PrimaryKeyRelatedField(
-        queryset=Recipe.objects.all(),
-        source='recipe',
-        write_only=True,
-    )
-    menu_id = serializers.PrimaryKeyRelatedField(
-        queryset=Menu.objects.all(),
-        source='menu',
-    )
+    menu_id = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Order
-        fields = ['id', 'recipe', 'recipe_id', 'menu_id', 'guest_name', 'is_fulfilled', 'created_at']
-        read_only_fields = ['id', 'created_at']
+        fields = ['id', 'recipe', 'menu_id', 'guest_name', 'is_fulfilled', 'created_at']
+        read_only_fields = ['id', 'guest_name', 'created_at']
+
+
+class GuestOrderSerializer(OrderSerializer):
+    """An order placed from a shared menu. The view supplies the menu from the share token.
+
+    The recipe is looked up among that menu's own items, so a drink that is not on the menu
+    fails validation exactly as a nonexistent one does. Needs `menu` in the context.
+    """
+    recipe_id = serializers.PrimaryKeyRelatedField(
+        queryset=Recipe.objects.none(),
+        source='recipe',
+        write_only=True,
+    )
+
+    class Meta(OrderSerializer.Meta):
+        fields = OrderSerializer.Meta.fields + ['recipe_id']
+        read_only_fields = ['id', 'is_fulfilled', 'created_at']
+
+    def get_fields(self):
+        fields = super().get_fields()
+        fields['recipe_id'].queryset = Recipe.objects.filter(menu_items__menu=self.context['menu'])
+        return fields
 
 
 class BuyListItemSerializer(serializers.ModelSerializer):

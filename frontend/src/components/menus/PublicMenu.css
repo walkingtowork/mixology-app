@@ -7,6 +7,12 @@
 }
 
 .public-menu-header,
+.public-menu-order-error {
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
 .public-menu-list {
   position: relative;
   z-index: 1;
@@ -275,6 +281,37 @@
 }
 
 .pm-drawer-close:hover {
+  background: var(--color-surface-alt);
+}
+
+.pm-drawer-guest {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3) var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
+.pm-drawer-guest strong {
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.pm-drawer-edit-name {
+  display: inline-flex;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+.pm-drawer-edit-name:hover {
   background: var(--color-surface-alt);
 }
 

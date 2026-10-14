@@ -27,6 +27,13 @@ internet while the real auth UI is still weeks away, and it needs no throwaway c
 front of responses marked `Cache-Control: public` is how one user gets served another user's
 data. Today that header is on exactly the three viewsets about to become per-user.
 
+**10.0 and 11.0 now come before 9.0** (the user's call, 2026-10-14). The plan was to have the
+frontend test framework in place before the auth UI. The user wants a real login screen
+before the 2026-10-31 party, so the bar device does not have to sign in through `/admin/`.
+The cost: the auth UI ships covered only by backend tests and a browser click-through until
+9.0 lands, which then starts by writing the auth UI tests (9.6). Task numbers are unchanged
+so existing references still resolve; the list below is in working order.
+
 **The ownership migration is phased across separate deploys** (7.0, then 8.0). Railway runs
 `migrate` inside its start command, so a migration that fails partway does not warn — gunicorn
 never boots and the app is down until it is fixed.
@@ -35,8 +42,9 @@ never boots and the app is down until it is fixed.
 
 **Shipped:** 1.0 (`SECRET_KEY` + deploy hardening), 2.0 (CI), 2.5 (interim API lockdown,
 PR #17), 3.0 + 4.0 + `data.json` deleted (PR #18), 5.0 (same-origin proxy + WhiteNoise for
-the admin, PR #19), 6.0 (default-deny API, PR #20), **7.0 (nullable owner + backfill,
-PR #21)**. Preview deployments are off (5.8).
+the admin, PR #19), 6.0 (default-deny API, PR #20), 7.0 (nullable owner + backfill,
+PR #21), **8.0 (ownership enforced and every query scoped, PR #22)**. Preview deployments
+are off (5.8).
 
 **The app is same-origin in production as of 2026-10-13.** `VITE_API_BASE_URL` is deleted in
 Vercel, the live bundle contains no Railway URL, and every API call goes to
@@ -52,14 +60,68 @@ out on a phone, which closes 6.6.
 
 **Ownership phase one is live as of 2026-10-13.** Migrations `0010` (nullable `owner` on the
 five owned models) and `0011` (backfill to `walkingtowork`) are applied in production: the
-Railway deploy is active, and the zero-unowned-rows query below printed 0 for every table.
-The site stayed up throughout. Nothing reads `owner` yet, so behaviour is unchanged. A
+Railway deploy is active, and a per-table count of unowned rows printed 0 for every table.
+The site stayed up throughout. A
 pre-migration dump exists at `~/mixology-2026-10-13-pre-7.0.dump`.
 
-**In progress — 8.0, written and rehearsed 2026-10-13 on `feature/ownership-scope`; not yet
-committed, pushed or deployed.** One deploy, not the two the handoff notes suggested: the
-user decided this on 2026-10-13 because they will not be writing to production during it,
-and the split only protected writes made while Railway swaps containers.
+**Ownership is enforced and scoped in production as of 2026-10-13 (8.0, PR #22).** Confirmed
+by the user: Railway shows the PR #22 deployment active; signed in as `walkingtowork` the app
+is fully populated (and its `/admin/` is empty, as it has no permissions); signed in as
+`admin` the app is empty; and `owner_id` is `NOT NULL` on all five tables. Checked from
+outside, signed out, through Vercel and directly on Railway: seven private reads are 403 and
+the public menu is a 200 with `Cache-Control: max-age=30, public`. Anonymous write probes
+were not re-sent after this deploy. A pre-deploy dump exists at `~/mixology-2026-10-13.dump`
+(taken 23:15). It shipped as one deploy, not the two the handoff notes suggested: the user
+would not be writing to production during it, and the split only protected such writes.
+
+**Sign in as `walkingtowork`, not `admin`** — `admin` owns nothing and sees an empty app.
+
+**Order scoping (8.5) is built on `feature/order-scoping`, 2026-10-13 — not yet merged or
+deployed.** Decisions the user agreed in that session:
+
+- **Guests and the bartender no longer share an endpoint.** Guests use
+  `/api/public/menu/<share_token>/orders/` (place, list by `guest_name`) and
+  `…/orders/<id>/?guest_name=…` (cancel); no session, the token in the URL is the credential.
+  `/api/orders/` is owner-only (`menu__owner=request.user`), has no POST, and only
+  `is_fulfilled` is writable. The share page URL and printed QR codes are unchanged.
+- **Only the active menu takes orders**, and only for drinks on it. Any menu can still be
+  previewed by its share link; the page hides the Order button when `is_active` is false and
+  the API answers 403. "My Orders" stays visible on an inactive menu, deliberately, so someone
+  shown a draft link can see the feature exists.
+- **Guest identity is still just a typed name.** Cancelling needs the matching name and an
+  unserved order. Two guests who type the same name share one order list and can cancel each
+  other's drinks; the user is not worried about that for a party. The "guest name hint" item
+  in `backlog.md` is the mitigation if it ever matters.
+- **A guest can change their name** from a pencil beside "Ordering as …" in the My Orders
+  drawer. It only changes the name saved on the phone: earlier orders stay under the old name
+  and drop out of that guest's list. Renaming existing orders was left out on purpose — it
+  needs a guest endpoint that would let anyone with the link rename another guest's orders.
+- **No compatibility shim for the old frontend bundle** — parties are months apart. The old
+  `POST /api/orders/` shape is now a 403.
+- **The device behind the bar must be signed in.** The Orders page used to work signed out;
+  it no longer does, and Django sessions last two weeks. Sign in at `/admin/` shortly before
+  a party (next one: 2026-10-31).
+
+Verified locally in headless Chrome on a DB copy with two hosts and a signed-out guest (27
+checks, UI and raw requests). **Still to do after merge:** confirm in production that a
+signed-out phone can order from the active menu's link and that the Orders page works signed
+in. Then 10.0 and 11.0 (login), then 9.0 — reordered 2026-10-14, see Sequencing.
+
+**Loose ends from 8.0:**
+- **No anonymous write was re-tested against production after the 8.0 deploy.** Claude's
+  POST/DELETE probes were blocked by the session's permission check (they would be real
+  writes if the lock had failed). Reads are confirmed 403 and the permission setting did not
+  change in PR #22. If wanted, the user can run one themselves; a 403 is the pass.
+- **Two docs commits are on local `main`, unpushed** (`6a16923`, `cbd5912`, plus this one).
+  They ride along with the next branch push, per the house rules.
+- **The local SQLite dev DB has not been migrated past `0011`.** If it has unowned rows it
+  needs `BACKFILL_OWNER_USERNAME=admin python manage.py migrate` (there is no
+  `walkingtowork` locally); a plain `migrate` will raise.
+- **In `mixology-pg18`**, `prod_1013_2152` is a restore of the 21:52 dump at migration `0009`
+  and makes a good template for the next rehearsal. Order scoping needs no migration, so a
+  rehearsal is only for a two-user check against real data.
+
+What 8.0 did, for reference:
 
 - **What it does.** Every owner-bearing viewset is scoped to `request.user`
   (`OwnerScopedMixin`); every create path sets the owner; ids in request bodies are checked
@@ -69,7 +131,8 @@ and the split only protected writes made while Railway swaps containers.
   into a 400, since DRF cannot derive that check from a constraint on a field it never sees.
 - **Tests:** 158 pass on SQLite and Postgres 18 (was 96). The isolation and foreign-id tests
   were confirmed to fail with the scoping removed.
-- **Rehearsed against `~/mixology-2026-10-13.dump`** (taken 21:52, at migration `0009`, so
+- **Rehearsed against the 21:52 version of `~/mixology-2026-10-13.dump`** (since replaced by
+  the 23:15 pre-deploy dump of the same name; it was at migration `0009`, so
   the copy was first migrated to `0011` to match production). With three unowned rows
   inserted to stand in for anything created since 7.0: `0012` and `0013` apply, zero nulls,
   all five `owner_id` columns `NOT NULL`, row counts unchanged (200 recipe-ingredients, 10
@@ -77,26 +140,8 @@ and the split only protected writes made while Railway swaps containers.
   12/108/50/2/3 rows; `admin` sees nothing, gets 404s, can create its own "Bourbon" beside
   the owner's, and cannot put the owner's recipe on its menu. Signed out, the share link and
   a guest order still work.
-- **The one way the deploy fails:** a row created *without an owner between `0012` and
-  `0013`* — only possible from the old container, in the instant between the two. Rehearsed:
-  `0013` raises, rolls back cleanly (columns still nullable, data intact), and gunicorn does
-  not boot. Recovery is `update … set owner_id` on the stray row and a redeploy; `0012` is
-  already recorded as applied and will not run again. **So: no creating anything in the app
-  while the deploy is in flight.** Once `0013` is in, a save from the old container simply
-  fails until the swap finishes.
-- **After the deploy, sign in as `walkingtowork`, not `admin`** — `admin` sees an empty app.
-- **`OrderViewSet` is untouched** and still fully open. Claude's recommendation, not yet
-  confirmed by the user: a PR of its own, since it changes the guest flow and the frontend
-  (guests would send the menu's share token). The stats endpoint already refuses to name
-  another user's recipe if an order points at one.
 
-```bash
-# zero unowned rows, per table -- non-zero before 8.0 deploys just means something was
-# created since 7.0, which 0012 handles; after it deploys the columns are NOT NULL
-psql "$DATABASE_PUBLIC_URL" -Atc "select 'categories', count(*) filter (where owner_id is null) from cocktails_ingredientcategory union all select 'ingredients', count(*) filter (where owner_id is null) from cocktails_ingredient union all select 'recipes', count(*) filter (where owner_id is null) from cocktails_recipe union all select 'menus', count(*) filter (where owner_id is null) from cocktails_menu union all select 'buy_list', count(*) filter (where owner_id is null) from cocktails_buylistitem"
-```
-
-**Rehearsal environment (reuse it for 8.13).** Docker container `mixology-pg18` — stopped
+**Rehearsal environment.** Docker container `mixology-pg18` — stopped
 as of 2026-10-13, data intact; bring it back with `docker start mixology-pg18`. It runs
 `postgres:18` on `127.0.0.1:5433`, password `localonly`; database `mixology` is the pristine
 restore, `rehearsal` and `rehearsal_fail` are scratch copies made with
@@ -114,53 +159,9 @@ come out owned by `walkingtowork` with zero nulls; the 200 recipe-ingredients, 1
 and 9 orders are untouched; reversing to `0009` and re-applying works; and with the owner
 account missing, `0010` commits, `0011` raises, and the data stays intact and readable.
 
-**Two things 8.0 must deal with, both found here:**
-- **Rows created between the 7.0 and 8.0 deploys have no owner.** Nothing sets `owner` on
-  create until 8.5 (confirmed: a category created on the migrated copy has `owner = None`).
-  So 8.1 cannot simply add `NOT NULL` — it must re-run the backfill for null rows first, in
-  the same migration, or the deploy fails on the first row added in the meantime.
-- **The owner cannot log in until 11.0.** `walkingtowork` is not staff, so it cannot use
-  `/admin/`, which is the only way to get a session today — the user logs in as `admin`, who
-  owns nothing. The moment 8.4 scopes querysets, the app is empty for `admin` and unreachable
-  for the owner. **Resolved 2026-10-13:** the user marked `walkingtowork` as staff in
-  production, so it can log in at `/admin/` (and, with no permissions, sees nothing there).
-  After 8.0 deploys the user must sign in as `walkingtowork`, not `admin`, to see their data.
+**House rules** (held across the 5.0–8.0 sessions):
 
-**Handoff notes for 8.0** (written 2026-10-13 at the end of the 5.0–7.0 session; these are
-Claude's recommendations, not decisions the user has made — raise them in the plan):
-
-- **Suggested split into two deploys, because of the deploy window.** While Railway swaps
-  containers the *old* code is still serving against the *new* schema. If `NOT NULL` lands in
-  the same deploy as the code that sets `owner`, an insert from the old container fails.
-  So: **8.0a** — set `owner` on every create path (8.5), scope querysets (8.4, 8.6–8.8), fix
-  `Menu.save()` (8.3), tests (8.9–8.11), admin (8.12), plus a data migration re-running the
-  backfill for null rows. **8.0b** — only once 8.0a is live and the null count is 0: `NOT NULL`
-  (8.1) and per-owner uniqueness (8.2). 8.0b's migration should still re-backfill first.
-- **Every create path must set an owner, not just `perform_create`.** The ones that are easy
-  to miss: the generic ingredient auto-created in `IngredientCategoryViewSet.create`/`update`,
-  `MenuViewSet.add_item`'s drawer flow, `BuyListViewSet.create`, and anything created through
-  **Django admin**, where `owner` is `blank=True` today and becomes a required form field once
-  it is `NOT NULL`.
-- **`0011`'s backfill is reusable but lives in a migration.** It only touches rows where
-  `owner IS NULL` and honours `BACKFILL_OWNER_USERNAME`. A second data migration can import
-  and call `backfill_owner` rather than copy it.
-- **Expect heavy test churn.** Almost every fixture in `cocktails/tests.py` creates rows through
-  the ORM with no owner. `AuthenticatedAPITestCase` already has `self.user`; that is where the
-  owner comes from. `OwnerBackfillMigrationTests` migrates *backwards* to `0010` in `setUp`, so
-  every new migration must be reversible or those four tests break.
-- **Who owns what, per environment.** Production: `walkingtowork` owns everything, `admin`
-  owns nothing, both can log in at `/admin/`. Local SQLite: `admin` owns everything and there
-  is no `walkingtowork`. A scoping bug that only shows for a non-owner will not show locally
-  unless a second user is created — verify with two users, on a DB copy.
-- **Per-owner uniqueness (8.2) is safe on today's data**: one owner per database, and the
-  existing global `unique=True` already guarantees no duplicate names within it.
-- **`OrderViewSet` is still wide open** (anonymous list, fulfil, cancel for every menu). 6.3
-  left it deliberately; the `backlog.md` entry assigns the fix to 8.0. Guests reach it from
-  `/share/:token` with no session, so scoping it means keying guest access on the share token.
-- **The pre-7.0 dump is stale for 8.0.** Take a new one, restore it into `mixology-pg18` as a
-  new database, and rehearse there. The session scratchpad (and the Python 3.12 venv in it)
-  does not survive; rebuild the venv per the rehearsal note below.
-- **House rules that held all session:** one PR per deploy; the user opens PRs from a URL
+- One PR per deploy; the user opens PRs from a URL
   (`gh` is not authenticated) and merges them; do not push until asked; after merge, run the
   live checks, delete the branch locally and remotely, then update this block. Docs-only
   commits go straight on `main` and ride along with the next branch push.
@@ -169,8 +170,8 @@ Claude's recommendations, not decisions the user has made — raise them in the 
 gets the app shell with "Failed to load …" and empty-state copy ("No menus yet"). No data is
 exposed, but it reads as *empty*, not *locked* — including to the owner when the session
 expires (Django's default is two weeks). The way back in is `thebarcart.vercel.app/admin/`.
-Any device used behind the bar needs to be logged in there first; the Orders page alone still
-works signed out, because `/api/orders/` is open.
+Any device used behind the bar needs to be logged in there first — including for the Orders
+page, once order scoping (8.5) is deployed.
 
 Locally no `frontend/.env` is needed; the Vite proxy forwards `/api`, `/admin` and `/static`
 to `localhost:8000`. `backend/.env` must have `DEBUG=True`, which is what adds the dev origin
@@ -326,7 +327,7 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
   - [x] 7.10 Note that `Order` and `MenuItem` derive ownership through `menu`, so they get no `owner` column of their own
   - [x] 7.11 Deploy this phase alone and confirm the app still works before starting 8.0 — 2026-10-13: no outage across the deploy window; the user confirmed the deployment is active and that every owned table has zero unowned rows in production
 
-- [ ] 8.0 Ownership, phase two — enforce and scope — written and rehearsed; deploy pending, see Current state
+- [x] 8.0 Ownership, phase two — enforce and scope — merged as PR #22, live 2026-10-13
   - [x] 8.1 Migration making `owner` `NOT NULL` — `0013`, preceded by `0012` re-running the backfill. Two migrations because Postgres will not `ALTER` a table in the transaction that updated its rows
   - [x] 8.2 Replace the global `unique=True` on `Ingredient.name` (`models.py:57`) and `IngredientCategory.name` (`:63`) with per-owner uniqueness — two users must both be able to have "Rum" — `UniqueConstraint(owner, name)` on both, added before the global one is dropped
   - [x] 8.3 Fix `Menu.save()` (`models.py:150`): `Menu.objects.exclude(pk=self.pk).update(is_active=False)` currently deactivates every menu belonging to *every* user — filters on `owner=self.owner`; pinned by `test_activating_my_menu_leaves_another_users_active_menu_alone`
@@ -339,14 +340,7 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
   - [x] 8.10 Tests that the nested-write paths in 8.6 reject a foreign id — `ForeignIdTests`
   - [x] 8.11 First-ever tests for Menu, MenuItem, Order and BuyList, closing the gap noted in `backlog.md` — `MenuAPITests`, `OrderAPITests` (pins today's open behaviour), `BuyListAPITests`
   - [x] 8.12 Show `owner` in Django admin for every model, with a filter by user — `OwnedAdmin` base class; the owner is required in admin forms even while the column is nullable
-  - [ ] 8.13 Rehearse against the restored dump, then deploy — rehearsed 2026-10-13 (see Current state); deploy pending
-
-- [ ] 9.0 Frontend test framework — before the auth UI, not after
-  - [ ] 9.1 Add Vitest, React Testing Library, `@testing-library/jest-dom` and `jsdom`
-  - [ ] 9.2 Add `vitest.config.ts` and `src/test/setup.ts`
-  - [ ] 9.3 Add a `test` script and wire it into the CI workflow from 2.0
-  - [ ] 9.4 Write one component test and one routing test to prove the setup
-  - [ ] 9.5 Establish and write down the mocking convention for `cocktailsApi`
+  - [x] 8.13 Rehearse against the restored dump, then deploy — rehearsed against the 21:52 dump, deployed and confirmed live 2026-10-13 (see Current state)
 
 - [ ] 10.0 Authentication backend
   - [ ] 10.1 Make `email` unique and required on `accounts.User`; set `USERNAME_FIELD = 'email'` and adjust `REQUIRED_FIELDS`
@@ -363,7 +357,15 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
   - [ ] 11.3 Route guard redirecting anonymous users to login, with `/share/:shareToken` explicitly exempt — this is the original complaint: truncating a share URL must land on a login screen, not your data
   - [ ] 11.4 Wire the 401 handler from 3.3 to the redirect
   - [ ] 11.5 Account controls in the nav in `App.tsx`
-  - [ ] 11.6 Tests: guard redirects, login succeeds, logout clears state, share route stays public
+  - [ ] 11.6 Click through in a real browser: guard redirects, login succeeds, logout clears state, share route stays public. The automated versions of these are 9.6, since 9.0 now comes after
+
+- [ ] 9.0 Frontend test framework — moved after 11.0 on 2026-10-14 (see Sequencing); numbers kept
+  - [ ] 9.1 Add Vitest, React Testing Library, `@testing-library/jest-dom` and `jsdom`
+  - [ ] 9.2 Add `vitest.config.ts` and `src/test/setup.ts`
+  - [ ] 9.3 Add a `test` script and wire it into the CI workflow from 2.0
+  - [ ] 9.4 Write one component test and one routing test to prove the setup
+  - [ ] 9.5 Establish and write down the mocking convention for `cocktailsApi`
+  - [ ] 9.6 Write the auth UI tests deferred from 11.6
 
 - [ ] 12.0 Invites
   - [ ] 12.1 `Invite` model — token, email, created/used timestamps, issuing user, expiry

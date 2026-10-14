@@ -192,9 +192,9 @@ if DEBUG:
 # reads followed once the Vercel /api proxy made the session cookie first-party, so the
 # frontend could authenticate at all. Every endpoint now needs a session unless it opts out.
 #
-# Two endpoints opt out deliberately, in views.py: PublicMenuView (guests read a shared menu)
-# and OrderViewSet (guests order without accounts). Both set AllowAny AND
-# authentication_classes = [] explicitly.
+# Only the share-token URLs opt out, in views.py: PublicMenuView (guests read a shared menu)
+# and the two GuestOrder views (guests order from it without accounts). Each sets AllowAny
+# AND authentication_classes = [] explicitly, and is keyed by the menu's unguessable token.
 #
 # BasicAuthentication is deliberately dropped from DRF's defaults -- session cookies are the
 # only way in, so there is no password-over-the-wire path to the API.
