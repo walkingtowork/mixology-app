@@ -89,6 +89,11 @@ Revisit before inviting anyone in, and again before any public launch.
 both of which are settings-and-a-dependency rather than new infrastructure. Redis-backed
 accurate throttling and any Vercel shared-secret gate are deferred until there is a reason.
 
+- [ ] **Revisit how long a login lasts.** Sessions use Django's default of two weeks, kept
+      on 2026-10-14 as "fine for now". The case to weigh: a phone used behind the bar should
+      not sign out mid-party, and a friend who opens the app every few months will be asked
+      to log in every time. Options are a longer `SESSION_COOKIE_AGE` or refreshing the
+      session on each visit (`SESSION_SAVE_EVERY_REQUEST`).
 - [ ] **Rotate `SECRET_KEY` and fix the fallback — ships in the first PR, not deferred.**
       `settings.py:36` falls back to the committed `django-insecure-…` placeholder from commit
       `ade7f58`, and `backend/.env.example` documents the variable as `DJANGO_SECRET_KEY` while

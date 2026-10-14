@@ -15,6 +15,7 @@ class UserAdmin(BaseUserAdmin):
         ('Additional Info', {'fields': ('fullname',)}),
     )
     
+    # Email is required, so the "add user" form has to ask for it.
     add_fieldsets = BaseUserAdmin.add_fieldsets + (
-        ('Additional Info', {'fields': ('fullname',)}),
+        ('Additional Info', {'fields': ('email', 'fullname')}),
     )
