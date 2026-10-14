@@ -111,7 +111,13 @@ talked 10.0 through on 2026-10-14 and changed its shape: login accepts email **o
 `USERNAME_FIELD` stays `username`, one deploy. See "Log in with email or username" in
 `PROJECT_CONTEXT.md`.
 
-**10.0 is built on `feature/auth-backend` (2026-10-14), not yet merged or deployed.** Rehearsed
+**11.0 is built on `feature/auth-ui` (2026-10-14), not yet merged or deployed.** After deploy:
+signed out, `thebarcart.vercel.app` should show the login page; sign in there (no `/admin/`),
+check the account chip logs out, and check a share link still opens signed out. Then 9.0.
+
+**10.0 is live as of 2026-10-14 (PR #24)** — the user confirmed Railway booted and `/admin/`
+signs in by username and by email. What follows describes how it was built and rehearsed.
+**10.0 was built on `feature/auth-backend` (2026-10-14).** Rehearsed
 against `prod_1013_2152` in `mixology-pg18`: both migrations apply, the two production users
 keep their emails, and a forced case-only email clash stops at `0002` with nothing applied.
 Login and logout were exercised through the Vite proxy in a real browser. **Before merging:**
@@ -368,13 +374,13 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
   - [x] 10.6 Existing `accounts/tests.py` kept as is — they already pass emails
   - [x] 10.7 Tests for identity constraints, the backend, login, logout, session, CSRF rejection and the migration
 
-- [ ] 11.0 Authentication UI
-  - [ ] 11.1 `AuthContext` exposing current user, loading state, login and logout
-  - [ ] 11.2 Login page
-  - [ ] 11.3 Route guard redirecting anonymous users to login, with `/share/:shareToken` explicitly exempt — this is the original complaint: truncating a share URL must land on a login screen, not your data
-  - [ ] 11.4 Wire the 401 handler from 3.3 to the redirect
-  - [ ] 11.5 Account controls in the nav in `App.tsx`
-  - [ ] 11.6 Click through in a real browser: guard redirects, login succeeds, logout clears state, share route stays public. The automated versions of these are 9.6, since 9.0 now comes after
+- [x] 11.0 Authentication UI — built on `feature/auth-ui`, 2026-10-14
+  - [x] 11.1 `AuthContext`/`AuthProvider` in `src/auth/`: current user, loading state, login and logout
+  - [x] 11.2 Login page (`components/auth/LoginPage`): one "email or username" field and a password, with the home page's glass and greeting (the user picked this from three rendered options)
+  - [x] 11.3 `RequireAuth` guard around the whole app shell; `/share/:shareToken` sits outside the provider entirely, so guests trigger no session check
+  - [x] 11.4 The API now answers 401 when nobody is signed in (`accounts.authentication.SessionAuthentication`), and the 401 handler drops to the login page and back
+  - [x] 11.5 `AccountMenu` chip in the top bar: initial and username (initial only on phones), opening a menu with Log out (the user picked this over a plain link)
+  - [x] 11.6 Clicked through in headless Chrome: guard, wrong password, return to the requested page, reload, expiry, logout, share route public. Automated versions are 9.6
 
 - [ ] 9.0 Frontend test framework — moved after 11.0 on 2026-10-14 (see Sequencing); numbers kept
   - [ ] 9.1 Add Vitest, React Testing Library, `@testing-library/jest-dom` and `jsdom`
@@ -408,6 +414,7 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
   - [ ] 14.3 Change-password endpoint requiring the current password
   - [ ] 14.4 Personal Info page
   - [ ] 14.5 Tests including the wrong-current-password rejection
+  - [ ] 14.6 Consider letting the user pick one of the glass icons (`GlassIcon`) as their user icon, replacing the yellow circle and initial in the account chip (`AccountMenu`). The user's idea, 2026-10-14: "a fun twist". Raise it when starting 14.0
 
 - [ ] 15.0 Rate limiting (Tier 1)
   - [ ] 15.1 DRF `AnonRateThrottle` and `UserRateThrottle` in the `REST_FRAMEWORK` block

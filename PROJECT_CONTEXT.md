@@ -168,7 +168,7 @@ Note `cancelOrder` hard-deletes, so cancelled drinks leave no trace — there is
 
 ## Multi-user accounts — agreed decisions
 
-**Status: in progress** — 1.0–8.0 shipped as of 2026-10-13; order scoping is live as of 2026-10-14 (PR #23); next is 10.0–11.0 (login), moved ahead of 9.0 (frontend tests) on 2026-10-14 so a login screen exists before the 2026-10-31 party. Full task breakdown, and a
+**Status: in progress** — 1.0–8.0 shipped as of 2026-10-13; order scoping (PR #23) and 10.0 (PR #24) are live as of 2026-10-14 and 11.0 is built on `feature/auth-ui`; the login work was moved ahead of 9.0 (frontend tests) on 2026-10-14 so a login screen exists before the 2026-10-31 party. Full task breakdown, and a
 "Current state" block that is kept up to date, in `tasks/tasks-multi-user-accounts.md`.
 
 Motivation: the app was built single-user with no authentication at all. Sharing a menu link
@@ -262,10 +262,10 @@ place, list or cancel their own orders on it (`/api/public/menu/<token>/orders/`
 scoping, 2026-10-13) — so the `curl -X DELETE` exposure (closed 2026-10-12, task 2.5), the
 "truncate the share URL and browse the whole bar" exposure and the open `/api/orders/` are
 all gone. `/api/orders/` is now the owner's, so the Orders page needs a session like every
-other page. Only the active menu accepts orders. There is no login screen
-until task 11.0: sign in at `https://thebarcart.vercel.app/admin/`, which sets the session
-cookie the app then uses. Signed out, the app shows "Failed to load …" over empty-state copy,
-which looks like missing data and is not. Note production had **no user accounts at all**
+other page. Only the active menu accepts orders. Since 11.0 (built 2026-10-14) the app has
+its own login page: signed out, every route but `/share/…` redirects to `/login`, and the API
+answers 401 (not 403) when nobody is signed in so the frontend can tell that apart from a
+refusal. Before 11.0 the only way in was `https://thebarcart.vercel.app/admin/`. Note production had **no user accounts at all**
 until a superuser was created on 2026-10-12: `data.json` (since deleted) seeded only
 cocktails data.
 

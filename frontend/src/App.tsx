@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Routes, Route, NavLink, Link, useMatch } from 'react-router-dom';
+import { Routes, Route, NavLink, Link } from 'react-router-dom';
 import IngredientList from './components/IngredientList';
 import IngredientDetail from './components/IngredientDetail';
 import RecipeList from './components/RecipeList';
@@ -13,6 +13,10 @@ import MenuDetail from './components/menus/MenuDetail';
 import MenuStats from './components/menus/MenuStats';
 import PublicMenu from './components/menus/PublicMenu';
 import OrdersPage from './components/orders/OrdersPage';
+import LoginPage from './components/auth/LoginPage';
+import AccountMenu from './components/auth/AccountMenu';
+import AuthProvider from './auth/AuthProvider';
+import RequireAuth from './auth/RequireAuth';
 import { fetchOrders } from './services/cocktailsApi';
 import './App.css';
 
@@ -20,73 +24,82 @@ const RecipeDetailWrapper = () => <RecipeDetail />;
 const RecipeFormWrapper = () => <RecipeForm />;
 const IngredientDetailWrapper = () => <IngredientDetail />;
 
-function App() {
+/** The signed-in app: navigation around the pages. Only ever rendered for a signed-in user. */
+function AppShell() {
   const [hasPendingOrders, setHasPendingOrders] = useState(false);
 
-  // Guests on a shared menu have no session and no nav, so there is no badge to fill.
-  const onSharedMenu = useMatch('/share/:shareToken') !== null;
-
   useEffect(() => {
-    if (onSharedMenu) return;
     fetchOrders({ today: true, fulfilled: false })
       .then(orders => setHasPendingOrders(orders.length > 0))
       .catch(() => {});
-  }, [onSharedMenu]);
+  }, []);
 
   return (
+    <div className="app">
+      <nav className="app-nav">
+        <Link to="/" className="nav-wordmark">The Bar Cart</Link>
+        {hasPendingOrders && (
+          <NavLink to="/orders" className={({ isActive }) => `nav-orders${isActive ? ' active' : ''}`}>Orders</NavLink>
+        )}
+        <div className="nav-links">
+          <NavLink to="/recipes" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Recipes</NavLink>
+          <NavLink to="/ingredients" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Ingredients</NavLink>
+          <NavLink to="/categories" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Categories</NavLink>
+          <NavLink to="/menus" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Menus</NavLink>
+          <Link to="/recipes/new" className="nav-action">+ New Recipe</Link>
+        </div>
+        <AccountMenu />
+      </nav>
+
+      <main>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/recipes" element={<RecipeList />} />
+          <Route path="/recipes/new" element={<RecipeFormWrapper />} />
+          <Route path="/recipes/:id" element={<RecipeDetailWrapper />} />
+          <Route path="/recipes/:id/edit" element={<RecipeFormWrapper />} />
+          <Route path="/ingredients" element={<IngredientList />} />
+          <Route path="/ingredients/:id" element={<IngredientDetailWrapper />} />
+          <Route path="/categories" element={<CategoryList />} />
+          <Route path="/menus" element={<MenuList />} />
+          <Route path="/menus/new" element={<MenuForm />} />
+          <Route path="/menus/:id" element={<MenuDetail />} />
+          <Route path="/menus/:id/edit" element={<MenuForm />} />
+          <Route path="/menus/:id/stats" element={<MenuStats />} />
+          <Route path="/orders" element={<OrdersPage />} />
+        </Routes>
+      </main>
+
+      <nav className="bottom-nav">
+        <NavLink to="/recipes" className={({ isActive }) => `bottom-nav-item${isActive ? ' active' : ''}`}>Recipes</NavLink>
+        <NavLink to="/ingredients" className={({ isActive }) => `bottom-nav-item${isActive ? ' active' : ''}`}>Ingred.</NavLink>
+        <NavLink to="/categories" className={({ isActive }) => `bottom-nav-item${isActive ? ' active' : ''}`}>Categs.</NavLink>
+        <NavLink to="/menus" className={({ isActive }) => `bottom-nav-item${isActive ? ' active' : ''}`}>Menus</NavLink>
+        {hasPendingOrders && (
+          <NavLink to="/orders" className={({ isActive }) => `bottom-nav-item${isActive ? ' active' : ''}`}>Orders</NavLink>
+        )}
+        <Link to="/recipes/new" className="bottom-nav-item bottom-nav-new">+ New</Link>
+      </nav>
+    </div>
+  );
+}
+
+function App() {
+  return (
     <Routes>
-      {/* Public share route — no nav */}
+      {/* Public share route — no nav, no sign-in, and no session check */}
       <Route path="/share/:shareToken" element={<PublicMenu />} />
 
-      {/* Main app */}
+      {/* Everything else knows who is signed in */}
       <Route
         path="*"
         element={
-          <div className="app">
-            <nav className="app-nav">
-              <Link to="/" className="nav-wordmark">The Bar Cart</Link>
-              {hasPendingOrders && (
-                <NavLink to="/orders" className={({ isActive }) => `nav-orders${isActive ? ' active' : ''}`}>Orders</NavLink>
-              )}
-              <div className="nav-links">
-                <NavLink to="/recipes" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Recipes</NavLink>
-                <NavLink to="/ingredients" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Ingredients</NavLink>
-                <NavLink to="/categories" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Categories</NavLink>
-                <NavLink to="/menus" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Menus</NavLink>
-                <Link to="/recipes/new" className="nav-action">+ New Recipe</Link>
-              </div>
-            </nav>
-
-            <main>
-              <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/recipes" element={<RecipeList />} />
-                <Route path="/recipes/new" element={<RecipeFormWrapper />} />
-                <Route path="/recipes/:id" element={<RecipeDetailWrapper />} />
-                <Route path="/recipes/:id/edit" element={<RecipeFormWrapper />} />
-                <Route path="/ingredients" element={<IngredientList />} />
-                <Route path="/ingredients/:id" element={<IngredientDetailWrapper />} />
-                <Route path="/categories" element={<CategoryList />} />
-                <Route path="/menus" element={<MenuList />} />
-                <Route path="/menus/new" element={<MenuForm />} />
-                <Route path="/menus/:id" element={<MenuDetail />} />
-                <Route path="/menus/:id/edit" element={<MenuForm />} />
-                <Route path="/menus/:id/stats" element={<MenuStats />} />
-                <Route path="/orders" element={<OrdersPage />} />
-              </Routes>
-            </main>
-
-            <nav className="bottom-nav">
-              <NavLink to="/recipes" className={({ isActive }) => `bottom-nav-item${isActive ? ' active' : ''}`}>Recipes</NavLink>
-              <NavLink to="/ingredients" className={({ isActive }) => `bottom-nav-item${isActive ? ' active' : ''}`}>Ingred.</NavLink>
-              <NavLink to="/categories" className={({ isActive }) => `bottom-nav-item${isActive ? ' active' : ''}`}>Categs.</NavLink>
-              <NavLink to="/menus" className={({ isActive }) => `bottom-nav-item${isActive ? ' active' : ''}`}>Menus</NavLink>
-              {hasPendingOrders && (
-                <NavLink to="/orders" className={({ isActive }) => `bottom-nav-item${isActive ? ' active' : ''}`}>Orders</NavLink>
-              )}
-              <Link to="/recipes/new" className="bottom-nav-item bottom-nav-new">+ New</Link>
-            </nav>
-          </div>
+          <AuthProvider>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="*" element={<RequireAuth><AppShell /></RequireAuth>} />
+            </Routes>
+          </AuthProvider>
         }
       />
     </Routes>

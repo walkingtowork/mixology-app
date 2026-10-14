@@ -88,6 +88,13 @@ export interface Order {
   created_at: string;
 }
 
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  fullname: string;
+}
+
 export interface BuyListItem {
   id: number;
   ingredient: Ingredient;
