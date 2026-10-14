@@ -23,6 +23,16 @@ per-feature task breakdowns.
       installed: delete `backend/venv`, `python3.12 -m venv venv`,
       `pip install -r requirements.txt`, run the tests. Prioritised by the user 2026-10-13.
 
+- [ ] **Signing in after a log out should land on the home page.** It still returns to the
+      page you were on. Reported by the user in production on 2026-10-14, after PR #26
+      shipped a fix (`returnAfterLogin` in the auth context) that passed the tests and a
+      headless-Chrome check. The live bundle does contain the fix, so the cause is not a
+      stale deploy. Start by reproducing it in production with the exact steps the user
+      takes (which page, phone or desktop, any reload or back button), because the local
+      reproduction no longer fails. Low impact: the API is scoped, so a different person
+      signing in sees "not found" rather than someone else's data. The user placed it
+      after their other raised items and before any new feature.
+
 - [ ] **Menu theming — decoration selector** (deadline 2026-09-20)
       `top_decoration` / `bottom_decoration` on `Menu`, a thumbnail picker, a fall SVG set,
       and the menu edit UI it depends on.
