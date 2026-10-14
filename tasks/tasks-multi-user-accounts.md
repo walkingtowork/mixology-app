@@ -115,7 +115,13 @@ talked 10.0 through on 2026-10-14 and changed its shape: login accepts email **o
 site shows the login page; signing in there and logging out from the account chip work; a
 share link still opens signed out. The bar device no longer needs `/admin/`.
 
-**Next — 9.0 (frontend test framework), starting with the auth UI tests in 9.6.** Then 12.0.
+**9.0 is built on `feature/frontend-tests` (2026-10-14), not yet merged.** 34 frontend tests,
+run by CI. They caught a bug that was live from 11.0: after a deliberate log out, the next
+sign-in returned to the previous page instead of home, because React Router navigations are
+low-priority transitions and the guard's redirect won the race. The browser click-through in
+11.0 missed it by reloading between the two steps. Fixed with `returnAfterLogin` in the auth
+context. **CI still gates nothing** (see the deployment notes), so a red run does not block a
+merge. Then 12.0.
 
 **10.0 is live as of 2026-10-14 (PR #24)** — the user confirmed Railway booted and `/admin/`
 signs in by username and by email. What follows describes how it was built and rehearsed.
@@ -384,13 +390,13 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
   - [x] 11.5 `AccountMenu` chip in the top bar: initial and username (initial only on phones), opening a menu with Log out (the user picked this over a plain link)
   - [x] 11.6 Clicked through in headless Chrome: guard, wrong password, return to the requested page, reload, expiry, logout, share route public. Automated versions are 9.6
 
-- [ ] 9.0 Frontend test framework — moved after 11.0 on 2026-10-14 (see Sequencing); numbers kept
-  - [ ] 9.1 Add Vitest, React Testing Library, `@testing-library/jest-dom` and `jsdom`
-  - [ ] 9.2 Add `vitest.config.ts` and `src/test/setup.ts`
-  - [ ] 9.3 Add a `test` script and wire it into the CI workflow from 2.0
-  - [ ] 9.4 Write one component test and one routing test to prove the setup
-  - [ ] 9.5 Establish and write down the mocking convention for `cocktailsApi`
-  - [ ] 9.6 Write the auth UI tests deferred from 11.6
+- [x] 9.0 Frontend test framework — built on `feature/frontend-tests`, 2026-10-14 (moved after 11.0; numbers kept)
+  - [x] 9.1 Vitest, React Testing Library, `@testing-library/jest-dom`, `user-event` and `jsdom`
+  - [x] 9.2 `vitest.config.ts` (extends `vite.config.ts`) and `src/test/setup.ts`
+  - [x] 9.3 `npm test` script, run in the CI frontend job
+  - [x] 9.4 A component test (`StatCard`) and routing tests (`App.test.tsx`)
+  - [x] 9.5 Mocking convention written in `src/test/render.tsx` and summarised in `CLAUDE.md`: mock `services/cocktailsApi`, never `fetch`
+  - [x] 9.6 Auth UI tests deferred from 11.6, plus `PublicMenu` (ordering, inactive menu, rename) and the request helper (CSRF, 401)
 
 - [ ] 12.0 Invites
   - [ ] 12.1 `Invite` model — token, email, created/used timestamps, issuing user, expiry

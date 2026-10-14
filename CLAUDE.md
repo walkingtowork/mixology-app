@@ -9,6 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm run dev       # Start Vite dev server (http://localhost:5173)
 npm run build     # TypeScript check + production build
 npm run lint      # ESLint
+npm test          # Vitest, once (npm run test:watch to re-run on change)
 ```
 
 ### Backend (run from `backend/` with venv activated)
@@ -50,6 +51,12 @@ When a category is created, a generic ingredient is auto-created for it (e.g., c
 - The `RecipeForm` component handles both create and edit via the same route wrapper
 - Inline styles are used throughout `App.tsx` nav; component-level CSS is minimal
 - API calls are same-origin by default (`VITE_API_BASE_URL` defaults to empty); set it only to bypass the proxy and call a backend directly
+
+### Frontend tests
+- Vitest + React Testing Library, in `*.test.ts(x)` files next to the code they cover
+- Components never call `fetch`; they go through `services/cocktailsApi`. So a component test mocks that one module (`vi.mock('…/services/cocktailsApi')`) and gives each call it makes a return value. Only `cocktailsApi.test.ts` stubs `fetch`
+- `src/test/render.tsx` has `renderAt(route, ui)` and the full convention; `src/test/fixtures.ts` has shared sample data
+- Test globals are off: import `describe`, `it`, `expect`, `vi` from `vitest`
 
 ## Project Context
 

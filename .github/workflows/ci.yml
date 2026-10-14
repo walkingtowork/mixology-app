@@ -84,6 +84,9 @@ jobs:
         # `npm run build` is `tsc -b && vite build`, so this is the type check too.
         run: npm run build
 
+      - name: Tests
+        run: npm test
+
       - name: Lint against baseline
         # eslint exits 1 whenever problems exist, and this repo has 8 standing ones, so a
         # bare `eslint .` could never gate anything. Exit 2 means eslint itself failed to
