@@ -107,7 +107,9 @@ checks, UI and raw requests). The user confirmed both production checks on 2026-
 signed-out phone can order from the active menu's link, and the Orders page works signed in.
 
 **Next — 10.0 and 11.0 (login), then 9.0** (reordered 2026-10-14, see Sequencing). The user
-wants to talk 10.0 through before any code is written.
+talked 10.0 through on 2026-10-14 and changed its shape: login accepts email **or** username,
+`USERNAME_FIELD` stays `username`, one deploy. See "Log in with email or username" in
+`PROJECT_CONTEXT.md`; subtasks 10.1–10.3 and 10.6 below predate that and need trimming to match.
 
 **Loose ends from 8.0:**
 - **No anonymous write was re-tested against production after the 8.0 deploy.** Claude's

@@ -188,8 +188,17 @@ record without a browser. Decided in conversation on 2026-09-21:
 - **`SameSite=Lax`** (Django's default) set *explicitly* in settings, so it reads as a
   decision and won't move under a future Django upgrade. It is defence in depth, not a
   replacement for CSRF tokens — keep `CsrfViewMiddleware` and DRF's CSRF enforcement.
-- **Email is the login identifier**, not username. Friends expect it, and it matches the
-  "change the email you signed up with" requirement.
+- **Log in with email or username** (revised 2026-10-14; originally "email, not username").
+  One "email or username" field plus password. Every account has both: new users choose a
+  username and give an email at signup, and can sign in with either. Email is unique and
+  required, compared ignoring case. Django's `USERNAME_FIELD` stays `username`, which keeps
+  the admin, `createsuperuser` and the existing account tests as they are — the reason for
+  the revision, along with `walkingtowork`/`admin` continuing to work unchanged.
+- **Two-week sessions for now** (Django's default); revisiting is in `backlog.md`.
+- **10.0 ships as one deploy** (2026-10-14): nobody is using the app in between, and the
+  migration is only the email constraint. Precautions: the two production accounts have
+  distinct emails (user confirmed), rehearse against a restored production dump, and take a
+  fresh dump right before merging.
 - **Invite-only signup.** No public registration form to find and farm.
 - **New accounts start completely empty.** Every category, ingredient, recipe and menu belongs
   to exactly one user; nothing is shared or seeded. A starter-ingredient wizard is deliberately
