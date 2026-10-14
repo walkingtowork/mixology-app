@@ -126,8 +126,8 @@ notes), so a red run does not block a merge.
 besides admin-made invites, the host can show a QR invite from the account menu. Decisions
 are under "Invites" in `PROJECT_CONTEXT.md`. The user granted `walkingtowork` "Can add
 invite" in Django admin and opened the invite QR in production; a forged token answers 404
-from outside. A full scan-and-signup in production had not been reported when this was
-written. Any other account that should invite needs the same permission.
+from outside. The user then signed up on a second phone in production and confirmed the
+whole flow works. Any other account that should invite needs the same permission.
 
 **Next: 13.0 (password reset).**
 
