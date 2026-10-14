@@ -4,10 +4,12 @@ import { useAuth } from './AuthContext';
 
 /** Renders its children only for a signed-in user; anyone else goes to the login page. */
 export default function RequireAuth({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, loading, returnAfterLogin } = useAuth();
   const location = useLocation();
 
   if (loading) return <LoadingSpinner />;
-  if (!user) return <Navigate to="/login" replace state={{ from: location }} />;
+  if (!user) {
+    return <Navigate to="/login" replace state={returnAfterLogin ? { from: location } : null} />;
+  }
   return children;
 }

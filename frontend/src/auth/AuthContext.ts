@@ -6,6 +6,12 @@ export interface AuthState {
   user: User | null;
   /** True until the first "who am I" answer arrives. */
   loading: boolean;
+  /**
+   * Whether the login page should send the next person back to the page they were on.
+   * True when a guard or an expired session sent them there; false after a deliberate
+   * log out, which should not hand the next user the previous one's last screen.
+   */
+  returnAfterLogin: boolean;
   /** Rejects with a message fit to show the person signing in. */
   login: (identifier: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
