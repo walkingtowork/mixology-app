@@ -14,9 +14,9 @@ import MenuStats from './components/menus/MenuStats';
 import PublicMenu from './components/menus/PublicMenu';
 import OrdersPage from './components/orders/OrdersPage';
 import LoginPage from './components/auth/LoginPage';
+import AccountMenu from './components/auth/AccountMenu';
 import AuthProvider from './auth/AuthProvider';
 import RequireAuth from './auth/RequireAuth';
-import { useAuth } from './auth/AuthContext';
 import { fetchOrders } from './services/cocktailsApi';
 import './App.css';
 
@@ -26,7 +26,6 @@ const IngredientDetailWrapper = () => <IngredientDetail />;
 
 /** The signed-in app: navigation around the pages. Only ever rendered for a signed-in user. */
 function AppShell() {
-  const { user, logout } = useAuth();
   const [hasPendingOrders, setHasPendingOrders] = useState(false);
 
   useEffect(() => {
@@ -49,9 +48,7 @@ function AppShell() {
           <NavLink to="/menus" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>Menus</NavLink>
           <Link to="/recipes/new" className="nav-action">+ New Recipe</Link>
         </div>
-        <button className="nav-logout" onClick={logout} title={`Signed in as ${user?.username}`}>
-          Log out
-        </button>
+        <AccountMenu />
       </nav>
 
       <main>

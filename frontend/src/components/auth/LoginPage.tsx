@@ -35,8 +35,19 @@ export default function LoginPage() {
 
   return (
     <div className="login-page">
-      <form className="login-card" onSubmit={handleSubmit}>
-        <h1 className="login-wordmark">The Bar Cart</h1>
+      <form className="login-form" onSubmit={handleSubmit}>
+        {/* The same glass and greeting as the home page: this is its front door. */}
+        <div className="login-glass" aria-hidden="true">
+          <div className="martini-glass">
+            <div className="glass" />
+            <div className="glass-left-edge" />
+            <div className="glass-right-edge" />
+            <div className="stem" />
+            <div className="base" />
+          </div>
+        </div>
+        <h1 className="login-title">What are we making tonight?</h1>
+        <p className="login-subtitle">Sign in to The Bar Cart</p>
         <FormField label="Email or username" htmlFor="login-identifier">
           <input
             id="login-identifier"
