@@ -13,6 +13,7 @@ import MenuDetail from './components/menus/MenuDetail';
 import MenuStats from './components/menus/MenuStats';
 import PublicMenu from './components/menus/PublicMenu';
 import OrdersPage from './components/orders/OrdersPage';
+import SignupPage from './components/auth/SignupPage';
 import LoginPage from './components/auth/LoginPage';
 import AccountMenu from './components/auth/AccountMenu';
 import AuthProvider from './auth/AuthProvider';
@@ -97,6 +98,7 @@ function App() {
           <AuthProvider>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/invite/:token" element={<SignupPage />} />
               <Route path="*" element={<RequireAuth><AppShell /></RequireAuth>} />
             </Routes>
           </AuthProvider>

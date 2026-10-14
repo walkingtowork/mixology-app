@@ -5,6 +5,7 @@ export const user: User = {
   username: 'walkingtowork',
   email: 'host@example.com',
   fullname: '',
+  can_invite: false,
 };
 
 export const negroni: Recipe = {

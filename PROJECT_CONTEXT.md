@@ -213,9 +213,20 @@ record without a browser. Decided in conversation on 2026-09-21:
   needs email. Build the real flow, point `EMAIL_BACKEND` at the console backend, and add an
   admin action that prints a copyable reset link. Switching to Gmail SMTP later is four env
   vars and zero code. The trap to avoid is not building the flow and retrofitting it.
-- **Invites are delivered by hand too** — generate a link in Django admin, text it over.
-  With invite-only signup the invite *is* the email verification, so that's one fewer
-  dependency.
+- **Invites are delivered by hand too** — generate a link in Django admin, text it over,
+  or (added 2026-10-14) show a QR code from "Invite someone" in the account menu.
+  - **Invites are not tied to an email** (decided 2026-10-14). A QR invite can't know the
+    address in advance, and a texted link verifies nothing about the email typed. So
+    **signup emails are unverified**. That matters once password reset sends real email,
+    and belongs on the public-launch list.
+  - **Single-use.** QR invites last 24 hours; admin invites default to 7 days.
+  - **Only accounts with "Can add invite"** (a Django permission, granted in admin) can make
+    invites from the app, so people who sign up can't invite others.
+  - **Public signup was considered and deferred.** It would be a database switch in admin,
+    and turning it on is the "going public" step: it waits for rate limiting (15.0) and the
+    Django upgrade at least.
+  - **Links use `SITE_URL`**, not the request's host, because admin is reached through the
+    Vercel proxy.
 - **Rate limiting at "Tier 1" only**: DRF throttling plus `django-axes`. No Redis, no Vercel
   shared-secret gate. Note DRF throttling is inaccurate under `gunicorn --workers 3` (each
   worker counts separately), but `django-axes` is DB-backed and therefore accurate across

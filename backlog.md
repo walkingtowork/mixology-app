@@ -162,6 +162,14 @@ accurate throttling and any Vercel shared-secret gate are deferred until there i
       counter, so any rate limit is effectively 3x looser and resets on restart. Accurate
       throttling needs Redis.
 
+- [ ] **Signup emails are unverified** (since 12.0, 2026-10-14). Invites are not tied to an
+      email, so anyone with an invite can sign up with any address. Fine while you hand out
+      every invite in person; before public signup, or before password reset sends real
+      email, verify the address.
+- [ ] **Skipped QR invites stay valid.** "New code" leaves the previous code usable for the
+      rest of its 24 hours, so someone who photographed it could still sign up. Delete it in
+      admin if that matters, or have "New code" revoke the old one.
+
 ## Testing
 
 The backend has 59 tests in `backend/cocktails/tests.py`, but they stop at ingredients,

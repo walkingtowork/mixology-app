@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react';
-import type { User } from '../types/cocktails';
+import type { SignupDetails, User } from '../types/cocktails';
 
 export interface AuthState {
   /** The signed-in user, or null. Meaningless while `loading` is true. */
@@ -15,6 +15,8 @@ export interface AuthState {
   /** Rejects with a message fit to show the person signing in. */
   login: (identifier: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  /** Uses an invite to create an account and sign it in. Rejects with a message to show. */
+  signup: (token: string, details: SignupDetails) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthState | null>(null);

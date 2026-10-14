@@ -1,11 +1,18 @@
+from datetime import timedelta
+
+from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth.models import Permission
 from django.core.exceptions import ValidationError
 from django.core.management import call_command
 from django.db import IntegrityError, connection, transaction
 from django.db.migrations.executor import MigrationExecutor
 from django.test import TestCase, TransactionTestCase, override_settings
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
+
+from .models import Invite
 
 User = get_user_model()
 
@@ -232,6 +239,7 @@ class AuthAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['user'], {
             'id': self.user.id, 'username': 'Alex', 'email': 'alex@example.com', 'fullname': 'Alex Lin',
+            'can_invite': False,
         })
         self.assertEqual(self.client.get('/api/auth/session/').data['user']['username'], 'Alex')
 
@@ -413,3 +421,187 @@ class PrepareUserIdentitiesMigrationTests(TransactionTestCase):
         self.OldUser.objects.create(username='sam', email='two@example.com')
         with self.assertRaisesMessage(RuntimeError, 'same username once case is ignored: sam'):
             self.migrate()
+
+
+@fast_passwords
+class InviteTests(APITestCase):
+    """Invites are the only way to sign up, and each one works once, before it expires."""
+
+    def setUp(self):
+        self.host = User.objects.create_user(username='host', email='host@example.com', password='host-pass-123')
+        self.host.user_permissions.add(Permission.objects.get(codename='add_invite'))
+        self.friend = User.objects.create_user(username='friend', email='friend@example.com', password='friend-pass-123')
+
+    def make_invite(self, **kwargs):
+        kwargs.setdefault('expires_at', timezone.now() + timedelta(hours=1))
+        return Invite.objects.create(created_by=self.host, **kwargs)
+
+    def signup_body(self, **overrides):
+        return {'username': 'newbie', 'email': 'newbie@example.com', 'password': 'a-fine-password', **overrides}
+
+    def signup(self, invite, **overrides):
+        return self.client.post(f'/api/auth/signup/{invite.token}/', self.signup_body(**overrides), format='json')
+
+    # Making invites
+
+    def test_session_says_who_can_invite(self):
+        self.client.login(username='host', password='host-pass-123')
+        self.assertTrue(self.client.get('/api/auth/session/').data['user']['can_invite'])
+        self.client.login(username='friend', password='friend-pass-123')
+        self.assertFalse(self.client.get('/api/auth/session/').data['user']['can_invite'])
+
+    def test_permitted_user_gets_a_24_hour_single_use_link(self):
+        self.client.force_authenticate(self.host)
+        response = self.client.post('/api/auth/invites/')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        invite = Invite.objects.get(pk=response.data['id'])
+        self.assertEqual(invite.created_by, self.host)
+        self.assertEqual(response.data['url'], f'{settings.SITE_URL}/invite/{invite.token}')
+        self.assertAlmostEqual(invite.expires_at, timezone.now() + timedelta(hours=24), delta=timedelta(minutes=1))
+        self.assertIsNone(response.data['used_by'])
+
+    def test_users_without_the_permission_cannot_invite(self):
+        self.client.force_authenticate(self.friend)
+        self.assertEqual(self.client.post('/api/auth/invites/').status_code, status.HTTP_403_FORBIDDEN)
+        self.assertFalse(Invite.objects.exists())
+
+    def test_signed_out_cannot_invite(self):
+        self.assertEqual(self.client.post('/api/auth/invites/').status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_invite_status_shows_who_joined(self):
+        invite = self.make_invite()
+        self.client.force_authenticate(self.host)
+        self.assertIsNone(self.client.get(f'/api/auth/invites/{invite.pk}/').data['used_by'])
+        self.client.force_authenticate(None)
+        self.signup(invite)
+        self.client.force_authenticate(self.host)
+        self.assertEqual(self.client.get(f'/api/auth/invites/{invite.pk}/').data['used_by'], 'newbie')
+
+    def test_cannot_see_someone_elses_invite(self):
+        other = User.objects.create_user(username='other', email='other@example.com', password='x-pass-123')
+        other.user_permissions.add(Permission.objects.get(codename='add_invite'))
+        invite = self.make_invite()
+        self.client.force_authenticate(other)
+        self.assertEqual(self.client.get(f'/api/auth/invites/{invite.pk}/').status_code, status.HTTP_404_NOT_FOUND)
+
+    # Checking and using invites
+
+    def test_checking_a_good_invite(self):
+        response = self.client.get(f'/api/auth/signup/{self.make_invite().token}/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('csrftoken', response.cookies)
+
+    def test_signup_creates_an_empty_account_and_signs_in(self):
+        invite = self.make_invite()
+        response = self.signup(invite)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        user = User.objects.get(username='newbie')
+        self.assertEqual(user.email, 'newbie@example.com')
+        self.assertFalse(user.is_staff)
+        self.assertFalse(user.has_perm('accounts.add_invite'))
+        self.assertEqual(response.data['user']['username'], 'newbie')
+        self.assertEqual(self.client.get('/api/auth/session/').data['user']['username'], 'newbie')
+        self.assertEqual(self.client.get('/api/recipes/').data, [])
+        invite.refresh_from_db()
+        self.assertEqual(invite.used_by, user)
+        self.assertIsNotNone(invite.used_at)
+
+    def test_used_invite_is_refused(self):
+        invite = self.make_invite()
+        self.signup(invite)
+        self.client.logout()
+        for response in (
+            self.client.get(f'/api/auth/signup/{invite.token}/'),
+            self.signup(invite, username='second', email='second@example.com'),
+        ):
+            self.assertEqual(response.status_code, status.HTTP_410_GONE)
+            self.assertEqual(response.data['detail'], 'This invite has already been used.')
+        self.assertFalse(User.objects.filter(username='second').exists())
+
+    def test_expired_invite_is_refused(self):
+        invite = self.make_invite(expires_at=timezone.now() - timedelta(seconds=1))
+        self.assertEqual(self.client.get(f'/api/auth/signup/{invite.token}/').status_code, status.HTTP_410_GONE)
+        response = self.signup(invite)
+        self.assertEqual(response.status_code, status.HTTP_410_GONE)
+        self.assertEqual(response.data['detail'], 'This invite has expired.')
+        self.assertFalse(User.objects.filter(username='newbie').exists())
+
+    def test_forged_or_missing_token_is_refused(self):
+        self.make_invite()
+        self.assertEqual(self.client.get('/api/auth/signup/not-a-real-token/').status_code, status.HTTP_404_NOT_FOUND)
+        response = self.client.post('/api/auth/signup/not-a-real-token/', self.signup_body(), format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(self.client.post('/api/auth/signup/', self.signup_body(), format='json').status_code, 404)
+        self.assertFalse(User.objects.filter(username='newbie').exists())
+
+    def test_usernames_and_emails_are_taken_ignoring_case(self):
+        invite = self.make_invite()
+        response = self.signup(invite, username='FRIEND')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('username', response.data)
+        response = self.signup(invite, email='Friend@Example.com')
+        self.assertIn('email', response.data)
+        invite.refresh_from_db()
+        self.assertIsNone(invite.used_at, 'a failed signup must not use up the invite')
+
+    def test_username_must_be_letters_and_numbers(self):
+        response = self.signup(self.make_invite(), username='new.bie')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('username', response.data)
+
+    def test_weak_passwords_are_refused(self):
+        invite = self.make_invite()
+        for password in ('short1', '12345678901', 'password123', 'newbie12345'):
+            response = self.signup(invite, password=password)
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, password)
+            self.assertIn('password', response.data)
+
+    def test_signup_requires_a_csrf_token(self):
+        client = APIClient(enforce_csrf_checks=True)
+        invite = self.make_invite()
+        client.get(f'/api/auth/signup/{invite.token}/', secure=True)
+        response = client.post(
+            f'/api/auth/signup/{invite.token}/', self.signup_body(), format='json', secure=True,
+            HTTP_ORIGIN='https://thebarcart.vercel.app',
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        response = client.post(
+            f'/api/auth/signup/{invite.token}/', self.signup_body(), format='json', secure=True,
+            HTTP_ORIGIN='https://thebarcart.vercel.app', HTTP_X_CSRFTOKEN=client.cookies['csrftoken'].value,
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_admin_invite_shows_its_link_and_defaults_to_seven_days(self):
+        admin_user = User.objects.create_superuser(username='boss', email='boss@example.com', password='boss-pass-123')
+        self.client.force_login(admin_user)
+        page = self.client.get('/admin/accounts/invite/add/')
+        self.assertContains(page, (timezone.localtime() + timedelta(days=7)).strftime('%Y-%m-%d'))
+        invite = self.make_invite(note='Sam')
+        self.assertContains(self.client.get(f'/admin/accounts/invite/{invite.pk}/change/'), invite.url)
+
+
+class InviteRaceTests(TransactionTestCase):
+    """Two people submitting the same link at once: exactly one account is created."""
+
+    def test_an_invite_cannot_be_used_twice_concurrently(self):
+        if connection.vendor == 'sqlite':
+            self.skipTest('SQLite has no row locks; run against Postgres to exercise this')
+        import threading
+        invite = Invite.objects.create(expires_at=timezone.now() + timedelta(hours=1))
+        results = []
+
+        def attempt(n):
+            client = APIClient()
+            response = client.post(f'/api/auth/signup/{invite.token}/', {
+                'username': f'racer{n}', 'email': f'racer{n}@example.com', 'password': 'a-fine-password',
+            }, format='json')
+            results.append(response.status_code)
+            connection.close()
+
+        threads = [threading.Thread(target=attempt, args=(n,)) for n in range(2)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+        self.assertEqual(sorted(results), [201, 410])
+        self.assertEqual(User.objects.filter(username__startswith='racer').count(), 1)

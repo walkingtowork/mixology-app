@@ -1,4 +1,4 @@
-import type { Ingredient, Recipe, IngredientCategory, Menu, BuyListItem, StockLevel, Order, DecorationKey, MenuStats, User } from '../types/cocktails';
+import type { Ingredient, Recipe, IngredientCategory, Menu, BuyListItem, StockLevel, Order, DecorationKey, MenuStats, User, Invite, SignupDetails } from '../types/cocktails';
 
 // Empty by default: every path below already starts with /api, which the Vercel rewrite
 // (and the Vite dev proxy) forwards to Django, so the app is same-origin with no
@@ -588,5 +588,44 @@ export async function logout(): Promise<void> {
   return request<void>('/api/auth/logout/', {
     method: 'POST',
     error: () => 'Failed to sign out',
+  });
+}
+
+// ── Invites ────────────────────────────────────────────────────────────────
+
+/** Resolves if the invite can be used; otherwise rejects saying why (used, expired, unknown). */
+export async function checkInvite(token: string): Promise<void> {
+  await request<{ valid: true }>(`/api/auth/signup/${encodeURIComponent(token)}/`, {
+    error: (_res, body) => body.detail ?? 'Could not check this invite. Reload the page and try again.',
+  });
+}
+
+/** Creates the account, signs it in, and resolves to the new user. */
+export async function signup(token: string, details: SignupDetails): Promise<User> {
+  const { user } = await request<{ user: User }>(`/api/auth/signup/${encodeURIComponent(token)}/`, {
+    method: 'POST',
+    body: details,
+    error: (res, body) => {
+      if (body.detail) return body.detail;
+      // A 400 lists problems per field; every message names what it is about.
+      const fields = body as Record<string, string[] | undefined>;
+      const messages = ['username', 'email', 'password'].flatMap(f => fields[f] ?? []);
+      return (res.status === 400 && messages.join(' ')) || 'Could not create your account. Reload the page and try again.';
+    },
+  });
+  return user;
+}
+
+/** A fresh single-use invite, for showing as a QR code. */
+export async function createInvite(): Promise<Invite> {
+  return request<Invite>('/api/auth/invites/', {
+    method: 'POST',
+    error: () => 'Could not make an invite',
+  });
+}
+
+export async function fetchInvite(id: number): Promise<Invite> {
+  return request<Invite>(`/api/auth/invites/${id}/`, {
+    error: () => 'Could not check the invite',
   });
 }
