@@ -2187,8 +2187,8 @@ class OwnerBackfillMigrationTests(TransactionTestCase):
 
     def test_existing_rows_go_to_the_original_user_not_the_superuser(self):
         User = self.old_apps.get_model('accounts', 'User')
-        User.objects.create(username='admin', is_superuser=True, is_staff=True)
-        owner = User.objects.create(username='walkingtowork')
+        User.objects.create(username='admin', email='admin@example.com', is_superuser=True, is_staff=True)
+        owner = User.objects.create(username='walkingtowork', email='walkingtowork@example.com')
         self.create_unowned_rows()
 
         new_apps = self.run_backfill()
@@ -2201,8 +2201,8 @@ class OwnerBackfillMigrationTests(TransactionTestCase):
 
     def test_rows_that_already_have_an_owner_are_left_alone(self):
         User = self.old_apps.get_model('accounts', 'User')
-        User.objects.create(username='walkingtowork')
-        friend = User.objects.create(username='friend')
+        User.objects.create(username='walkingtowork', email='walkingtowork@example.com')
+        friend = User.objects.create(username='friend', email='friend@example.com')
         self.old_apps.get_model('cocktails', 'Recipe').objects.create(name='Negroni', owner=friend)
 
         new_apps = self.run_backfill()

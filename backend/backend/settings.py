@@ -65,6 +65,9 @@ INSTALLED_APPS = [
 # Custom User Model
 AUTH_USER_MODEL = 'accounts.User'
 
+# The only way to sign in, for the app and the Django admin alike: email or username.
+AUTHENTICATION_BACKENDS = ['accounts.backends.EmailOrUsernameBackend']
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',

@@ -190,8 +190,9 @@ record without a browser. Decided in conversation on 2026-09-21:
   replacement for CSRF tokens — keep `CsrfViewMiddleware` and DRF's CSRF enforcement.
 - **Log in with email or username** (revised 2026-10-14; originally "email, not username").
   One "email or username" field plus password. Every account has both: new users choose a
-  username and give an email at signup, and can sign in with either. Email is unique and
-  required, compared ignoring case. Django's `USERNAME_FIELD` stays `username`, which keeps
+  username and give an email at signup, and can sign in with either. Both are unique
+  ignoring case; email is required; usernames are letters and numbers only, so a typed
+  value containing `@` is always an email. Django's `USERNAME_FIELD` stays `username`, which keeps
   the admin, `createsuperuser` and the existing account tests as they are — the reason for
   the revision, along with `walkingtowork`/`admin` continuing to work unchanged.
 - **Two-week sessions for now** (Django's default); revisiting is in `backlog.md`.

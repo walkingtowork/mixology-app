@@ -109,7 +109,20 @@ signed-out phone can order from the active menu's link, and the Orders page work
 **Next — 10.0 and 11.0 (login), then 9.0** (reordered 2026-10-14, see Sequencing). The user
 talked 10.0 through on 2026-10-14 and changed its shape: login accepts email **or** username,
 `USERNAME_FIELD` stays `username`, one deploy. See "Log in with email or username" in
-`PROJECT_CONTEXT.md`; subtasks 10.1–10.3 and 10.6 below predate that and need trimming to match.
+`PROJECT_CONTEXT.md`.
+
+**10.0 is built on `feature/auth-backend` (2026-10-14), not yet merged or deployed.** Rehearsed
+against `prod_1013_2152` in `mixology-pg18`: both migrations apply, the two production users
+keep their emails, and a forced case-only email clash stops at `0002` with nothing applied.
+Login and logout were exercised through the Vite proxy in a real browser. **Before merging:**
+the user takes a fresh production dump. **After deploy:** confirm Railway booted, and that
+`/admin/` still signs in as `walkingtowork` and also accepts the email. Nothing in the
+frontend uses the new endpoints until 11.0.
+- The frontend must re-read the `csrftoken` cookie after login: Django rotates it. The
+  `request` helper already reads it per call.
+- Usernames are ASCII letters and digits only (the user's call). The rule is enforced by
+  validation, not the database, so a legacy username with a symbol still works unless it
+  contains `@`, which would be read as an email.
 
 **Loose ends from 8.0:**
 - **No anonymous write was re-tested against production after the 8.0 deploy.** Claude's
@@ -346,14 +359,14 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
   - [x] 8.12 Show `owner` in Django admin for every model, with a filter by user — `OwnedAdmin` base class; the owner is required in admin forms even while the column is nullable
   - [x] 8.13 Rehearse against the restored dump, then deploy — rehearsed against the 21:52 dump, deployed and confirmed live 2026-10-13 (see Current state)
 
-- [ ] 10.0 Authentication backend
-  - [ ] 10.1 Make `email` unique and required on `accounts.User`; set `USERNAME_FIELD = 'email'` and adjust `REQUIRED_FIELDS`
-  - [ ] 10.2 Data migration guaranteeing existing users have unique, non-empty emails before the constraint lands
-  - [ ] 10.3 Update `UserAdmin` in `accounts/admin.py`, whose fieldsets and `ordering` currently assume username
-  - [ ] 10.4 Login, logout and "who am I" session endpoints
-  - [ ] 10.5 Verify CSRF is enforced on unsafe methods and that DRF's `SessionAuthentication` is doing it
-  - [ ] 10.6 Update the 10 existing tests in `accounts/tests.py`, which all construct users by username
-  - [ ] 10.7 Tests for login, logout, session and CSRF rejection
+- [x] 10.0 Authentication backend — built on `feature/auth-backend`, 2026-10-14; reshaped that day (email **or** username, see Sequencing and `PROJECT_CONTEXT.md`)
+  - [x] 10.1 Email required and unique ignoring case; username unique ignoring case and letters-and-numbers only. `USERNAME_FIELD` stays `username`
+  - [x] 10.2 Data migration `accounts.0002` ahead of the constraints in `0003`: blank emails get `<username>@placeholder.invalid`, case-insensitive clashes stop the migration with an explanation
+  - [x] 10.3 `EmailOrUsernameBackend` as the only authentication backend (so `/admin/` accepts either too); the admin "add user" form asks for email
+  - [x] 10.4 `GET /api/auth/session/`, `POST /api/auth/login/` (`identifier`, `password`), `POST /api/auth/logout/`
+  - [x] 10.5 CSRF enforced on login explicitly (`csrf_protect`; DRF only checks it once a session exists) and on logout by `SessionAuthentication`. The session endpoint sets the `csrftoken` cookie
+  - [x] 10.6 Existing `accounts/tests.py` kept as is — they already pass emails
+  - [x] 10.7 Tests for identity constraints, the backend, login, logout, session, CSRF rejection and the migration
 
 - [ ] 11.0 Authentication UI
   - [ ] 11.1 `AuthContext` exposing current user, loading state, login and logout
