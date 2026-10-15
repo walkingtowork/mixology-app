@@ -189,6 +189,26 @@ SITE_URL = os.getenv(
     'SITE_URL', 'http://localhost:5173' if DEBUG else 'https://thebarcart.vercel.app',
 ).rstrip('/')
 
+# Email. The console backend writes each message to the log (Railway's deploy logs) instead
+# of sending it, so password reset links are handed over by hand for now: copied from the log,
+# or made with the "Make a password reset link" action in admin. Switching to Gmail SMTP is
+# four env vars and no code:
+#   EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+#   EMAIL_HOST_USER=<the Gmail address>
+#   EMAIL_HOST_PASSWORD=<a Google app password, not the account password>
+#   DEFAULT_FROM_EMAIL=The Bar Cart <the Gmail address>
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'The Bar Cart <noreply@thebarcart.vercel.app>')
+
+# How long a password reset link works. Django's default, stated so it reads as a decision:
+# a link texted by hand may sit unread for a day or two. Using it, or signing in, ends it early.
+PASSWORD_RESET_TIMEOUT = 60 * 60 * 24 * 3
+
 # SESSION_COOKIE_DOMAIN is deliberately unset. A host-only cookie set through the proxy
 # belongs to the Vercel origin; pinning it to the Railway host would make the browser
 # reject it outright.

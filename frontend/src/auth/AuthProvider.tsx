@@ -42,9 +42,14 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     setReturnAfterLogin(true);
   }, []);
 
+  const resetPassword = useCallback(async (uid: string, token: string, password: string) => {
+    setUser(await api.resetPassword(uid, token, password));
+    setReturnAfterLogin(true);
+  }, []);
+
   const value = useMemo(
-    () => ({ user, loading, returnAfterLogin, login, logout, signup }),
-    [user, loading, returnAfterLogin, login, logout, signup],
+    () => ({ user, loading, returnAfterLogin, login, logout, signup, resetPassword }),
+    [user, loading, returnAfterLogin, login, logout, signup, resetPassword],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

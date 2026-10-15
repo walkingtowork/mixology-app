@@ -5,6 +5,8 @@ import { checkInvite } from '../../services/cocktailsApi';
 import Button from '../ui/Button';
 import FormField from '../ui/FormField';
 import LoadingSpinner from '../ui/LoadingSpinner';
+import AuthHeader from './AuthHeader';
+import NewPasswordFields from './NewPasswordFields';
 import './LoginPage.css';
 
 const USERNAME_PATTERN = /^[A-Za-z0-9]+$/;
@@ -18,7 +20,6 @@ export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [joined, setJoined] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,20 +33,7 @@ export default function SignupPage() {
   if (joined) return <Navigate to="/" replace />;
   if (loading || invite === 'checking') return <LoadingSpinner />;
 
-  const header = (
-    <>
-      <div className="login-glass" aria-hidden="true">
-        <div className="martini-glass">
-          <div className="glass" />
-          <div className="glass-left-edge" />
-          <div className="glass-right-edge" />
-          <div className="stem" />
-          <div className="base" />
-        </div>
-      </div>
-      <h1 className="login-title">Welcome to The Bar Cart</h1>
-    </>
-  );
+  const header = <AuthHeader title="Welcome to The Bar Cart" />;
 
   // Signing up here would replace the current session, and use up the invite for nothing.
   if (user) {
@@ -76,7 +64,6 @@ export default function SignupPage() {
 
   const usernameProblem = username && !USERNAME_PATTERN.test(username)
     ? 'Letters and numbers only.' : undefined;
-  const confirmProblem = confirm && confirm !== password ? "The passwords don't match." : undefined;
   const ready = username && email.trim() && password && confirm === password && !usernameProblem;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -122,34 +109,13 @@ export default function SignupPage() {
             spellCheck={false}
           />
         </FormField>
-        <FormField label="Password" htmlFor="signup-password">
-          <div className="password-input">
-            <input
-              id="signup-password"
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              autoComplete="new-password"
-            />
-            <button
-              type="button"
-              className="password-toggle"
-              onClick={() => setShowPassword(s => !s)}
-              aria-pressed={showPassword}
-            >
-              {showPassword ? 'Hide' : 'Show'}
-            </button>
-          </div>
-        </FormField>
-        <FormField label="Confirm password" htmlFor="signup-confirm" error={confirmProblem}>
-          <input
-            id="signup-confirm"
-            type={showPassword ? 'text' : 'password'}
-            value={confirm}
-            onChange={e => setConfirm(e.target.value)}
-            autoComplete="new-password"
-          />
-        </FormField>
+        <NewPasswordFields
+          idPrefix="signup"
+          password={password}
+          confirm={confirm}
+          onPasswordChange={setPassword}
+          onConfirmChange={setConfirm}
+        />
         {error && <p className="login-error" role="alert">{error}</p>}
         <Button type="submit" variant="primary" disabled={submitting || !ready}>
           {submitting ? 'Creating your account…' : 'Create account'}

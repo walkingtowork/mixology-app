@@ -38,7 +38,7 @@ so existing references still resolve; the list below is in working order.
 `migrate` inside its start command, so a migration that fails partway does not warn — gunicorn
 never boots and the app is down until it is fixed.
 
-## Current state — updated 2026-10-14
+## Current state — updated 2026-10-15
 
 **Shipped:** 1.0 (`SECRET_KEY` + deploy hardening), 2.0 (CI), 2.5 (interim API lockdown,
 PR #17), 3.0 + 4.0 + `data.json` deleted (PR #18), 5.0 (same-origin proxy + WhiteNoise for
@@ -129,7 +129,14 @@ invite" in Django admin and opened the invite QR in production; a forged token a
 from outside. The user then signed up on a second phone in production and confirmed the
 whole flow works. Any other account that should invite needs the same permission.
 
-**Next: 13.0 (password reset).**
+**13.0 (password reset) is built on `feature/password-reset` (2026-10-15)**, awaiting merge.
+No migration: Django's reset tokens are signed, not stored. Email goes to the console backend,
+so in production a reset link appears in Railway's deploy logs; the easier route is the
+"Make a password reset link" action on Users in admin. The forgot-password page asks the
+server whether email is switched on and, while it is not, tells people to ask their host.
+A successful reset signs the person in (a choice made while building, matching signup) and
+signs out every other session. Exercised end to end in headless Chrome on a DB copy.
+**Next after merge: 14.0 (Personal Info).**
 
 **10.0 is live as of 2026-10-14 (PR #24)** — the user confirmed Railway booted and `/admin/`
 signs in by username and by email. What follows describes how it was built and rehearsed.
@@ -415,15 +422,15 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
   - [x] 12.6 Tests: valid, expired, already-used and forged tokens, case-only clashes, weak passwords, CSRF, and the race (Postgres only)
   - [x] 12.7 "Invite someone" in the account menu: a full-screen QR for a fresh 24-hour single-use invite, which notices when it is used and makes the next one. Offered only to accounts with Django's "Can add invite" permission (`can_invite` in the session payload)
 
-- [ ] 13.0 Password reset — full flow, manual delivery
-  - [ ] 13.1 Forgot-password endpoint using Django's `default_token_generator`
-  - [ ] 13.2 Token validation and password-set endpoint
-  - [ ] 13.3 Call `send_mail()` normally, with `EMAIL_BACKEND` set to the console backend in production for now
-  - [ ] 13.4 Django admin action printing a copyable reset link, so recovery works today with no email service
-  - [ ] 13.5 Forgot-password and reset pages in the frontend
-  - [ ] 13.6 Confirm the response does not reveal whether an address is registered
-  - [ ] 13.7 Document the four env vars that switch delivery to Gmail SMTP later, with zero code change
-  - [ ] 13.8 Tests: token issued, token validates, expired token rejected, token single-use
+- [x] 13.0 Password reset — full flow, manual delivery — built 2026-10-15 on `feature/password-reset`
+  - [x] 13.1 Forgot-password endpoint using Django's `default_token_generator` — `POST /api/auth/password-reset/` takes an email or username, like login
+  - [x] 13.2 Token validation and password-set endpoint
+  - [x] 13.3 Call `send_mail()` normally, with `EMAIL_BACKEND` set to the console backend in production for now — the console backend is the default, so production writes the email to Railway's logs
+  - [x] 13.4 Django admin action printing a copyable reset link, so recovery works today with no email service — "Make a password reset link" on the Users list; skips deactivated accounts
+  - [x] 13.5 Forgot-password and reset pages in the frontend — `/forgot-password` and `/reset-password/:uid/:token`; the login page links to the first. Signup and reset now share `NewPasswordFields` and `AuthHeader`
+  - [x] 13.6 Confirm the response does not reveal whether an address is registered — one answer for every case, including a mail failure, which is logged instead
+  - [x] 13.7 Document the four env vars that switch delivery to Gmail SMTP later, with zero code change — in `settings.py` and `backend/.env.example`
+  - [x] 13.8 Tests: token issued, token validates, expired token rejected, token single-use — plus sign-in ends an unused link, deactivated accounts, weak passwords, CSRF, and every other session signed out
 
 - [ ] 14.0 Personal Info screen
   - [ ] 14.1 Profile read and update endpoints for email and fullname

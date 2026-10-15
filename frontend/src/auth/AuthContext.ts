@@ -17,6 +17,8 @@ export interface AuthState {
   logout: () => Promise<void>;
   /** Uses an invite to create an account and sign it in. Rejects with a message to show. */
   signup: (token: string, details: SignupDetails) => Promise<void>;
+  /** Uses a reset link to set a new password and sign in. Rejects with a message to show. */
+  resetPassword: (uid: string, token: string, password: string) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthState | null>(null);

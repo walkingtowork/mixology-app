@@ -591,6 +591,46 @@ export async function logout(): Promise<void> {
   });
 }
 
+// ── Password reset ─────────────────────────────────────────────────────────
+
+/**
+ * Asks for a reset link. The answer is the same whether or not an account matched; it only
+ * says whether links are emailed at all, or have to be asked for by hand for now.
+ */
+export async function requestPasswordReset(identifier: string): Promise<{ emailed: boolean }> {
+  return request<{ emailed: boolean }>('/api/auth/password-reset/', {
+    method: 'POST',
+    body: { identifier },
+    error: () => 'Could not send a reset link. Reload the page and try again.',
+  });
+}
+
+/** Resolves if the reset link can be used; otherwise rejects saying why. */
+export async function checkPasswordReset(uid: string, token: string): Promise<void> {
+  await request<{ valid: true }>(resetPath(uid, token), {
+    error: (_res, body) => body.detail ?? 'Could not check this link. Reload the page and try again.',
+  });
+}
+
+/** Sets the new password, signs in, and resolves to the user. */
+export async function resetPassword(uid: string, token: string, password: string): Promise<User> {
+  const { user } = await request<{ user: User }>(resetPath(uid, token), {
+    method: 'POST',
+    body: { password },
+    error: (res, body) => {
+      // A 404 is a used or expired link; a 400 lists what is wrong with the password.
+      if (res.status === 404 && body.detail) return body.detail;
+      const problems = (body as { password?: string[] }).password ?? [];
+      return (res.status === 400 && problems.join(' ')) || 'Could not reset your password. Reload the page and try again.';
+    },
+  });
+  return user;
+}
+
+function resetPath(uid: string, token: string): string {
+  return `/api/auth/password-reset/${encodeURIComponent(uid)}/${encodeURIComponent(token)}/`;
+}
+
 // ── Invites ────────────────────────────────────────────────────────────────
 
 /** Resolves if the invite can be used; otherwise rejects saying why (used, expired, unknown). */

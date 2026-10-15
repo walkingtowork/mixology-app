@@ -1,10 +1,11 @@
 from datetime import timedelta
 
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils import timezone
 from django.utils.html import format_html
 from .models import Invite, User
+from .password_reset import can_reset, reset_url
 
 # Invites made here are usually texted, so they last longer than the app's QR invites.
 INVITE_ADMIN_LIFETIME = timedelta(days=7)
@@ -26,6 +27,24 @@ class UserAdmin(BaseUserAdmin):
     add_fieldsets = BaseUserAdmin.add_fieldsets + (
         ('Additional Info', {'fields': ('email', 'fullname')}),
     )
+
+    actions = ['make_password_reset_link']
+
+    @admin.action(description='Make a password reset link')
+    def make_password_reset_link(self, request, queryset):
+        """Show a link to copy and text over, since reset emails only reach the log for now."""
+        for user in queryset:
+            if not can_reset(user):
+                self.message_user(
+                    request, f'No link for {user.username}: the account is deactivated or has no password.',
+                    messages.WARNING,
+                )
+                continue
+            self.message_user(request, format_html(
+                '{}: <input type="text" value="{}" readonly size="80" onclick="this.select()"> '
+                'Works once, for three days, or until they sign in.',
+                user.username, reset_url(user),
+            ))
 
 
 @admin.register(Invite)

@@ -1,3 +1,4 @@
+import logging
 from datetime import timedelta
 
 from django.contrib.auth import authenticate, login, logout
@@ -14,6 +15,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Invite, User, username_validator
+from .password_reset import can_reset, emails_are_delivered, send_reset_email, user_for_link
+
+logger = logging.getLogger(__name__)
 
 # An invite made from the app is shown as a QR code to someone standing in front of you, so it
 # is short-lived. Invites made in Django admin default to INVITE_ADMIN_LIFETIME (admin.py).
@@ -187,3 +191,77 @@ class InviteSignupView(APIView):
             invite.save(update_fields=['used_at', 'used_by'])
         login(request, user, backend='accounts.backends.EmailOrUsernameBackend')
         return Response({'user': user_payload(user)}, status=status.HTTP_201_CREATED)
+
+
+def validated_new_password(data, user):
+    """The new password from a request body, or raise a 400 listing what is wrong with it."""
+    password = data.get('password')
+    if not isinstance(password, str) or not password:
+        raise serializers.ValidationError({'password': ['Choose a new password.']})
+    try:
+        validate_password(password, user=user)
+    except DjangoValidationError as exc:
+        raise serializers.ValidationError({'password': list(exc.messages)})
+    return password
+
+
+class PasswordResetRequestView(APIView):
+    """"I forgot my password": email a reset link to the account's address.
+
+    The response is the same whether or not an account matched, so this never says which
+    emails or usernames exist. It does say whether email is switched on at all, which is
+    true or false for everyone: while it is off, the page tells people to ask for a link.
+    CSRF is enforced explicitly, for the same reason as LoginView.
+    """
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    @method_decorator(csrf_protect)
+    def post(self, request):
+        identifier = request.data.get('identifier')
+        if not isinstance(identifier, str) or not identifier.strip():
+            return Response(
+                {'identifier': ['Enter your email or username.']}, status=status.HTTP_400_BAD_REQUEST,
+            )
+        identifier = identifier.strip()
+        lookup = 'email__iexact' if '@' in identifier else 'username__iexact'
+        user = User.objects.filter(**{lookup: identifier}).first()
+        if user and can_reset(user):
+            try:
+                send_reset_email(user)
+            except Exception:
+                # A mail failure must look like any other answer, or it gives the account away.
+                logger.exception('Could not send a password reset email to user %s', user.pk)
+        return Response({'emailed': emails_are_delivered()})
+
+
+class PasswordResetConfirmView(APIView):
+    """Check a reset link (GET) or use it to set a new password and sign in (POST).
+
+    The link is the credential, as with an invite. Used, expired and made-up links all get
+    the same 404: the token cannot tell them apart, and the advice is the same either way.
+    Changing the password signs out every other session, since Django ties each session to
+    the password hash.
+    """
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def invalid(self):
+        return Response(
+            {'detail': "This reset link has expired or has already been used."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    @method_decorator(ensure_csrf_cookie)
+    def get(self, request, uidb64, token):
+        return Response({'valid': True}) if user_for_link(uidb64, token) else self.invalid()
+
+    @method_decorator(csrf_protect)
+    def post(self, request, uidb64, token):
+        user = user_for_link(uidb64, token)
+        if user is None:
+            return self.invalid()
+        user.set_password(validated_new_password(request.data, user))
+        user.save(update_fields=['password'])
+        login(request, user, backend='accounts.backends.EmailOrUsernameBackend')
+        return Response({'user': user_payload(user)})

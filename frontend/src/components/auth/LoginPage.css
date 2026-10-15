@@ -48,6 +48,19 @@
   font-size: var(--text-sm);
 }
 
+/* A quiet text link under a form: "Forgot your password?", "Back to sign in". */
+.login-link {
+  align-self: center;
+  color: var(--color-accent);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.login-link:hover {
+  text-decoration: underline;
+}
+
 .login-error-centered {
   text-align: center;
   font-size: var(--text-base);

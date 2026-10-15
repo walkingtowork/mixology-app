@@ -86,6 +86,33 @@ describe('auth calls', () => {
   });
 });
 
+describe('password reset calls', () => {
+  it('requestPasswordReset posts the identifier and returns whether it was emailed', async () => {
+    respond(200, { emailed: false });
+    expect(await api.requestPasswordReset('sam')).toEqual({ emailed: false });
+    const { url, init } = lastRequest();
+    expect(url).toBe('/api/auth/password-reset/');
+    expect(JSON.parse(init.body as string)).toEqual({ identifier: 'sam' });
+  });
+
+  it('resetPassword posts to the link and unwraps the user', async () => {
+    respond(200, { user: { id: 1, username: 'sam', email: 's@example.com', fullname: '' } });
+    expect((await api.resetPassword('MQ', 'abc-123', 'pw')).username).toBe('sam');
+    const { url, init } = lastRequest();
+    expect(url).toBe('/api/auth/password-reset/MQ/abc-123/');
+    expect(JSON.parse(init.body as string)).toEqual({ password: 'pw' });
+  });
+
+  it("resetPassword passes on the server's reasons, but not a CSRF failure", async () => {
+    respond(400, { password: ['This password is too short.', 'This password is too common.'] });
+    await expect(api.resetPassword('MQ', 't', 'pw')).rejects.toThrow('This password is too short. This password is too common.');
+    respond(404, { detail: 'This reset link has expired or has already been used.' });
+    await expect(api.resetPassword('MQ', 't', 'pw')).rejects.toThrow('expired or has already been used');
+    respond(403, { detail: 'CSRF Failed: CSRF token missing.' });
+    await expect(api.resetPassword('MQ', 't', 'pw')).rejects.toThrow('Could not reset your password. Reload the page and try again.');
+  });
+});
+
 describe('guest order calls', () => {
   const TOKEN = '11111111-2222-3333-4444-555555555555';
 

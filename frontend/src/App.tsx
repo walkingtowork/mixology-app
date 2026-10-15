@@ -15,6 +15,8 @@ import PublicMenu from './components/menus/PublicMenu';
 import OrdersPage from './components/orders/OrdersPage';
 import SignupPage from './components/auth/SignupPage';
 import LoginPage from './components/auth/LoginPage';
+import ForgotPasswordPage from './components/auth/ForgotPasswordPage';
+import ResetPasswordPage from './components/auth/ResetPasswordPage';
 import AccountMenu from './components/auth/AccountMenu';
 import AuthProvider from './auth/AuthProvider';
 import RequireAuth from './auth/RequireAuth';
@@ -99,6 +101,8 @@ function App() {
             <Routes>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/invite/:token" element={<SignupPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/reset-password/:uid/:token" element={<ResetPasswordPage />} />
               <Route path="*" element={<RequireAuth><AppShell /></RequireAuth>} />
             </Routes>
           </AuthProvider>
