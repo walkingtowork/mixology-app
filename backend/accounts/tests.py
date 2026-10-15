@@ -1,8 +1,12 @@
+import re
 from datetime import timedelta
+from unittest import mock
 
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.models import Permission
+from django.contrib.auth.tokens import default_token_generator
+from django.core import mail
 from django.core.exceptions import ValidationError
 from django.core.management import call_command
 from django.db import IntegrityError, connection, transaction
@@ -13,6 +17,7 @@ from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 
 from .models import Invite
+from .password_reset import reset_url
 
 User = get_user_model()
 
@@ -578,6 +583,188 @@ class InviteTests(APITestCase):
         self.assertContains(page, (timezone.localtime() + timedelta(days=7)).strftime('%Y-%m-%d'))
         invite = self.make_invite(note='Sam')
         self.assertContains(self.client.get(f'/admin/accounts/invite/{invite.pk}/change/'), invite.url)
+
+
+@fast_passwords
+class PasswordResetTests(APITestCase):
+    """Forgot password: a link by email (or by hand), used once to set a new password."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='alex', email='alex@example.com', password='old-password-1')
+
+    def ask(self, identifier):
+        return self.client.post('/api/auth/password-reset/', {'identifier': identifier}, format='json')
+
+    def link_parts(self, url):
+        uid, token = re.search(r'/reset-password/([A-Za-z0-9_-]+)/([0-9a-z-]+)', url).groups()
+        return uid, token
+
+    def confirm_url(self, user=None):
+        uid, token = self.link_parts(reset_url(user or self.user))
+        return f'/api/auth/password-reset/{uid}/{token}/'
+
+    def reset(self, url, password='a-brand-new-password'):
+        return self.client.post(url, {'password': password}, format='json')
+
+    # Asking for a link
+
+    def test_asking_by_email_sends_a_link_to_that_address(self):
+        response = self.ask('ALEX@example.com')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ['alex@example.com'])
+        self.assertIn(f'{settings.SITE_URL}/reset-password/', mail.outbox[0].body)
+
+    def test_asking_by_username_works_too(self):
+        self.ask('Alex')
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_the_emailed_link_works(self):
+        self.ask('alex')
+        uid, token = self.link_parts(mail.outbox[0].body)
+        response = self.client.get(f'/api/auth/password-reset/{uid}/{token}/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_the_answer_never_says_whether_an_account_exists(self):
+        User.objects.create_user(username='gone', email='gone@example.com', password='x-password-1', is_active=False)
+        User.objects.create_user(username='nopass', email='nopass@example.com')  # unusable password
+        answers = set()
+        for identifier in ['alex', 'nobody', 'nobody@example.com', 'gone', 'nopass']:
+            with self.subTest(identifier=identifier):
+                response = self.ask(identifier)
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                answers.add(str(response.data))
+        self.assertEqual(len(answers), 1)
+        self.assertEqual([m.to for m in mail.outbox], [['alex@example.com']])
+
+    def test_a_mail_failure_looks_like_any_other_answer(self):
+        expected = self.ask('nobody').data
+        with mock.patch('accounts.views.send_reset_email', side_effect=OSError('SMTP down')):
+            with self.assertLogs('accounts.views', 'ERROR'):
+                response = self.ask('alex')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, expected)
+
+    def test_asking_needs_an_identifier(self):
+        for body in [{}, {'identifier': '  '}, {'identifier': ['alex']}]:
+            with self.subTest(body=body):
+                response = self.client.post('/api/auth/password-reset/', body, format='json')
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_the_answer_says_whether_email_is_switched_on(self):
+        with override_settings(EMAIL_BACKEND='django.core.mail.backends.console.EmailBackend'):
+            with mock.patch('sys.stdout'):
+                self.assertEqual(self.ask('alex').data, {'emailed': False})
+        with override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend'):
+            self.assertEqual(self.ask('alex').data, {'emailed': True})
+
+    # Checking and using a link
+
+    def test_a_good_link_checks_out(self):
+        self.assertEqual(self.client.get(self.confirm_url()).data, {'valid': True})
+
+    def test_made_up_links_are_a_404(self):
+        uid, token = self.link_parts(reset_url(self.user))
+        for url in [f'/api/auth/password-reset/{uid}/not-the-token/',
+                    f'/api/auth/password-reset/bm9wZQ/{token}/',
+                    f'/api/auth/password-reset/!!!/{token}/']:
+            with self.subTest(url=url):
+                self.assertEqual(self.client.get(url).status_code, status.HTTP_404_NOT_FOUND)
+                self.assertEqual(self.reset(url).status_code, status.HTTP_404_NOT_FOUND)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('old-password-1'))
+
+    def test_using_a_link_sets_the_password_and_signs_in(self):
+        response = self.reset(self.confirm_url())
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['user']['username'], 'alex')
+        self.assertEqual(self.client.get('/api/auth/session/').data['user']['username'], 'alex')
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('a-brand-new-password'))
+        self.assertFalse(self.user.check_password('old-password-1'))
+
+    def test_a_link_works_only_once(self):
+        url = self.confirm_url()
+        self.reset(url)
+        self.client.logout()
+        self.assertEqual(self.client.get(url).status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(self.reset(url, 'another-new-password').status_code, status.HTTP_404_NOT_FOUND)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('a-brand-new-password'))
+
+    def test_a_link_expires_after_three_days(self):
+        url = self.confirm_url()
+        later = default_token_generator._now() + timedelta(days=3, minutes=1)
+        with mock.patch.object(default_token_generator, '_now', return_value=later):
+            self.assertEqual(self.client.get(url).status_code, status.HTTP_404_NOT_FOUND)
+            self.assertEqual(self.reset(url).status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_signing_in_ends_an_unused_link(self):
+        url = self.confirm_url()
+        self.client.post('/api/auth/login/', {'identifier': 'alex', 'password': 'old-password-1'}, format='json')
+        self.assertEqual(self.client.get(url).status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_a_deactivated_account_cannot_use_its_link(self):
+        url = self.confirm_url()
+        self.user.is_active = False
+        self.user.save()
+        self.assertEqual(self.reset(url).status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_a_weak_password_is_refused_and_the_link_still_works(self):
+        url = self.confirm_url()
+        for password in ['', 'alex', '12345678']:
+            with self.subTest(password=password):
+                response = self.reset(url, password)
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertTrue(response.data['password'])
+        self.assertEqual(self.client.get('/api/auth/session/').data, {'user': None})
+        self.assertEqual(self.reset(url).status_code, status.HTTP_200_OK)
+
+    def test_resetting_signs_out_everywhere_else(self):
+        """A reset is often "someone else has my password", so their session must end."""
+        elsewhere = APIClient()
+        elsewhere.login(username='alex', password='old-password-1')
+        self.assertIsNotNone(elsewhere.get('/api/auth/session/').data['user'])
+        self.user.refresh_from_db()  # signing in changed last_login, which the token covers
+        self.assertEqual(self.reset(self.confirm_url()).status_code, status.HTTP_200_OK)
+        self.assertIsNone(elsewhere.get('/api/auth/session/').data['user'])
+
+    def test_using_a_link_needs_a_csrf_token(self):
+        client = APIClient(enforce_csrf_checks=True)
+        url = self.confirm_url()
+        client.get(url, secure=True)
+        origin = {'secure': True, 'HTTP_ORIGIN': 'https://thebarcart.vercel.app'}
+        response = client.post(url, {'password': 'a-brand-new-password'}, format='json', **origin)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        response = client.post(
+            url, {'password': 'a-brand-new-password'}, format='json',
+            HTTP_X_CSRFTOKEN=client.cookies['csrftoken'].value, **origin,
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_asking_for_a_link_needs_a_csrf_token(self):
+        client = APIClient(enforce_csrf_checks=True)
+        response = client.post(
+            '/api/auth/password-reset/', {'identifier': 'alex'}, format='json',
+            secure=True, HTTP_ORIGIN='https://thebarcart.vercel.app',
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(mail.outbox, [])
+
+    # Making a link by hand
+
+    def test_admin_makes_a_copyable_link(self):
+        boss = User.objects.create_superuser(username='boss', email='boss@example.com', password='boss-pass-123')
+        gone = User.objects.create_user(username='gone', email='gone@example.com', password='x-password-1', is_active=False)
+        self.client.force_login(boss)
+        page = self.client.post('/admin/accounts/user/', {
+            'action': 'make_password_reset_link', '_selected_action': [self.user.pk, gone.pk],
+        }, follow=True)
+        self.assertContains(page, f'{settings.SITE_URL}/reset-password/')
+        self.assertContains(page, 'No link for gone: the account is deactivated or has no password.')
+        uid, token = self.link_parts(page.content.decode())
+        self.client.logout()
+        self.assertEqual(self.client.get(f'/api/auth/password-reset/{uid}/{token}/').status_code, status.HTTP_200_OK)
 
 
 class InviteRaceTests(TransactionTestCase):

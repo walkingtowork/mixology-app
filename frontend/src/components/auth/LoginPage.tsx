@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Link, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import Button from '../ui/Button';
+import AuthHeader from './AuthHeader';
 import FormField from '../ui/FormField';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import './LoginPage.css';
@@ -36,17 +37,7 @@ export default function LoginPage() {
   return (
     <div className="login-page">
       <form className="login-form" onSubmit={handleSubmit}>
-        {/* The same glass and greeting as the home page: this is its front door. */}
-        <div className="login-glass" aria-hidden="true">
-          <div className="martini-glass">
-            <div className="glass" />
-            <div className="glass-left-edge" />
-            <div className="glass-right-edge" />
-            <div className="stem" />
-            <div className="base" />
-          </div>
-        </div>
-        <h1 className="login-title">What are we making tonight?</h1>
+        <AuthHeader title="What are we making tonight?" />
         <p className="login-subtitle">Sign in to The Bar Cart</p>
         <FormField label="Email or username" htmlFor="login-identifier">
           <input
@@ -74,6 +65,7 @@ export default function LoginPage() {
         <Button type="submit" variant="primary" disabled={submitting || !identifier.trim() || !password}>
           {submitting ? 'Signing in…' : 'Sign in'}
         </Button>
+        <Link className="login-link" to="/forgot-password">Forgot your password?</Link>
       </form>
     </div>
   );
