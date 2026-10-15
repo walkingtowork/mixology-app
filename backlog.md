@@ -1,188 +1,174 @@
 # Product Backlog
 
-Last reviewed: 2026-09-20. Status verified against the code, not just memory — several
-items below had shipped long ago but were never checked off.
+Last reviewed: 2026-10-15. Reorganised with the user into the agreed build order, with
+story points on every item. Status verified against the code, not just memory.
 
 See `PROJECT_CONTEXT.md` for the *why* behind agreed decisions, and `tasks/` for
 per-feature task breakdowns.
 
-## In progress
+## Story points
 
-- [ ] **Multi-user accounts** (planned 2026-09-21, no deadline) — auth, invite-only signup,
-      per-user ownership of every model, password reset, personal info. Closes the standing
-      hole where the API has no authentication at all.
-      → `tasks/tasks-multi-user-accounts.md`, decisions in `PROJECT_CONTEXT.md`
+Fibonacci scale (1, 2, 3, 5, 8, 13), sizing effort, complexity and uncertainty relative to
+other items, not hours.
 
-## Up next — first thing after multi-user accounts ships
+- **1** — a setting or a one-file change
+- **3** — a small feature across backend and frontend, with tests
+- **8** — a multi-part feature on both ends
+- **13** — too big or too vague; split it before starting
 
-- [ ] **Rebuild `backend/venv` on Python 3.12.** It is Python 3.9.6 (the macOS system
+An **epic** is a total of its child tickets, never estimated as a single piece of work.
+
+---
+
+## 1. Now — before the 2026-10-31 party
+
+- [ ] **Guest order limit** (5) — a guest can have at most two unserved orders on a menu at
+      once; more opens up as drinks are served or cancelled. Enforced on the server, since
+      the only existing guard is the 5-second button lock in `PublicMenu.tsx`. A guest is
+      their self-typed name on a menu, as for listing and cancelling. Revisit the number
+      once non-alcoholic or hot drinks are on menus. Throttling the endpoint itself is still
+      15.0. Agreed 2026-10-15.
+
+## 2. Finish multi-user accounts
+
+Auth, invite-only signup, per-user ownership, password reset, personal info. Phases 1.0–12.0
+are live. → `tasks/tasks-multi-user-accounts.md`, decisions in `PROJECT_CONTEXT.md`
+
+- [ ] **13.0 Password reset** (8) — endpoints, pages, an admin action that prints a reset
+      link, console email backend for now
+- [ ] **14.0 Personal Info screen** (5)
+- [ ] **14.6 Glass-icon avatars** (2) — the user's idea: pick a `GlassIcon` in place of the
+      yellow initial circle. Raise it when starting 14.0
+- [ ] **15.0 Rate limiting, Tier 1** (5) — DRF throttles plus `django-axes` for logins, and
+      throttling of the anonymous order endpoint (15.5). Wiring axes to the DRF login view
+      needs care
+- [ ] **16.0 Documentation and skills** (3)
+
+## 3. Housekeeping after multi-user ships
+
+- [ ] **Rebuild `backend/venv` on Python 3.12** (1) — it is Python 3.9.6 (the macOS system
       Python), while `requirements.txt` says 3.12+, CI runs 3.12, and the venv is missing
       `psycopg2-binary` and `gunicorn` — `psycopg2-binary` will not build on 3.9 here at all.
-      So local dev cannot talk to Postgres or run under gunicorn, and every migration
-      rehearsal needs a throwaway 3.12 venv. `/opt/homebrew/bin/python3.12` is already
-      installed: delete `backend/venv`, `python3.12 -m venv venv`,
-      `pip install -r requirements.txt`, run the tests. Prioritised by the user 2026-10-13.
+      `/opt/homebrew/bin/python3.12` is already installed: delete `backend/venv`,
+      `python3.12 -m venv venv`, `pip install -r requirements.txt`, run the tests.
+      Prioritised by the user 2026-10-13.
+- [ ] **Signing in after a log out should land on the home page** (3) — it still returns to
+      the page you were on. Reported in production 2026-10-14, after PR #26 shipped a fix
+      (`returnAfterLogin` in the auth context) that passed the tests and a headless-Chrome
+      check. The live bundle contains the fix, so it is not a stale deploy. Start by
+      reproducing it in production with the user's exact steps (which page, phone or
+      desktop, any reload or back button). Low impact: the API is scoped.
 
-- [ ] **Signing in after a log out should land on the home page.** It still returns to the
-      page you were on. Reported by the user in production on 2026-10-14, after PR #26
-      shipped a fix (`returnAfterLogin` in the auth context) that passed the tests and a
-      headless-Chrome check. The live bundle does contain the fix, so the cause is not a
-      stale deploy. Start by reproducing it in production with the exact steps the user
-      takes (which page, phone or desktop, any reload or back button), because the local
-      reproduction no longer fails. Low impact: the API is scoped, so a different person
-      signing in sees "not found" rather than someone else's data. The user placed it
-      after their other raised items and before any new feature.
+## 4. Quality and testing — before the redesign
 
-- [ ] **Menu theming — decoration selector** (deadline 2026-09-20)
-      `top_decoration` / `bottom_decoration` on `Menu`, a thumbnail picker, a fall SVG set,
-      and the menu edit UI it depends on.
-      → `tasks/tasks-menu-theming-and-stats.md`, branch `feature/menu-theming-and-stats`
+A redesign rewrites every page; these are the safety net that catches it breaking things.
 
-- [ ] **Menu order stats** (planned, no deadline)
-      Per-menu admin page at `/menus/:id/stats`: per-drink counts, headline numbers,
-      guest breakdown, unordered drinks.
-      → `tasks/tasks-menu-theming-and-stats.md`
+- [ ] **Quality checklist in the task workflow** (3) — an ISO 25010-based "done means…"
+      checklist (functional suitability, reliability, usability, security, maintainability,
+      performance, compatibility, portability) applied to every task, plus what
+      "production-ready" means for this app. Kano belongs in backlog prioritisation rather
+      than QA: classify features as basic / performance / delighter when ordering work.
+- [ ] **First QA audit** (8) — walk the whole app against the checklist; findings become
+      their own tickets
+- [ ] **Playwright end-to-end tests** (5) — login, build a recipe, share a menu, guest orders
+- [ ] **Frontend component coverage** (8) — routing and nav active states, RecipeList,
+      RecipeDetail, RecipeForm, menus, orders. Vitest + Testing Library are in place (9.0);
+      split per area when picked up
+- [ ] **Coverage reporting in CI** (2)
 
-## Features
+## 5. Visual and UX redesign — epic (~39)
 
-- [ ] **Starter-ingredient wizard** — a new account starts completely empty (every
-      category, ingredient, recipe and menu belongs to exactly one user, with nothing
-      shared or seeded). That means a friend's first load is three empty pages and they
-      must create a category before they can do anything. A guided "stock your bar"
-      wizard on first login would fill that gap. Deferred deliberately during the
-      multi-user planning on 2026-09-20 to keep the ownership model totally open —
-      build it after multi-user ships, against a real first-run experience.
+Full visual and UI/UX redesign and implementation. Absorbs the colour system cleanup
+(`--color-primary` is an alias of `--color-accent`; see `PROJECT_CONTEXT.md`) and the
+Orders nav badge collision (`.nav-orders` and `.nav-link.active` use the identical
+`--color-accent` on `--color-accent-light` pair, `App.css:88` and `:62`, so a nav page looks
+like it has two selected items).
 
-- [ ] Add ingredient substitutions
-- [ ] Add recipes for home-made ingredients
-- [ ] Think more about handling sugar cubes
-- [ ] Add tags to recipes (and ingredients?) Use the existing `tasks/prd-tags.md`, but review first
-- [ ] **Orders nav badge collides with the active nav link.** `.nav-orders` and
-      `.nav-link.active` use the identical pair — `--color-accent` text on
-      `--color-accent-light` — so when you're on any nav page it reads as two selected
-      items at once (`App.css:88` and `:62`). Needs a third colour for Orders, or a
-      different device entirely (outline, dot, count badge). Tied up with the
-      `--color-primary` / `--color-accent` cleanup in `PROJECT_CONTEXT.md`, since a real
-      primary colour would give Orders somewhere to go. Raised 2026-09-20.
-- [ ] **Buy list / shopping list view** — the model, API and "add to buy list" from
-      `IngredientDetail` all exist, but there is no route or page that actually shows the
-      list. Small, high-value gap.
-- [ ] **Standalone "add ingredient" on the Ingredients page** — ingredients can currently
-      only be created inline from `RecipeForm` while building a recipe
-      (`RecipeForm.tsx:83`); the Ingredients page has no add action of its own.
+- [ ] **Design direction** (5) — rendered options to choose between
+- [ ] **Design tokens and core components** (8) — real primary colour, type, spacing,
+      buttons, inputs, cards
+- [ ] **Recipes and ingredients** (8)
+- [ ] **Menus and the public menu** (8)
+- [ ] **Orders and account screens** (5)
+- [ ] **Mobile polish** (5)
 
-### Menus — near-future
+## 6. Marketing homepage
 
-- [ ] **Background images for menu theming** — consider whether menus should support full
-      background imagery rather than only corner SVG decorations. Deferred from the
-      2026-09-18 decoration work; revisit once the selector is in and we've seen the fall
-      theme in use.
-- [ ] **Guest name hint on the order form** — add a note to the "What is your name?" step
-      nudging guests toward distinct names. Guest names are self-entered and not unique, so
-      two guests named "Sam" merge into one row in menu stats. Agreed to consider, not to
-      implement yet.
-- [ ] **View recipes from the stats page** — drink names on `/menus/:id/stats` are plain
-      text. Consider linking them through to the recipe, or showing the recipe inline, so
-      you can go from "the Federation went 6 times" straight to how it's made. Raised
-      2026-09-20; no design decisions yet.
-- [ ] **Last call / ordering cutoff** for the public menu — the one piece of the original
-      ordering plan that was never built.
-- [ ] **Non-alcoholic / N/A menu options** — either a separate N/A menu type or tagging
-      recipes as N/A. No decision made yet.
+- [ ] **Public homepage explaining the app** (5) — the app requires a login, so a signed-out
+      visitor needs a page that explains recipes, ingredients, menus and guest ordering.
+      Built after the redesign's tokens so it is built once.
 
-## Security — deferred from multi-user planning (2026-09-21)
+## 7. Menus and drinks
 
-Raised while planning the multi-user overhaul and explicitly paused, not dismissed.
-Revisit before inviting anyone in, and again before any public launch.
+- [ ] **Menu sections — event vs standard drinks** (8) — sections within one menu ("Tonight's
+      specials" / "The usual" / "Zero-proof") rather than separate pages, so guests keep a
+      single scroll
+- [ ] **Non-alcoholic drinks** (3) — mark a recipe non-alcoholic, label it on the menu and
+      filter by it; a "Zero-proof" section comes free with menu sections
+- [ ] **Last call / ordering cutoff** (5) — the one piece of the original ordering plan never
+      built
+- [ ] **Guest name hint on the order form** (1) — nudge guests toward distinct names. Names
+      are self-entered and not unique, so two "Sam"s merge into one row in menu stats, and
+      share the order limit
+- [ ] **View recipes from the stats page** (2) — link drink names on `/menus/:id/stats`
+      through to the recipe
+- [ ] **Background images for menu theming** (5 / 13) — 5 for curated images, 13 for user
+      uploads, which need file storage. Revisit once the fall decorations have seen use
 
-**Agreed 2026-09-21:** rate limiting goes in at "Tier 1" — DRF throttling plus `django-axes`,
-both of which are settings-and-a-dependency rather than new infrastructure. Redis-backed
-accurate throttling and any Vercel shared-secret gate are deferred until there is a reason.
+## 8. AI-assisted entry
 
-- [ ] **Revisit how long a login lasts.** Sessions use Django's default of two weeks, kept
-      on 2026-10-14 as "fine for now". The case to weigh: a phone used behind the bar should
-      not sign out mid-party, and a friend who opens the app every few months will be asked
-      to log in every time. Options are a longer `SESSION_COOKIE_AGE` or refreshing the
-      session on each visit (`SESSION_SAVE_EVERY_REQUEST`).
-- [ ] **Rotate `SECRET_KEY` and fix the fallback — ships in the first PR, not deferred.**
-      `settings.py:36` falls back to the committed `django-insecure-…` placeholder from commit
-      `ade7f58`, and `backend/.env.example` documents the variable as `DJANGO_SECRET_KEY` while
-      settings reads `SECRET_KEY` — so following the repo's own example lands you silently on the
-      public key. Align the name, raise on startup when `DEBUG=False` and the key is missing, and
-      rotate the Railway value now while there are no real sessions to invalidate. No real `.env`
-      was ever committed and `.gitignore` has always covered it, so history does not need rewriting.
+Both need a model, not hand-written parsing: recipe text is too varied, and bottles need
+vision.
 
-- [x] **`OrderViewSet` was unauthenticated and under-scoped.** Split on 2026-10-13: guests
-      order through `/api/public/menu/<share_token>/orders/`, and `/api/orders/` is owner-only.
-      Still no rate limiting on guest ordering — it is a spam target for anyone holding a
-      share link (15.5).
-- [ ] **IDOR risk on nested writes.** Scoping `get_queryset` is not enough when an id
-      arrives in a request body or query string. Three concrete spots: `MenuViewSet.add_item`
-      (recipe id), `BuyListViewSet.create` (`ingredient_id`), and `RecipeViewSet.get_queryset`
-      (`?ingredient=` / `?category=`). Each must verify the referenced object belongs to the
-      requester, or user A can pull user B's recipe onto their menu.
-- [ ] **No login rate limiting.** A login form with unlimited password attempts. Consider
-      `django-axes`, plus DRF throttling (see note about `--workers 3` below).
-- [ ] **Cookie and transport flags are unset.** `SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE`,
-      `SECURE_SSL_REDIRECT`, HSTS, and a deliberate session lifetime. `HttpOnly` is on by
-      default. Run `python manage.py check --deploy` — it enumerates these.
-- [ ] **Vercel preview deployments proxy to a Railway backend.** If previews point at
-      production, an unfinished branch writes to real data. Decide where previews point
-      before the `/api` rewrite lands.
-- [ ] **Django 4.2.26 is past end of life** (4.2 LTS extended support ended April 2026), so
-      it no longer receives security patches. Fine for a private app; a blocker for opening
-      to the public. Note `requirements.txt` claims "Python 3.12+ required" while the local
-      venv runs Python 3.9.6, itself EOL since October 2025.
-- [ ] **No backup routine exists.** The Railway plan has no automatic backups, so production
-      is only ever backed up when someone runs `pg_dump` by hand. One dump was taken
-      2026-10-12. Worth deciding on a cadence and, eventually, automating it — a scheduled
-      job, or upgrading the Railway plan. Until then the rule is: dump before every schema or
-      data migration. See the backup note in `PROJECT_CONTEXT.md`.
+- [ ] **AI foundation** (3) — a backend endpoint, the API key in Railway, per-user usage
+      limits since every call costs money
+- [ ] **Paste-to-import recipes** (5) — paste a recipe (e.g. a YouTube description), review
+      the parsed ingredients and amounts, save
+- [ ] **Bottle recognition from photos** (8) — photograph several bottles, review the
+      matches against existing ingredients and categories, add them in one go
 
-- [ ] **CI detects but does not gate — nothing actually blocks a bad merge or deploy.**
-      Verified 2026-09-21 by deliberately breaking a test: the backend check went red, and
-      GitHub still offered a green "Merge pull request" button. Two separate gaps:
-      1. **No branch protection on `main`.** Requiring the CI checks to pass before merge is
-         a repo setting, not code — Settings → Branches → add a rule for `main` requiring
-         "CI / Backend (Django)" and "CI / Frontend (Vite / TypeScript)".
-      2. **Deploys ignore CI entirely.** Railway and Vercel both build from `main` on push,
-         independently of the workflow, so a red build on `main` means it already shipped.
-      Worth closing *before* the ownership migration in task 7.0/8.0, which is the first
-      change where a bad merge reaching production costs more than a quick revert.
+## 9. Features
 
-- [ ] **Railway has no Python runtime pin.** There is no `runtime.txt`, `.python-version`
-      or nixpacks config in `backend/`, so Railway chooses the Python version itself.
-      Django 4.2 supports 3.8–3.12 and does **not** support 3.13+, so if Railway's default
-      ever moves past 3.12 the deploy breaks with no warning. CI pins 3.12 explicitly.
-      Pinning the deploy side too would close the gap — verify which file Railway honours
-      before relying on it. Related to the Django 4.2 end-of-life item above.
+- [ ] **Buy list page** (3) — the model, API and "add to buy list" from `IngredientDetail`
+      all exist; there is no page that shows the list
+- [ ] **Standalone "add ingredient" on the Ingredients page** (2) — ingredients can only be
+      created inline from `RecipeForm` today (`RecipeForm.tsx:83`)
+- [ ] **Starter-ingredient wizard** (8) — a new account starts completely empty, so a
+      friend's first load is three empty pages. A guided "stock your bar" wizard on first
+      login. Deferred during multi-user planning to keep the ownership model open
+- [ ] **Recipe tags** (8) — use `tasks/prd-tags.md`, but review it first
+- [ ] **Ingredient substitutions** (8) — not yet defined; may be a 13
+- [ ] **Recipes for home-made ingredients** (8) — linking a recipe to the ingredient it
+      produces; not yet defined
+- [ ] **Sugar cube handling** (2, spike) — work out what the problem actually is
 
-- [ ] **DRF throttling needs a shared cache to work.** The Railway start command runs
-      `gunicorn --workers 3`; with the default local-memory cache each worker keeps its own
-      counter, so any rate limit is effectively 3x looser and resets on restart. Accurate
-      throttling needs Redis.
+## 10. Security and operations
 
-- [ ] **Signup emails are unverified** (since 12.0, 2026-10-14). Invites are not tied to an
-      email, so anyone with an invite can sign up with any address. Fine while you hand out
-      every invite in person; before public signup, or before password reset sends real
-      email, verify the address.
-- [ ] **Skipped QR invites stay valid.** "New code" leaves the previous code usable for the
-      rest of its 24 hours, so someone who photographed it could still sign up. Delete it in
-      admin if that matters, or have "New code" revoke the old one.
+Raised during multi-user planning and paused, not dismissed. Revisit before any public
+launch. **Agreed 2026-09-21:** rate limiting goes in at "Tier 1" (15.0); Redis-backed
+throttling is deferred until there is a reason.
 
-## Testing
-
-The backend has 59 tests in `backend/cocktails/tests.py`, but they stop at ingredients,
-recipes and categories. The frontend has no test framework at all.
-
-- [ ] **Backend: no Menu test coverage.** The 59 tests in `backend/cocktails/tests.py`
-      cover ingredients, recipes and categories only. Menu, MenuItem, Order and BuyList —
-      including menu activation, share tokens and ordering — have no tests at all.
-- [ ] Set up frontend testing framework (Vitest + React Testing Library)
-- [ ] Add unit tests for routing functionality (route rendering, navigation, active states)
-- [ ] Add unit tests for React components (RecipeList, RecipeDetail, RecipeForm, etc.)
-- [ ] Add integration tests for user flows (create recipe, edit recipe, delete recipe)
-- [ ] Add tests for navigation bar and routing behavior
+- [ ] **Branch protection on `main`** (1) — a repo setting: Settings → Branches → require
+      "CI / Backend (Django)" and "CI / Frontend (Vite / TypeScript)". Verified 2026-09-21
+      that a red check still offers a green merge button
+- [ ] **Deploys wait for CI** (3) — Railway and Vercel both build from `main` on push,
+      independently of the workflow, so a red build on `main` has already shipped
+- [ ] **Pin Python on Railway** (1) — no `runtime.txt`, `.python-version` or nixpacks config,
+      so Railway picks. Django 4.2 does not support 3.13+. Verify which file Railway honours
+- [ ] **Decide how long a login lasts** (1) — Django's default two weeks, kept 2026-10-14 as
+      "fine for now". Options: a longer `SESSION_COOKIE_AGE`, or `SESSION_SAVE_EVERY_REQUEST`
+- [ ] **"New code" should revoke the previous QR invite** (1) — a skipped code stays valid
+      for the rest of its 24 hours
+- [ ] **Backup routine** (3) — the Railway plan has no automatic backups; production is only
+      backed up by a manual `pg_dump`. Until automated: dump before every schema or data
+      migration. See `PROJECT_CONTEXT.md`
+- [ ] **Upgrade off Django 4.2** (5) — past end of life (April 2026), so no security patches.
+      Fine for a private app; a blocker for a public one. Target 5.2 LTS
+- [ ] **Verify signup email addresses** (5) — invites are not tied to an email, so anyone with
+      an invite can sign up with any address. Needed before public signup or real reset email
+- [ ] **Redis-backed throttling** (5) — `gunicorn --workers 3` with the local-memory cache
+      gives each worker its own counter, so DRF limits are ~3x looser and reset on restart.
+      Deferred
 
 ## Shipped
 
@@ -191,10 +177,18 @@ recipes and categories. The frontend has no test framework at all.
 - [x] Add Menus — planning, drag-and-drop ordering, share links, QR codes, activation
 - [x] Add ability to click on an ingredient and see all recipes that use it
 - [x] View ingredient, amount remaining — stock levels + `StockBottle` UI, and
-      "add to buy list" from `IngredientDetail` (the list *view* is still outstanding, above)
+      "add to buy list" from `IngredientDetail` (the list *page* is still outstanding)
 - [x] Deploy — Railway (backend) + Vercel (frontend); see `PROJECT_CONTEXT.md`
 - [x] Guest drink ordering from the public menu + bartender Orders view (`82483ae`)
 - [x] Public menu visual polish, first pass — SVG decorations, QR modal, mobile fixes
+- [x] Menu theming — decoration selector, fall SVG set, menu edit mode
+      (`tasks/tasks-menu-theming-and-stats.md`)
+- [x] Menu order stats at `/menus/:id/stats`
+- [x] Multi-user 1.0–12.0: `SECRET_KEY` with no fallback, CI, same-origin proxy, default-deny
+      API, ownership on every model, nested-write IDOR checks (`OwnedPrimaryKeyRelatedField`),
+      secure cookies and HSTS, Vercel previews off, owner-only `/api/orders/` with separate
+      guest endpoints, frontend test framework (9.0), login, invite-only signup
+- [x] Backend tests for menus, orders, guest ordering and the buy list (159 tests)
 
 ## Ingredient Categories - Out of Scope
 
