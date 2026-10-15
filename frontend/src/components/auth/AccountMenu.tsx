@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import InviteDialog from './InviteDialog';
+import UserAvatar from './UserAvatar';
 import './AccountMenu.css';
 
 /** The signed-in user's chip in the top bar, opening a small menu. */
@@ -37,12 +39,20 @@ export default function AccountMenu() {
         aria-expanded={open}
         aria-label={`Account: ${user.username}`}
       >
-        <span className="account-avatar" aria-hidden="true">{user.username.charAt(0).toUpperCase()}</span>
+        <UserAvatar user={user} />
         <span className="account-name">{user.username}</span>
       </button>
       {open && (
         <div className="account-dropdown" role="menu">
           <p className="account-who">Signed in as <strong>{user.username}</strong></p>
+          <Link
+            to="/account"
+            className="account-item"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+          >
+            Personal info
+          </Link>
           {user.can_invite && (
             <button
               className="account-item"

@@ -81,21 +81,24 @@ const GLASS_LABELS: Record<GlassType, string> = {
 interface GlassIconProps {
   glass: GlassType | null | undefined;
   size?: number;
+  /** Show the glass's name on hover. Off where the name would be noise, as in an avatar. */
+  tooltip?: boolean;
 }
 
-export default function GlassIcon({ glass, size = 50 }: GlassIconProps) {
+export default function GlassIcon({ glass, size = 50, tooltip = true }: GlassIconProps) {
   if (!glass) return null;
   const icon = renderGlass(glass);
   if (!icon) return null;
+  const title = tooltip ? GLASS_LABELS[glass] : undefined;
 
   if (size === 50) {
-    return <div title={GLASS_LABELS[glass]}>{icon}</div>;
+    return <div title={title}>{icon}</div>;
   }
 
   const scale = size / 50;
   return (
     <div
-      title={GLASS_LABELS[glass]}
+      title={title}
       style={{ width: size, height: size, flexShrink: 0, overflow: 'visible', position: 'relative' }}
     >
       <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left', position: 'absolute' }}>

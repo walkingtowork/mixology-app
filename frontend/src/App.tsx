@@ -18,6 +18,7 @@ import LoginPage from './components/auth/LoginPage';
 import ForgotPasswordPage from './components/auth/ForgotPasswordPage';
 import ResetPasswordPage from './components/auth/ResetPasswordPage';
 import AccountMenu from './components/auth/AccountMenu';
+import PersonalInfoPage from './components/auth/PersonalInfoPage';
 import AuthProvider from './auth/AuthProvider';
 import RequireAuth from './auth/RequireAuth';
 import { fetchOrders } from './services/cocktailsApi';
@@ -70,6 +71,7 @@ function AppShell() {
           <Route path="/menus/:id/edit" element={<MenuForm />} />
           <Route path="/menus/:id/stats" element={<MenuStats />} />
           <Route path="/orders" element={<OrdersPage />} />
+          <Route path="/account" element={<PersonalInfoPage />} />
         </Routes>
       </main>
 

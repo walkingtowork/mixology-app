@@ -465,13 +465,13 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
   - [x] 13.7 Document the four env vars that switch delivery to Gmail SMTP later, with zero code change — in `settings.py` and `backend/.env.example`
   - [x] 13.8 Tests: token issued, token validates, expired token rejected, token single-use — plus sign-in ends an unused link, deactivated accounts, weak passwords, CSRF, and every other session signed out
 
-- [ ] 14.0 Personal Info screen
-  - [ ] 14.1 Profile read and update endpoints for email and fullname
-  - [ ] 14.2 Require the current password to change email — with no verification, a typo in the login identifier locks the account out immediately
-  - [ ] 14.3 Change-password endpoint requiring the current password
-  - [ ] 14.4 Personal Info page
-  - [ ] 14.5 Tests including the wrong-current-password rejection
-  - [ ] 14.6 Let the user pick one of the glass icons (`GlassIcon`) as their user icon, replacing the yellow circle and initial in the account chip (`AccountMenu`). The user's idea, 2026-10-14: "a fun twist". **Decided 2026-10-15: build it as part of 14.0**, on the same page
+- [x] 14.0 Personal Info screen
+  - [x] 14.1 Profile read and update endpoints for email and fullname — `GET`/`PATCH /api/auth/profile/`, always the signed-in user (no id in the URL); also takes `avatar_glass`
+  - [x] 14.2 Require the current password to change email — with no verification, a typo in the login identifier locks the account out immediately
+  - [x] 14.3 Change-password endpoint requiring the current password — `POST /api/auth/password/`; keeps this session, signs out every other. **Follow-up once 15.0 is merged:** a tight per-user throttle on both current-password checks (they use `check_password`, so axes does not count them, and a stolen session could otherwise guess at the general 240/min)
+  - [x] 14.4 Personal Info page — `/account`, linked from the account menu
+  - [x] 14.5 Tests including the wrong-current-password rejection — 19 backend, 8 frontend
+  - [x] 14.6 Let the user pick one of the glass icons (`GlassIcon`) as their user icon, replacing the yellow circle and initial in the account chip (`AccountMenu`). The user's idea, 2026-10-14: "a fun twist". **Decided 2026-10-15: build it as part of 14.0**, on the same page. Shipped as `avatar_glass` on the user (migration `accounts.0005`, additive) and chip style "C1" (warm grey chip, white disc), chosen by the user 2026-10-16 as good for now; the glass icons also got flush rims, a new shot glass and an SVG Glencairn
   - **Decided 2026-10-15:** the page shows the username but does not let it be edited. Only email and full name are editable
 
 - [x] 15.0 Rate limiting (Tier 1) — built on `feature/rate-limiting` (2026-10-16) by a subagent; live as of 2026-10-20 (PR #31). **After deploy, verify `TRUSTED_PROXY_COUNT` with `/api/auth/client-ip/` (see 15.6)**

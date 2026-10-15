@@ -19,6 +19,8 @@ export interface AuthState {
   signup: (token: string, details: SignupDetails) => Promise<void>;
   /** Uses a reset link to set a new password and sign in. Rejects with a message to show. */
   resetPassword: (uid: string, token: string, password: string) => Promise<void>;
+  /** Replaces the signed-in user's details after the Personal Info page saves them. */
+  updateUser: (user: User) => void;
 }
 
 export const AuthContext = createContext<AuthState | null>(null);

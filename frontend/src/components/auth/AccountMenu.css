@@ -7,8 +7,10 @@
   align-items: center;
   gap: var(--space-2);
   padding: 3px var(--space-3) 3px 3px;
-  background: none;
-  border: 1.5px solid var(--color-border-strong);
+  /* "C1" (14.6): a warm grey chip with no outline, so the white avatar disc stands out
+     without repeating a colour. Interim, until the redesign (backlog.md). */
+  background: var(--color-surface-alt);
+  border: 1.5px solid transparent;
   border-radius: var(--radius-full);
   color: var(--color-text-primary);
   font-family: var(--font-sans);
@@ -20,25 +22,12 @@
 
 .account-chip:hover,
 .account-chip[aria-expanded="true"] {
-  background-color: var(--color-surface-alt);
+  background-color: var(--color-border);
 }
 
 .account-chip:focus-visible {
   outline: 2px solid var(--color-accent-border);
   outline-offset: 2px;
-}
-
-.account-avatar {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: var(--color-accent-light);
-  color: var(--color-accent);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .account-name {
@@ -75,6 +64,8 @@
 
 .account-item {
   display: block;
+  box-sizing: border-box;
+  text-decoration: none;
   width: 100%;
   padding: var(--space-2);
   background: none;
@@ -88,10 +79,11 @@
 }
 
 .account-item:hover {
+  text-decoration: none;
   background-color: var(--color-surface-alt);
 }
 
-/* Phones: the top bar is tight, so the chip shrinks to the initial alone. */
+/* Phones: the top bar is tight, so the chip shrinks to the avatar alone. */
 @media (max-width: 640px) {
   .account-chip {
     padding: 3px;

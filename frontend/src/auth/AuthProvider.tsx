@@ -47,9 +47,11 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     setReturnAfterLogin(true);
   }, []);
 
+  const updateUser = useCallback((next: User) => setUser(next), []);
+
   const value = useMemo(
-    () => ({ user, loading, returnAfterLogin, login, logout, signup, resetPassword }),
-    [user, loading, returnAfterLogin, login, logout, signup, resetPassword],
+    () => ({ user, loading, returnAfterLogin, login, logout, signup, resetPassword, updateUser }),
+    [user, loading, returnAfterLogin, login, logout, signup, resetPassword, updateUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

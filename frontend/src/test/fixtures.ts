@@ -5,6 +5,7 @@ export const user: User = {
   username: 'walkingtowork',
   email: 'host@example.com',
   fullname: '',
+  avatar_glass: '',
   can_invite: false,
 };
 
