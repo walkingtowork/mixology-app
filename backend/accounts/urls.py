@@ -1,4 +1,5 @@
 from django.urls import path
+from .diagnostics import ClientIPView
 from .views import (
     SessionView, LoginView, LogoutView, InviteListView, InviteDetailView, InviteSignupView,
     PasswordResetRequestView, PasswordResetConfirmView,
@@ -16,4 +17,6 @@ urlpatterns = [
         'auth/password-reset/<str:uidb64>/<str:token>/',
         PasswordResetConfirmView.as_view(), name='auth-password-reset-confirm',
     ),
+    # Temporary, superusers only: delete once TRUSTED_PROXY_COUNT is verified (15.6).
+    path('auth/client-ip/', ClientIPView.as_view(), name='auth-client-ip'),
 ]
