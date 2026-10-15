@@ -137,7 +137,7 @@ server whether email is switched on and, while it is not, tells people to ask th
 A successful reset signs the person in (a choice made while building, matching signup) and
 signs out every other session. Exercised end to end in headless Chrome on a DB copy.
 **Plan for the rest of the project (agreed 2026-10-15), in this order:**
-1. **16.1–16.4 first:** the `CLAUDE.md` owner-scoping rule and the three skills. They record
+1. **16.1–16.4 first** (done 2026-10-15, branch `docs/conventions-and-skills`): the `CLAUDE.md` owner-scoping rule and the three skills, in `.claude/commands/` as `owner-scoping`, `safe-migration` and `frontend-test`. They record
    the conventions 14.0 and 15.0 should follow, and they are what a subagent starting from
    nothing will read.
 2. **14.0 (with 14.6) and 15.0 in parallel, as a multi-agent trial.** The user's first try at
@@ -464,10 +464,10 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
   - [ ] 15.9 **Throttle forgot-password** (`/api/auth/password-reset/`) per IP and per account. Every request generates an email, so once Gmail is on it could flood someone's inbox. Also give the other anonymous endpoints a general anon limit: invite signup/check, reset-link check/confirm, guest order list and cancel. The public menu GET is already cached for 30s. Add a modest per-user limit for signed-in users
 
 - [ ] 16.0 Documentation and skills
-  - [ ] 16.1 Add the core invariant to `CLAUDE.md`: every queryset is owner-scoped unless deliberately public. It belongs there rather than only in a skill, because `CLAUDE.md` loads every session
-  - [ ] 16.2 Write the `owner-scoping` skill in `.claude/commands/` — the checklist for adding a model or endpoint without leaking data
-  - [ ] 16.3 Write the `safe-migration` skill, encoding the phased pattern and the fact that a failed Railway migration is an outage rather than a warning
-  - [ ] 16.4 Write the `frontend-test` skill now that conventions exist from 9.0
+  - [x] 16.1 Add the core invariant to `CLAUDE.md`: every queryset is owner-scoped unless deliberately public. It belongs there rather than only in a skill, because `CLAUDE.md` loads every session
+  - [x] 16.2 Write the `owner-scoping` skill in `.claude/commands/` — the checklist for adding a model or endpoint without leaking data
+  - [x] 16.3 Write the `safe-migration` skill, encoding the phased pattern and the fact that a failed Railway migration is an outage rather than a warning
+  - [x] 16.4 Write the `frontend-test` skill now that conventions exist from 9.0
   - [ ] 16.5 Update `README.md` for signup, login and the superuser flow
   - [ ] 16.6 Run `/security-review` against the full branch before merge
   - [ ] 16.7 Update `backlog.md` and `PROJECT_CONTEXT.md` to reflect what shipped
