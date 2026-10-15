@@ -577,9 +577,11 @@ export async function login(identifier: string, password: string): Promise<User>
   const { user } = await request<{ user: User }>('/api/auth/login/', {
     method: 'POST',
     body: { identifier, password },
-    // Only a 400 carries a message meant for the person signing in.
+    // Only a 400 (wrong details) or a 429 (locked out, or too many requests) carries a
+    // message meant for the person signing in.
     error: (res, body) =>
-      (res.status === 400 && body.detail) || 'Could not sign in. Reload the page and try again.',
+      ((res.status === 400 || res.status === 429) && body.detail) ||
+      'Could not sign in. Reload the page and try again.',
   });
   return user;
 }
@@ -601,7 +603,9 @@ export async function requestPasswordReset(identifier: string): Promise<{ emaile
   return request<{ emailed: boolean }>('/api/auth/password-reset/', {
     method: 'POST',
     body: { identifier },
-    error: () => 'Could not send a reset link. Reload the page and try again.',
+    // A 429 (asked too often) says how long to wait.
+    error: (res, body) =>
+      (res.status === 429 && body.detail) || 'Could not send a reset link. Reload the page and try again.',
   });
 }
 
