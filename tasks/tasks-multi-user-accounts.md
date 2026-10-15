@@ -136,7 +136,18 @@ so in production a reset link appears in Railway's deploy logs; the easier route
 server whether email is switched on and, while it is not, tells people to ask their host.
 A successful reset signs the person in (a choice made while building, matching signup) and
 signs out every other session. Exercised end to end in headless Chrome on a DB copy.
-**Next after merge: 14.0 (Personal Info).**
+**Plan for the rest of the project (agreed 2026-10-15), in this order:**
+1. **16.1–16.4 first:** the `CLAUDE.md` owner-scoping rule and the three skills. They record
+   the conventions 14.0 and 15.0 should follow, and they are what a subagent starting from
+   nothing will read.
+2. **14.0 (with 14.6) and 15.0 in parallel, as a multi-agent trial.** The user's first try at
+   orchestration. The main session builds 14.0; one subagent builds 15.0 in its own git
+   worktree; the main session reviews its branch and hands over both PRs. Expect conflicts
+   in `settings.py`, `accounts/views.py` and `accounts/tests.py`. The user will check
+   `/usage` before and after to see what the subagent cost.
+3. **16.5–16.7 last**, with `/security-review` (16.6) run by a separate agent.
+The user wants this done within a day or so of 2026-10-15. Manual testing of 13.0 onward is
+deferred to one pass after 16.0; ask for it then, not per PR.
 
 **10.0 is live as of 2026-10-14 (PR #24)** — the user confirmed Railway booted and `/admin/`
 signs in by username and by email. What follows describes how it was built and rehearsed.
@@ -438,7 +449,8 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
   - [ ] 14.3 Change-password endpoint requiring the current password
   - [ ] 14.4 Personal Info page
   - [ ] 14.5 Tests including the wrong-current-password rejection
-  - [ ] 14.6 Consider letting the user pick one of the glass icons (`GlassIcon`) as their user icon, replacing the yellow circle and initial in the account chip (`AccountMenu`). The user's idea, 2026-10-14: "a fun twist". Raise it when starting 14.0
+  - [ ] 14.6 Let the user pick one of the glass icons (`GlassIcon`) as their user icon, replacing the yellow circle and initial in the account chip (`AccountMenu`). The user's idea, 2026-10-14: "a fun twist". **Decided 2026-10-15: build it as part of 14.0**, on the same page
+  - **Decided 2026-10-15:** the page shows the username but does not let it be edited. Only email and full name are editable
 
 - [ ] 15.0 Rate limiting (Tier 1)
   - [ ] 15.1 DRF `AnonRateThrottle` and `UserRateThrottle` in the `REST_FRAMEWORK` block
@@ -446,6 +458,10 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
   - [ ] 15.3 Add `django-axes` for login brute-force protection — DB-backed, so it *is* accurate across workers
   - [ ] 15.4 Wire axes to the login view deliberately; it hooks Django's `authenticate()` path and needs care with DRF
   - [ ] 15.5 Throttle the anonymous order-create endpoint, which is a spam target by construction
+  - [ ] 15.6 **Do this first: make Django see the real client IP.** Checked 2026-10-15: nothing in `settings.py` reads `X-Forwarded-For` (only `SECURE_PROXY_SSL_HEADER` is set), so behind Vercel → Railway every request has the same `REMOTE_ADDR`. Per-IP throttling would then treat the whole internet as one client and could shut off ordering for a whole party, and axes's "user + IP" lockout would become "user from anywhere", letting anyone lock an account out. Configure DRF's `NUM_PROXIES` and axes's IP lookup (django-ipware) to match the real proxy chain, and **verify in production** what `X-Forwarded-For` actually contains before trusting the count
+  - [ ] 15.7 **Lockout rule (decided 2026-10-15):** 5 failed attempts locks that username + IP for 30 minutes. Lock on the combination, never on username alone, so a stranger cannot lock you out of your own phone
+  - [ ] 15.8 **Guest limits must be generous.** Everyone at a party shares the home Wi-Fi's public IP, so the guest-order throttle is a "no real party could reach this" ceiling against scripts on a leaked share link, not crowd control (the two-unserved-drinks limit, PR #28, does that)
+  - [ ] 15.9 **Throttle forgot-password** (`/api/auth/password-reset/`) per IP and per account. Every request generates an email, so once Gmail is on it could flood someone's inbox. Also give the other anonymous endpoints a general anon limit: invite signup/check, reset-link check/confirm, guest order list and cancel. The public menu GET is already cached for 30s. Add a modest per-user limit for signed-in users
 
 - [ ] 16.0 Documentation and skills
   - [ ] 16.1 Add the core invariant to `CLAUDE.md`: every queryset is owner-scoped unless deliberately public. It belongs there rather than only in a skill, because `CLAUDE.md` loads every session
