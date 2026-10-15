@@ -3,9 +3,11 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle
 from django.db import transaction
 from django.db.models import Count, Max, Min
 from django.utils.cache import patch_cache_control
+from backend.throttling import GuestOrderCreateThrottle
 
 
 class PublicCacheMixin:
@@ -320,9 +322,13 @@ class GuestOrderMixin:
     another guest whose name they know -- accepted for a party.
 
     Never add PublicCacheMixin here: these responses are per-guest.
+
+    Rate limited per IP: the general anonymous limit for everything, plus a tighter one on
+    placing an order. Both are generous, since a whole party shares one public IP (15.8).
     """
     permission_classes = [AllowAny]
     authentication_classes = []
+    throttle_classes = [AnonRateThrottle, GuestOrderCreateThrottle]
     serializer_class = GuestOrderSerializer
 
     def get_menu(self):
@@ -355,7 +361,7 @@ class GuestOrderListView(GuestOrderMixin, generics.ListCreateAPIView):
             raise PermissionDenied("This menu isn't taking orders right now.")
         # A guest is their name on this menu, as for listing and cancelling, so a new name
         # gets a fresh allowance. This stops a guest tapping through the whole menu, not
-        # someone set on spamming; throttling the endpoint is the guard for that.
+        # someone set on spamming; GuestOrderCreateThrottle is the guard for that.
         with transaction.atomic():
             # Lock the menu row so two quick taps cannot both see one pending order and
             # both go through. A no-op on SQLite, which serialises writes anyway.
