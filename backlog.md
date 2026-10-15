@@ -22,12 +22,10 @@ An **epic** is a total of its child tickets, never estimated as a single piece o
 
 ## 1. Now — before the 2026-10-31 party
 
-- [ ] **Guest order limit** (5) — a guest can have at most two unserved orders on a menu at
-      once; more opens up as drinks are served or cancelled. Enforced on the server, since
-      the only existing guard is the 5-second button lock in `PublicMenu.tsx`. A guest is
-      their self-typed name on a menu, as for listing and cancelling. Revisit the number
-      once non-alcoholic or hot drinks are on menus. Throttling the endpoint itself is still
-      15.0. Agreed 2026-10-15.
+- [x] **Guest order limit** (5) — merged 2026-10-15 (PR #28). At most two unserved orders
+      per guest name per menu; serving or cancelling frees a slot. **Manual testing on a
+      real phone in production is still outstanding** — the checklist is on PR #28. Revisit
+      the number once non-alcoholic or hot drinks are on menus.
 
 ## 2. Finish multi-user accounts
 
