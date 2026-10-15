@@ -22,18 +22,18 @@ An **epic** is a total of its child tickets, never estimated as a single piece o
 
 ## 1. Now — before the 2026-10-31 party
 
-- [x] **Guest order limit** (5) — merged 2026-10-15 (PR #28). At most two unserved orders
-      per guest name per menu; serving or cancelling frees a slot. **Manual testing on a
-      real phone in production is still outstanding** — the checklist is on PR #28. Revisit
-      the number once non-alcoholic or hot drinks are on menus.
+- [x] **Guest order limit** (5) — merged 2026-10-15 (PR #28), and tested by the user on a
+      phone in production the same day. At most two unserved orders per guest name per menu;
+      serving or cancelling frees a slot. The user may do a trial run with a friend or two
+      before the party. Revisit the number once non-alcoholic or hot drinks are on menus.
 
 ## 2. Finish multi-user accounts
 
 Auth, invite-only signup, per-user ownership, password reset, personal info. Phases 1.0–12.0
 are live. → `tasks/tasks-multi-user-accounts.md`, decisions in `PROJECT_CONTEXT.md`
 
-- [ ] **13.0 Password reset** (8) — endpoints, pages, an admin action that prints a reset
-      link, console email backend for now
+- [x] **13.0 Password reset** (8) — merged 2026-10-15 (PR #29). Manual testing is deferred
+      to one pass over all the user-account work once 16.0 is done
 - [ ] **14.0 Personal Info screen** (5)
 - [ ] **14.6 Glass-icon avatars** (2) — the user's idea: pick a `GlassIcon` in place of the
       yellow initial circle. Raise it when starting 14.0
