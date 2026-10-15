@@ -1,7 +1,7 @@
 import logging
 from datetime import timedelta
 
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
@@ -33,6 +33,7 @@ def user_payload(user):
         'username': user.username,
         'email': user.email,
         'fullname': user.fullname,
+        'avatar_glass': user.avatar_glass,
         'can_invite': user.has_perm('accounts.add_invite'),
     }
 
@@ -281,3 +282,67 @@ class PasswordResetConfirmView(APIView):
         user.save(update_fields=['password'])
         login(request, user, backend='accounts.backends.EmailOrUsernameBackend')
         return Response({'user': user_payload(user)})
+
+
+def check_current_password(data, user):
+    """Raise a 400 unless the request body carries the user's current password.
+
+    It is checked directly rather than through authenticate(), which is about starting a
+    session: this person already has one, and is proving it is still them at the keyboard.
+    """
+    current = data.get('current_password')
+    if not isinstance(current, str) or not current:
+        raise serializers.ValidationError({'current_password': ['Enter your current password.']})
+    if not user.check_password(current):
+        raise serializers.ValidationError({'current_password': ['That password is incorrect.']})
+
+
+class ProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['email', 'fullname', 'avatar_glass']
+
+    # Case-insensitive, matching the database constraint; changing only the case of your own
+    # address is fine.
+    def validate_email(self, value):
+        if User.objects.filter(email__iexact=value).exclude(pk=self.instance.pk).exists():
+            raise serializers.ValidationError('An account with that email already exists.')
+        return value
+
+
+class ProfileView(APIView):
+    """Your own name, email and avatar. The username is shown but cannot be changed here.
+
+    Changing the email needs the current password: it is a login identifier and is not
+    verified, so a typo, or someone at an unlocked phone, would otherwise lock the owner out.
+    There is no object id in the URL; it is always the signed-in user.
+    """
+
+    def get(self, request):
+        return Response({'user': user_payload(request.user)})
+
+    def patch(self, request):
+        user = request.user
+        serializer = ProfileSerializer(user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        new_email = serializer.validated_data.get('email')
+        if new_email is not None and new_email != user.email:
+            check_current_password(request.data, user)
+        serializer.save()
+        return Response({'user': user_payload(user)})
+
+
+class PasswordChangeView(APIView):
+    """Change your password, given the current one.
+
+    Every other session is signed out (Django ties each session to the password hash), but
+    this one is kept, so the person changing it stays signed in.
+    """
+
+    def post(self, request):
+        user = request.user
+        check_current_password(request.data, user)
+        user.set_password(validated_new_password(request.data, user))
+        user.save(update_fields=['password'])
+        update_session_auth_hash(request, user)
+        return Response(status=status.HTTP_204_NO_CONTENT)

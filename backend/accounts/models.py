@@ -7,6 +7,8 @@ from django.db import models
 from django.db.models.functions import Lower
 from django.utils import timezone
 
+from cocktails.models import GLASS_CHOICES
+
 # Letters and numbers only. Nothing in a username can look like an email address, so a
 # typed login containing "@" is always an email and anything else is always a username.
 username_validator = RegexValidator(
@@ -32,6 +34,9 @@ class User(AbstractUser):
     )
     email = models.EmailField('email address')
     fullname = models.CharField(max_length=150, blank=True, help_text="User's full name")
+    # One of the recipe glass icons, shown as the user's picture in the account chip.
+    # Blank shows their initial instead.
+    avatar_glass = models.CharField(max_length=20, choices=GLASS_CHOICES, blank=True)
 
     class Meta:
         verbose_name = "User"
