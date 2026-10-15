@@ -6,11 +6,32 @@
   overflow: hidden;
 }
 
-.public-menu-header,
-.public-menu-order-error {
+.public-menu-header {
   text-align: center;
   color: var(--color-text-secondary);
   font-size: var(--text-sm);
+}
+
+/* Pinned to the bottom of the screen: the Order button a guest tapped may be far down the
+   menu, and a message at the top of the page would go unseen. Below the drawer and modal,
+   and taps go through it to the drink underneath. */
+.public-menu-order-error {
+  position: fixed;
+  left: 50%;
+  bottom: var(--space-6);
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100% - 2 * var(--space-4));
+  z-index: 150;
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  background: var(--color-text-primary);
+  color: var(--color-surface);
+  font-size: var(--text-sm);
+  text-align: center;
+  pointer-events: none;
 }
 
 .public-menu-list {

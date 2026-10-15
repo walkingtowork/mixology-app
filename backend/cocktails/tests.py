@@ -1706,6 +1706,39 @@ class GuestOrderAPITests(APITestCase):
         self.assertEqual(order.menu, self.menu)
         self.assertFalse(order.is_fulfilled)
 
+    # --- the pending-order limit ---
+
+    def test_guest_cannot_have_more_than_two_drinks_on_the_way(self):
+        self.place('Sam')
+        self.place('Sam')
+        response = self.order()
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn('2 drinks on the way', response.data['detail'])
+        self.assertEqual(Order.objects.count(), 2)
+
+    def test_a_served_drink_frees_a_slot(self):
+        self.place('Sam')
+        served = self.place('Sam')
+        served.is_fulfilled = True
+        served.save()
+        self.assertEqual(self.order().status_code, status.HTTP_201_CREATED)
+
+    def test_a_cancelled_drink_frees_a_slot(self):
+        self.place('Sam')
+        cancelled = self.place('Sam')
+        self.client.delete(f'{self.url}{cancelled.id}/?guest_name=Sam')
+        self.assertEqual(self.order().status_code, status.HTTP_201_CREATED)
+
+    def test_limit_is_per_guest(self):
+        self.place('Sam')
+        self.place('Sam')
+        self.assertEqual(self.order(guest_name='Alex').status_code, status.HTTP_201_CREATED)
+
+    def test_limit_is_per_menu(self):
+        self.place('Sam', menu=self.draft_menu)
+        self.place('Sam', menu=self.draft_menu)
+        self.assertEqual(self.order().status_code, status.HTTP_201_CREATED)
+
     # --- listing ---
 
     def test_guest_sees_only_their_own_orders_on_this_menu(self):
