@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from django.db import transaction
 from django.db.models import Count, Max, Min
 from django.utils.cache import patch_cache_control
 
@@ -341,13 +342,35 @@ class GuestOrderMixin:
         return {**super().get_serializer_context(), 'menu': self.get_menu()}
 
 
+# Enough for a guest and their partner, or two at once for the bold. More opens up as
+# drinks are served or cancelled. Revisit once menus carry non-alcoholic or hot drinks.
+MAX_PENDING_GUEST_ORDERS = 2
+
+
 class GuestOrderListView(GuestOrderMixin, generics.ListCreateAPIView):
     def perform_create(self, serializer):
         menu = self.get_menu()
         # Any menu can be previewed by its share link; only the active one takes orders.
         if not menu.is_active:
             raise PermissionDenied("This menu isn't taking orders right now.")
-        serializer.save(menu=menu)
+        # A guest is their name on this menu, as for listing and cancelling, so a new name
+        # gets a fresh allowance. This stops a guest tapping through the whole menu, not
+        # someone set on spamming; throttling the endpoint is the guard for that.
+        with transaction.atomic():
+            # Lock the menu row so two quick taps cannot both see one pending order and
+            # both go through. A no-op on SQLite, which serialises writes anyway.
+            Menu.objects.select_for_update().filter(pk=menu.pk).first()
+            pending = Order.objects.filter(
+                menu=menu,
+                guest_name=serializer.validated_data['guest_name'],
+                is_fulfilled=False,
+            ).count()
+            if pending >= MAX_PENDING_GUEST_ORDERS:
+                raise PermissionDenied(
+                    f"You already have {pending} drinks on the way. "
+                    "You can order another once one is served."
+                )
+            serializer.save(menu=menu)
 
 
 class GuestOrderDetailView(GuestOrderMixin, generics.DestroyAPIView):

@@ -39,6 +39,13 @@ export default function PublicMenu() {
       .finally(() => setLoading(false));
   }, [shareToken]);
 
+  // The error is a toast over the menu, so it clears itself rather than covering a drink.
+  useEffect(() => {
+    if (!orderError) return;
+    const timer = setTimeout(() => setOrderError(null), 6000);
+    return () => clearTimeout(timer);
+  }, [orderError]);
+
   const placeOrder = async (recipeId: number, name: string) => {
     if (!shareToken) return;
     setOrderError(null);

@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import { Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as api from '../../services/cocktailsApi';
@@ -63,6 +63,22 @@ describe('PublicMenu', () => {
     await user.click(await screen.findByRole('button', { name: 'Order' }));
     expect(await screen.findByRole('alert')).toHaveTextContent("This menu isn't taking orders right now.");
     expect(screen.getByRole('button', { name: 'Order' })).toBeEnabled();
+  });
+
+  it('shows the order limit, then clears the message by itself', async () => {
+    localStorage.setItem('barCart_guestName', 'Sam');
+    const refusal = 'You already have 2 drinks on the way. You can order another once one is served.';
+    vi.mocked(api.createGuestOrder).mockRejectedValue(new Error(refusal));
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const { user } = renderMenu();
+      await user.click(await screen.findByRole('button', { name: 'Order' }));
+      expect(await screen.findByRole('alert')).toHaveTextContent(refusal);
+      await act(() => vi.advanceTimersByTimeAsync(6000));
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("lists the guest's own orders and cancels one", async () => {
