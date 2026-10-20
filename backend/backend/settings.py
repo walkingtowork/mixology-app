@@ -12,9 +12,12 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 from dotenv import load_dotenv
+from datetime import timedelta
 from django.core.exceptions import ImproperlyConfigured
 import dj_database_url
 import os
+
+from backend.client_ip import parse_trusted_proxy_count
 
 # Load environment variables from .env file
 load_dotenv()
@@ -57,6 +60,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'corsheaders',
+    'axes',
     'api',
     'accounts',
     'cocktails',
@@ -66,7 +70,12 @@ INSTALLED_APPS = [
 AUTH_USER_MODEL = 'accounts.User'
 
 # The only way to sign in, for the app and the Django admin alike: email or username.
-AUTHENTICATION_BACKENDS = ['accounts.backends.EmailOrUsernameBackend']
+# LoginLockoutBackend goes first: it is django-axes refusing a locked-out username + IP before
+# any password is checked (see "Login lockout" below). It never signs anyone in itself.
+AUTHENTICATION_BACKENDS = [
+    'accounts.backends.LoginLockoutBackend',
+    'accounts.backends.EmailOrUsernameBackend',
+]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -78,6 +87,9 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # Last, as axes asks. Turns a lockout in the Django admin login into a 429 page. The API's
+    # LoginView answers a lockout itself (accounts/views.py), so this never touches it.
+    'axes.middleware.AxesMiddleware',
 ]
 
 ROOT_URLCONF = 'backend.urls'
@@ -214,6 +226,25 @@ PASSWORD_RESET_TIMEOUT = 60 * 60 * 24 * 3
 # reject it outright.
 
 
+# The real client IP (15.6), for rate limiting and login lockout. Requests arrive as
+# browser -> Vercel rewrite -> Railway edge -> gunicorn, so REMOTE_ADDR is a Railway proxy and
+# is the same for everyone. Each proxy appends the address it saw to X-Forwarded-For, and
+# TRUSTED_PROXY_COUNT says how many entries to count in from the right to reach the one the
+# first trusted proxy (Vercel) recorded. See backend/client_ip.py.
+#
+# NOT YET VERIFIED. The default of 2 assumes Vercel sends `client` and Railway appends Vercel's
+# address, giving `client, vercel`. Nobody has looked at what production actually receives.
+# Too low and everyone looks like Vercel's IP: per-IP limits become global, and anyone could
+# lock an account out from anywhere. Too high and the client can pick its own IP by sending
+# the header. After deploying, a superuser opens /api/auth/client-ip/ from a phone on mobile
+# data and sets this so `drf_throttle_ip` is that phone's public IP.
+#
+# Known gap at any value: Railway's own URL is public, so a client can skip Vercel, and at a
+# count of 2 or more it then controls the left-hand entry. Closing that needs Railway to
+# accept only Vercel's traffic (the deferred shared-secret gate).
+TRUSTED_PROXY_COUNT = parse_trusted_proxy_count(os.getenv('TRUSTED_PROXY_COUNT'), default=2)
+
+
 # Django REST Framework
 # Default-deny. Until 2026-10-12 there was no REST_FRAMEWORK block at all, so DRF fell back
 # to AllowAny and anyone on the internet could `curl -X DELETE` any record -- no browser,
@@ -234,7 +265,76 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'accounts.authentication.SessionAuthentication',
     ],
+    # Rate limiting (15.0). Every endpoint gets the general limit for who is asking: per IP
+    # when signed out, per account when signed in. Views that need a different limit add a
+    # scoped throttle of their own (backend/throttling.py).
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'backend.throttling.SignedInUserThrottle',
+    ],
+    # READ THIS BEFORE TUNING: these limits are about 3x looser than written. DRF keeps its
+    # counts in the cache, and with no CACHES setting that is local memory, private to each
+    # process. Railway runs `gunicorn --workers 3`, so each worker counts on its own and a
+    # client can make up to three times the limit (more if gunicorn ever runs more workers),
+    # and every count resets on deploy. A shared cache (Redis) would fix it and is deferred
+    # (backlog.md). Login brute force is handled by django-axes, which counts in the database
+    # and is exact across workers.
+    #
+    # Deliberately generous until TRUSTED_PROXY_COUNT is verified in production: if it is
+    # wrong, every client looks like the same IP and a per-IP limit becomes a global one.
+    # Everyone at a party also shares one public IP (next one 2026-10-31), so the anonymous
+    # limits are a "no real party could reach this" ceiling against scripts, not crowd
+    # control (15.8).
+    'DEFAULT_THROTTLE_RATES': {
+        # Every anonymous request: login, session, invite check/signup, reset-link
+        # check/confirm, guest order list and cancel, the public menu (which Vercel also
+        # caches for 30s). A party's phones loading the menu and checking orders stay far below.
+        'anon': '300/minute',
+        # Signed-in use, per account. A fast session clicking around makes a few requests
+        # per page; this only stops a script running with someone's session.
+        'user': '240/minute',
+        # Placing a guest order, per IP. One bartender cannot pour 60 drinks a minute, and each
+        # guest is held to two unserved drinks anyway (PR #28).
+        'guest_order_create': '60/minute',
+        # "Forgot password", per IP (a visible 429) and per account (silently skips the email,
+        # see PasswordResetAccountThrottle). Each request can send an email.
+        'password_reset': '10/hour',
+        'password_reset_account': '3/hour',
+    },
+    # How many proxies sit in front of Django; DRF counts that many entries in from the right
+    # of X-Forwarded-For. axes uses the same lookup (AXES_CLIENT_IP_CALLABLE below).
+    'NUM_PROXIES': TRUSTED_PROXY_COUNT,
+    'EXCEPTION_HANDLER': 'backend.throttling.exception_handler',
 }
+
+
+# Login lockout (django-axes, 15.3/15.7). Failed sign-ins are recorded in the database, so
+# the count is exact across gunicorn workers, and the API and the Django admin share it.
+#
+# 5 failures lock that username + IP for 30 minutes. Never the username alone: then a
+# stranger could lock you out of your own account from anywhere. The username is normalised
+# first (accounts.backends.lockout_username), so switching between email, username and
+# letter case does not buy extra tries. Unlock someone early by deleting their row under
+# Axes > Access attempts in admin, or `python manage.py axes_reset_username <username>`.
+AXES_FAILURE_LIMIT = 5
+AXES_COOLOFF_TIME = timedelta(minutes=30)
+AXES_LOCKOUT_PARAMETERS = [['username', 'ip_address']]
+AXES_USERNAME_CALLABLE = 'accounts.backends.lockout_username'
+AXES_CLIENT_IP_CALLABLE = 'backend.client_ip.client_ip'
+# A sign-in that works clears the failures for that username + IP.
+AXES_RESET_ON_SUCCESS = True
+# 30 minutes from the lockout, as the message says. Axes's default restarts the clock on every
+# attempt made while locked out, so a phone retrying in the background would never get back in.
+AXES_RESET_COOL_OFF_ON_FAILURE_DURING_LOCKOUT = False
+# Only failures are stored. Axes would otherwise keep a row with the IP and browser of every
+# successful sign-in forever, which nothing here uses.
+AXES_DISABLE_ACCESS_LOG = True
+AXES_COOLOFF_MESSAGE = 'Too many failed sign-in attempts. Please wait 30 minutes and try again.'
+
+
+# Throttle counts live in the cache, which outlives a single test. This runner empties it
+# before each test, so limits stay switched on in tests and behave exactly as in production.
+TEST_RUNNER = 'backend.test_runner.CacheClearingTestRunner'
 
 
 # Security

@@ -12,7 +12,10 @@ from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
 from rest_framework import serializers, status
 from rest_framework.permissions import AllowAny, BasePermission
 from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
+
+from backend.throttling import LockedOut, PasswordResetAccountThrottle, PasswordResetIPThrottle
 
 from .models import Invite, User, username_validator
 from .password_reset import can_reset, emails_are_delivered, send_reset_email, user_for_link
@@ -57,7 +60,9 @@ class LoginView(APIView):
     sign a visitor in to an attacker's account.
 
     A failure is a 400 with one message for every cause -- unknown account, wrong password,
-    deactivated user -- so the response never says which accounts exist.
+    deactivated user -- so the response never says which accounts exist. Five failures for
+    one username from one IP lock it for 30 minutes (django-axes, settings.py); that is the
+    same for names that match no account.
     """
     permission_classes = [AllowAny]
 
@@ -69,6 +74,13 @@ class LoginView(APIView):
         if isinstance(identifier, str) and isinstance(password, str):
             user = authenticate(request, username=identifier, password=password)
         if user is None:
+            # django-axes flags the request when this username + IP is locked out, whether
+            # this attempt was the fifth failure or came in during the 30 minutes after.
+            # It is checked here because axes's middleware only sees Django's own request
+            # object, not DRF's. Locked out is a 429 with its own message; a correct
+            # password does not get in until the lock expires.
+            if getattr(request, 'axes_locked_out', False):
+                raise LockedOut()
             return Response(
                 {'detail': 'Incorrect email, username or password.'},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -212,9 +224,13 @@ class PasswordResetRequestView(APIView):
     emails or usernames exist. It does say whether email is switched on at all, which is
     true or false for everyone: while it is off, the page tells people to ask for a link.
     CSRF is enforced explicitly, for the same reason as LoginView.
+
+    Every request can send an email, so it is limited per IP (a 429) and per account (no
+    email, same answer; see PasswordResetAccountThrottle).
     """
     permission_classes = [AllowAny]
     authentication_classes = []
+    throttle_classes = [AnonRateThrottle, PasswordResetIPThrottle]
 
     @method_decorator(csrf_protect)
     def post(self, request):
@@ -226,7 +242,7 @@ class PasswordResetRequestView(APIView):
         identifier = identifier.strip()
         lookup = 'email__iexact' if '@' in identifier else 'username__iexact'
         user = User.objects.filter(**{lookup: identifier}).first()
-        if user and can_reset(user):
+        if user and can_reset(user) and PasswordResetAccountThrottle(user).allow_request(request, self):
             try:
                 send_reset_email(user)
             except Exception:

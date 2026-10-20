@@ -78,9 +78,11 @@ describe('auth calls', () => {
     expect(JSON.parse(init.body as string)).toEqual({ identifier: 'sam', password: 'pw' });
   });
 
-  it("login passes on the server's message for a 400 only", async () => {
+  it("login passes on the server's message for a 400 or 429 only", async () => {
     respond(400, { detail: 'Incorrect email, username or password.' });
     await expect(api.login('sam', 'no')).rejects.toThrow('Incorrect email, username or password.');
+    respond(429, { detail: 'Too many failed sign-in attempts. Please wait 30 minutes and try again.' });
+    await expect(api.login('sam', 'no')).rejects.toThrow('Please wait 30 minutes');
     respond(403, { detail: 'CSRF Failed: CSRF token missing.' });
     await expect(api.login('sam', 'pw')).rejects.toThrow('Could not sign in. Reload the page and try again.');
   });
@@ -93,6 +95,13 @@ describe('password reset calls', () => {
     const { url, init } = lastRequest();
     expect(url).toBe('/api/auth/password-reset/');
     expect(JSON.parse(init.body as string)).toEqual({ identifier: 'sam' });
+  });
+
+  it('requestPasswordReset says how long to wait when asked too often, and nothing else', async () => {
+    respond(429, { detail: 'Too many requests. Please wait 60 minutes and try again.' });
+    await expect(api.requestPasswordReset('sam')).rejects.toThrow('Please wait 60 minutes');
+    respond(403, { detail: 'CSRF Failed: CSRF token missing.' });
+    await expect(api.requestPasswordReset('sam')).rejects.toThrow('Could not send a reset link. Reload the page and try again.');
   });
 
   it('resetPassword posts to the link and unwraps the user', async () => {
