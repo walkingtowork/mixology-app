@@ -52,8 +52,9 @@ before beta hosts (~10, possibly on the same day). The user agreed to keep 2 and
 rates. Also: sign the bar device in before the 2026-10-31 party, since a lockout blocks
 sign-in but not an existing session.
 
-**14.0 (Personal Info, with 14.6 glass avatars) is pushed on `feature/personal-info`, PR
-open (2026-10-20).** Rebased on `main` with no conflicts; the per-account current-password
+**14.0 (Personal Info, with 14.6 glass avatars) is merged (PR #32, 2026-10-20).** Its
+"After deploy" checks are done together with the proxy-count check above, not saved for the
+pass after 16.0. Rebased on `main` with no conflicts; the per-account current-password
 throttle (14.3) is added; 293 backend / 66 frontend tests. The branch also carries a
 `backlog.md` note for the redesign (all glass icons to SVG; the "C1" chip is interim). The
 multi-agent trial debrief is done (2026-10-20). Next: 16.5–16.7.
