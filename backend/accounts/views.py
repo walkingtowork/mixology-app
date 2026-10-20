@@ -9,13 +9,15 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
-from rest_framework import serializers, status
+from rest_framework import exceptions, serializers, status
 from rest_framework.permissions import AllowAny, BasePermission
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
 
-from backend.throttling import LockedOut, PasswordResetAccountThrottle, PasswordResetIPThrottle
+from backend.throttling import (
+    CurrentPasswordThrottle, LockedOut, PasswordResetAccountThrottle, PasswordResetIPThrottle,
+)
 
 from .models import Invite, User, username_validator
 from .password_reset import can_reset, emails_are_delivered, send_reset_email, user_for_link
@@ -284,13 +286,18 @@ class PasswordResetConfirmView(APIView):
         return Response({'user': user_payload(user)})
 
 
-def check_current_password(data, user):
+def check_current_password(request, view, user):
     """Raise a 400 unless the request body carries the user's current password.
 
     It is checked directly rather than through authenticate(), which is about starting a
     session: this person already has one, and is proving it is still them at the keyboard.
+    That also means django-axes never sees these attempts, so CurrentPasswordThrottle (a 429)
+    is the brute-force guard here.
     """
-    current = data.get('current_password')
+    throttle = CurrentPasswordThrottle(user)
+    if not throttle.allow_request(request, view):
+        raise exceptions.Throttled(throttle.wait())
+    current = request.data.get('current_password')
     if not isinstance(current, str) or not current:
         raise serializers.ValidationError({'current_password': ['Enter your current password.']})
     if not user.check_password(current):
@@ -327,7 +334,7 @@ class ProfileView(APIView):
         serializer.is_valid(raise_exception=True)
         new_email = serializer.validated_data.get('email')
         if new_email is not None and new_email != user.email:
-            check_current_password(request.data, user)
+            check_current_password(request, self, user)
         serializer.save()
         return Response({'user': user_payload(user)})
 
@@ -341,7 +348,7 @@ class PasswordChangeView(APIView):
 
     def post(self, request):
         user = request.user
-        check_current_password(request.data, user)
+        check_current_password(request, self, user)
         user.set_password(validated_new_password(request.data, user))
         user.save(update_fields=['password'])
         update_session_auth_hash(request, user)

@@ -608,6 +608,8 @@ export async function updateProfile(changes: ProfileChanges): Promise<User> {
     body: changes,
     error: (res, body) =>
       (res.status === 400 && fieldMessages(body, ['current_password', 'email', 'fullname', 'avatar_glass'])) ||
+      // A 429: too many current-password checks on this account.
+      (res.status === 429 && body.detail) ||
       'Could not save your details. Reload the page and try again.',
   });
   return user;
@@ -620,6 +622,7 @@ export async function changePassword(currentPassword: string, password: string):
     body: { current_password: currentPassword, password },
     error: (res, body) =>
       (res.status === 400 && fieldMessages(body, ['current_password', 'password'])) ||
+      (res.status === 429 && body.detail) ||
       'Could not change your password. Reload the page and try again.',
   });
 }

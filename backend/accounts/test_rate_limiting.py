@@ -222,6 +222,52 @@ class PasswordResetThrottleTests(APITestCase):
         self.assertEqual([m.to for m in mail.outbox], [['sam@example.com']])
 
 
+@fast_passwords
+class CurrentPasswordThrottleTests(APITestCase):
+    """Changing the email or password checks the current one; axes never sees those checks."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='alex', email='alex@example.com', password='old-password-1')
+        self.client.force_login(self.user)
+
+    def change_password(self, current):
+        return self.client.post(
+            '/api/auth/password/', {'current_password': current, 'password': 'a-new-long-passphrase'},
+            format='json',
+        )
+
+    def change_email(self, current):
+        return self.client.patch(
+            '/api/auth/profile/', {'email': 'new@example.com', 'current_password': current}, format='json',
+        )
+
+    def test_guesses_on_either_form_share_one_limit_then_even_the_right_password_is_refused(self):
+        for n in range(limit('current_password')):
+            guess = self.change_password if n % 2 else self.change_email
+            self.assertEqual(guess(f'guess-{n}').status_code, status.HTTP_400_BAD_REQUEST)
+        response = self.change_password('old-password-1')
+        self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+        self.assertIn('Please wait', response.data['detail'])
+        self.assertIn('no-store', response['Cache-Control'])
+        self.assertEqual(self.change_email('old-password-1').status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('old-password-1'))
+        self.assertEqual(self.user.email, 'alex@example.com')
+
+    def test_edits_that_do_not_check_the_password_do_not_count(self):
+        for n in range(limit('current_password') + 2):
+            response = self.client.patch('/api/auth/profile/', {'fullname': f'Alex {n}'}, format='json')
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.change_email('old-password-1').status_code, status.HTTP_200_OK)
+
+    def test_the_limit_is_per_account(self):
+        for n in range(limit('current_password')):
+            self.change_password(f'guess-{n}')
+        sam = User.objects.create_user(username='sam', email='sam@example.com', password='pw-for-sam-1')
+        self.client.force_login(sam)
+        self.assertEqual(self.change_password('pw-for-sam-1').status_code, status.HTTP_204_NO_CONTENT)
+
+
 @two_proxies
 class GuestOrderThrottleTests(APITestCase):
     def setUp(self):

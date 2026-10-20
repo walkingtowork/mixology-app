@@ -300,6 +300,10 @@ REST_FRAMEWORK = {
         # see PasswordResetAccountThrottle). Each request can send an email.
         'password_reset': '10/hour',
         'password_reset_account': '3/hour',
+        # Checking the current password to change your email or password, per account
+        # (CurrentPasswordThrottle). Someone fixing a typo or two never gets near it; a
+        # session guessing the password gets 10 tries an hour.
+        'current_password': '10/hour',
     },
     # How many proxies sit in front of Django; DRF counts that many entries in from the right
     # of X-Forwarded-For. axes uses the same lookup (AXES_CLIENT_IP_CALLABLE below).

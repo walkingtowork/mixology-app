@@ -62,6 +62,25 @@ class PasswordResetAccountThrottle(SimpleRateThrottle):
         return self.cache_format % {'scope': self.scope, 'ident': self.user.pk}
 
 
+class CurrentPasswordThrottle(SimpleRateThrottle):
+    """Current-password checks per account: changing the email or the password (14.0).
+
+    The person already has a session, so this is what stops someone at an unlocked phone, or
+    a script with a stolen session cookie, from guessing the password to take the account
+    over. Every check counts, right or wrong. Visible: the 429 only ever reaches someone
+    signed in to the account, so it reveals nothing. Checked by hand, like
+    PasswordResetAccountThrottle, because a name or avatar edit does not check the password.
+    """
+    scope = 'current_password'
+
+    def __init__(self, user):
+        self.user = user
+        super().__init__()
+
+    def get_cache_key(self, request, view):
+        return self.cache_format % {'scope': self.scope, 'ident': self.user.pk}
+
+
 class LockedOut(exceptions.APIException):
     """A sign-in refused by django-axes: too many failures for this username from this IP."""
     status_code = status.HTTP_429_TOO_MANY_REQUESTS
