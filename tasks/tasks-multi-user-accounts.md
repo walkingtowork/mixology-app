@@ -52,14 +52,11 @@ before beta hosts (~10, possibly on the same day). The user agreed to keep 2 and
 rates. Also: sign the bar device in before the 2026-10-31 party, since a lockout blocks
 sign-in but not an existing session.
 
-**14.0 (Personal Info, with 14.6 glass avatars) is built on `feature/personal-info`, not
-pushed.** Three commits; 263 backend / 64 frontend tests; a headless-Chrome run on a DB copy
-passed 9 checks. Next: rebase on `main` (merges cleanly with 15.0; the combined suite passed
-before the merge), add a tight per-user throttle to both current-password checks
-(profile email change and `/api/auth/password/`), push, and hand over the PR. The branch also
-carries a `backlog.md` note for the redesign (all glass icons to SVG; the "C1" chip is
-interim) and the 14.x ticks in this file. After that: the multi-agent trial debrief (the
-user runs `/usage` first), then 16.5–16.7.
+**14.0 (Personal Info, with 14.6 glass avatars) is pushed on `feature/personal-info`, PR
+open (2026-10-20).** Rebased on `main` with no conflicts; the per-account current-password
+throttle (14.3) is added; 293 backend / 66 frontend tests. The branch also carries a
+`backlog.md` note for the redesign (all glass icons to SVG; the "C1" chip is interim). The
+multi-agent trial debrief is done (2026-10-20). Next: 16.5–16.7.
 
 
 **Shipped:** 1.0 (`SECRET_KEY` + deploy hardening), 2.0 (CI), 2.5 (interim API lockdown,
