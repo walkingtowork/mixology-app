@@ -88,6 +88,16 @@ describe('auth calls', () => {
   });
 });
 
+describe('current-password checks', () => {
+  it('updateProfile and changePassword say how long to wait after too many tries', async () => {
+    const detail = 'Too many requests. Please wait 45 minutes and try again.';
+    respond(429, { detail });
+    await expect(api.updateProfile({ email: 'new@example.com', current_password: 'pw' })).rejects.toThrow('Please wait 45 minutes');
+    respond(429, { detail });
+    await expect(api.changePassword('pw', 'a-new-long-passphrase')).rejects.toThrow('Please wait 45 minutes');
+  });
+});
+
 describe('password reset calls', () => {
   it('requestPasswordReset posts the identifier and returns whether it was emailed', async () => {
     respond(200, { emailed: false });

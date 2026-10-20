@@ -244,7 +244,7 @@ class AuthAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['user'], {
             'id': self.user.id, 'username': 'Alex', 'email': 'alex@example.com', 'fullname': 'Alex Lin',
-            'can_invite': False,
+            'avatar_glass': '', 'can_invite': False,
         })
         self.assertEqual(self.client.get('/api/auth/session/').data['user']['username'], 'Alex')
 
@@ -368,6 +368,20 @@ class AuthCsrfTests(APITestCase):
         self.assertEqual(self.post('/api/categories/', {'name': 'Gin'}).status_code, status.HTTP_403_FORBIDDEN)
         response = self.post('/api/categories/', {'name': 'Gin'}, token=self.csrf_token())
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_profile_and_password_writes_need_the_token(self):
+        self.client.get('/api/auth/session/', secure=True)
+        self.post('/api/auth/login/', self.credentials(), token=self.csrf_token())
+        patch = lambda **extra: self.client.patch(
+            '/api/auth/profile/', {'fullname': 'x'}, format='json', secure=True,
+            HTTP_ORIGIN=self.ORIGIN, **extra,
+        )
+        self.assertEqual(patch().status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(patch(HTTP_X_CSRFTOKEN=self.csrf_token()).status_code, status.HTTP_200_OK)
+        body = {'current_password': 'correct-horse', 'password': 'a-new-long-passphrase'}
+        self.assertEqual(self.post('/api/auth/password/', body).status_code, status.HTTP_403_FORBIDDEN)
+        response = self.post('/api/auth/password/', body, token=self.csrf_token())
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
 
 class PrepareUserIdentitiesMigrationTests(TransactionTestCase):
@@ -792,3 +806,150 @@ class InviteRaceTests(TransactionTestCase):
             t.join()
         self.assertEqual(sorted(results), [201, 410])
         self.assertEqual(User.objects.filter(username__startswith='racer').count(), 1)
+
+
+@fast_passwords
+class ProfileTests(APITestCase):
+    """The Personal Info page: name, email, avatar and password, always your own."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='Alex', email='alex@example.com', password='correct-horse', fullname='Alex Lin',
+        )
+        self.other = User.objects.create_user(
+            username='sam', email='sam@example.com', password='other-horse', fullname='Sam',
+        )
+        self.client.force_authenticate(self.user)
+
+    def patch(self, body):
+        return self.client.patch('/api/auth/profile/', body, format='json')
+
+    def change_password(self, current='correct-horse', new='a-new-long-passphrase'):
+        return self.client.post(
+            '/api/auth/password/', {'current_password': current, 'password': new}, format='json',
+        )
+
+    def test_profile_needs_a_session(self):
+        self.client.force_authenticate(None)
+        self.assertEqual(self.client.get('/api/auth/profile/').status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(self.patch({'fullname': 'x'}).status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(self.change_password().status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_get_returns_your_own_profile(self):
+        response = self.client.get('/api/auth/profile/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['user']['username'], 'Alex')
+        self.assertNotIn('password', str(response.data))
+
+    def test_update_name_and_avatar_without_a_password(self):
+        response = self.patch({'fullname': 'Alex L.', 'avatar_glass': 'coupe'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['user']['fullname'], 'Alex L.')
+        self.assertEqual(response.data['user']['avatar_glass'], 'coupe')
+        self.user.refresh_from_db()
+        self.assertEqual((self.user.fullname, self.user.avatar_glass), ('Alex L.', 'coupe'))
+
+    def test_avatar_can_be_cleared_but_not_made_up(self):
+        self.patch({'avatar_glass': 'coupe'})
+        self.assertEqual(self.patch({'avatar_glass': ''}).status_code, status.HTTP_200_OK)
+        self.assertEqual(self.patch({'avatar_glass': 'tiki_mug'}).status_code, status.HTTP_400_BAD_REQUEST)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.avatar_glass, '')
+
+    def test_username_and_other_fields_cannot_be_changed(self):
+        self.patch({'username': 'hacker', 'is_staff': True, 'is_superuser': True, 'fullname': 'A'})
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.username, 'Alex')
+        self.assertFalse(self.user.is_staff or self.user.is_superuser)
+
+    def test_only_your_own_account_changes(self):
+        self.patch({'fullname': 'Changed', 'id': self.other.id})
+        self.other.refresh_from_db()
+        self.assertEqual(self.other.fullname, 'Sam')
+
+    def test_changing_email_needs_the_current_password(self):
+        response = self.patch({'email': 'new@example.com'})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('current_password', response.data)
+        response = self.patch({'email': 'new@example.com', 'current_password': 'correct-horse'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.email, 'new@example.com')
+
+    def test_wrong_current_password_leaves_everything_unchanged(self):
+        response = self.patch({
+            'email': 'new@example.com', 'fullname': 'Changed', 'current_password': 'wrong',
+        })
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['current_password'], ['That password is incorrect.'])
+        self.user.refresh_from_db()
+        self.assertEqual((self.user.email, self.user.fullname), ('alex@example.com', 'Alex Lin'))
+
+    def test_saving_the_same_email_needs_no_password(self):
+        self.assertEqual(
+            self.patch({'email': 'alex@example.com', 'fullname': 'A'}).status_code, status.HTTP_200_OK,
+        )
+
+    def test_email_taken_by_someone_else_is_refused_ignoring_case(self):
+        response = self.patch({'email': 'SAM@example.com', 'current_password': 'correct-horse'})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('email', response.data)
+
+    def test_changing_only_the_case_of_your_own_email_is_allowed(self):
+        response = self.patch({'email': 'Alex@Example.com', 'current_password': 'correct-horse'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_email_must_be_valid_and_present(self):
+        for email in ['', 'not-an-email']:
+            with self.subTest(email=email):
+                response = self.patch({'email': email, 'current_password': 'correct-horse'})
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_new_email_signs_in(self):
+        self.patch({'email': 'new@example.com', 'current_password': 'correct-horse'})
+        self.assertEqual(authenticate(username='new@example.com', password='correct-horse'), self.user)
+
+    def test_change_password(self):
+        self.assertEqual(self.change_password().status_code, status.HTTP_204_NO_CONTENT)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('a-new-long-passphrase'))
+
+    def test_change_password_rejects_the_wrong_current_password(self):
+        response = self.change_password(current='wrong')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['current_password'], ['That password is incorrect.'])
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('correct-horse'))
+
+    def test_change_password_needs_both_fields_and_a_strong_password(self):
+        for body in [{}, {'current_password': 'correct-horse'}, {'password': 'a-new-long-passphrase'},
+                     {'current_password': 'correct-horse', 'password': 'short'}]:
+            with self.subTest(body=body):
+                response = self.client.post('/api/auth/password/', body, format='json')
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('correct-horse'))
+
+
+@fast_passwords
+class PasswordChangeSessionTests(APITestCase):
+    """Real sessions, not force_authenticate: this session stays, every other one ends."""
+
+    def setUp(self):
+        User.objects.create_user(username='alex', email='alex@example.com', password='correct-horse')
+        self.other_device = APIClient()
+        for client in (self.client, self.other_device):
+            client.post(
+                '/api/auth/login/', {'identifier': 'alex', 'password': 'correct-horse'}, format='json',
+            )
+
+    def test_this_session_stays_and_others_end(self):
+        response = self.client.post(
+            '/api/auth/password/',
+            {'current_password': 'correct-horse', 'password': 'a-new-long-passphrase'}, format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(self.client.get('/api/auth/profile/').status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            self.other_device.get('/api/auth/profile/').status_code, status.HTTP_401_UNAUTHORIZED,
+        )

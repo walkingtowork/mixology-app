@@ -88,11 +88,21 @@ export interface Order {
   created_at: string;
 }
 
+/** Fields the Personal Info page can change. A new email needs the current password. */
+export interface ProfileChanges {
+  fullname?: string;
+  email?: string;
+  avatar_glass?: GlassType | '';
+  current_password?: string;
+}
+
 export interface User {
   id: number;
   username: string;
   email: string;
   fullname: string;
+  /** The glass shown as their picture in the account chip; '' shows their initial. */
+  avatar_glass: GlassType | '';
   /** Granted "Can add invite" in Django admin, so the account menu offers invites. */
   can_invite: boolean;
 }

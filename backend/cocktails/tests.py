@@ -2196,7 +2196,12 @@ class OwnerBackfillMigrationTests(TransactionTestCase):
 
     def setUp(self):
         self.executor = MigrationExecutor(connection)
-        self.executor.migrate(self.BEFORE)
+        # Rewind accounts too, to the migration this state's User model comes from. Otherwise
+        # the table keeps columns added since (avatar_glass, say) that the old model can't fill.
+        graph = self.executor.loader.graph
+        accounts = [node for node in graph.forwards_plan(self.BEFORE[0]) if node[0] == 'accounts'][-1]
+        self.executor.migrate(self.BEFORE + [accounts])
+        self.executor = MigrationExecutor(connection)
         self.old_apps = self.executor.loader.project_state(self.BEFORE).apps
 
     def tearDown(self):

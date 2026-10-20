@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import FormField from '../ui/FormField';
+import './NewPasswordFields.css';
 
 interface NewPasswordFieldsProps {
   /** Prefixes the input ids, so two forms on one page could not collide. */
@@ -12,7 +13,7 @@ interface NewPasswordFieldsProps {
   label?: string;
 }
 
-/** A new password typed twice, with one Show/Hide button for both. Used at signup and reset. */
+/** A new password typed twice, with one Show/Hide button for both. Used at signup, reset and on Personal Info. */
 export default function NewPasswordFields({
   idPrefix, password, confirm, onPasswordChange, onConfirmChange, label = 'Password',
 }: NewPasswordFieldsProps) {

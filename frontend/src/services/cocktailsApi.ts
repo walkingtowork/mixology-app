@@ -1,4 +1,4 @@
-import type { Ingredient, Recipe, IngredientCategory, Menu, BuyListItem, StockLevel, Order, DecorationKey, MenuStats, User, Invite, SignupDetails } from '../types/cocktails';
+import type { Ingredient, Recipe, IngredientCategory, Menu, BuyListItem, StockLevel, Order, DecorationKey, MenuStats, User, Invite, SignupDetails, ProfileChanges } from '../types/cocktails';
 
 // Empty by default: every path below already starts with /api, which the Vercel rewrite
 // (and the Vite dev proxy) forwards to Django, so the app is same-origin with no
@@ -590,6 +590,40 @@ export async function logout(): Promise<void> {
   return request<void>('/api/auth/logout/', {
     method: 'POST',
     error: () => 'Failed to sign out',
+  });
+}
+
+// ── Personal info ──────────────────────────────────────────────────────────
+
+/** Every message in a 400's per-field errors, in field order; each one names its subject. */
+function fieldMessages(body: object, fields: string[]): string {
+  const byField = body as Record<string, string[] | undefined>;
+  return fields.flatMap(f => byField[f] ?? []).join(' ');
+}
+
+/** Saves changes to your own profile and resolves to the updated user. */
+export async function updateProfile(changes: ProfileChanges): Promise<User> {
+  const { user } = await request<{ user: User }>('/api/auth/profile/', {
+    method: 'PATCH',
+    body: changes,
+    error: (res, body) =>
+      (res.status === 400 && fieldMessages(body, ['current_password', 'email', 'fullname', 'avatar_glass'])) ||
+      // A 429: too many current-password checks on this account.
+      (res.status === 429 && body.detail) ||
+      'Could not save your details. Reload the page and try again.',
+  });
+  return user;
+}
+
+/** Changes your password. This session stays signed in; every other one is signed out. */
+export async function changePassword(currentPassword: string, password: string): Promise<void> {
+  await request<void>('/api/auth/password/', {
+    method: 'POST',
+    body: { current_password: currentPassword, password },
+    error: (res, body) =>
+      (res.status === 400 && fieldMessages(body, ['current_password', 'password'])) ||
+      (res.status === 429 && body.detail) ||
+      'Could not change your password. Reload the page and try again.',
   });
 }
 

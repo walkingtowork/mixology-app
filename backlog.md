@@ -90,6 +90,14 @@ like it has two selected items).
 - [ ] **Orders and account screens** (5)
 - [ ] **Mobile polish** (5)
 
+Notes for the redesign (from 14.6, 2026-10-16):
+- **Consider moving every glass icon to SVG.** They are CSS boxes today (`GlassIcon.tsx`
+  plus `App.css`), which can't make curved shapes, and render differently as the browser
+  rounds their 1.5px borders (the rim fix in 14.6). The Glencairn is already an SVG drawn
+  to match, so it is the template.
+- **Revisit the account chip.** It shipped as "C1" (outline-free warm grey chip, white disc
+  holding the glass avatar) as good enough for now, not a final look.
+
 ## 6. Marketing homepage
 
 - [ ] **Public homepage explaining the app** (5) — the app requires a login, so a signed-out

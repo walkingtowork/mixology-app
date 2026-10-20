@@ -38,7 +38,26 @@ so existing references still resolve; the list below is in working order.
 `migrate` inside its start command, so a migration that fails partway does not warn — gunicorn
 never boots and the app is down until it is fixed.
 
-## Current state — updated 2026-10-15
+## Current state — updated 2026-10-20
+
+**Update 2026-10-20: 15.0 (rate limiting) is live (PR #31, merged and deployed).** Checked from
+outside: `/api/auth/client-ip/` answers 401 signed out (so the deploy has it), private reads
+are still 401. **Not yet done:** the `TRUSTED_PROXY_COUNT` check (15.6). Due 2026-10-21, or at the next session
+after that. Sign in as a superuser on a phone with Wi-Fi off, open
+`https://thebarcart.vercel.app/api/auth/client-ip/`, compare `drf_throttle_ip` with the phone's
+public IP, fix the count in Railway if needed, then delete `ClientIPView`. Discussed
+2026-10-20 against the user's traffic (parties of 10–15, peak ~30 orders at once, home Wi-Fi =
+one IP): the limits have 2x+ headroom even if the count is wrong, so it only becomes critical
+before beta hosts (~10, possibly on the same day). The user agreed to keep 2 and keep the
+rates. Also: sign the bar device in before the 2026-10-31 party, since a lockout blocks
+sign-in but not an existing session.
+
+**14.0 (Personal Info, with 14.6 glass avatars) is pushed on `feature/personal-info`, PR
+open (2026-10-20).** Rebased on `main` with no conflicts; the per-account current-password
+throttle (14.3) is added; 293 backend / 66 frontend tests. The branch also carries a
+`backlog.md` note for the redesign (all glass icons to SVG; the "C1" chip is interim). The
+multi-agent trial debrief is done (2026-10-20). Next: 16.5–16.7.
+
 
 **Shipped:** 1.0 (`SECRET_KEY` + deploy hardening), 2.0 (CI), 2.5 (interim API lockdown,
 PR #17), 3.0 + 4.0 + `data.json` deleted (PR #18), 5.0 (same-origin proxy + WhiteNoise for
@@ -443,16 +462,16 @@ Each parent task 1.0–8.0 is intended to be its own PR and its own deploy.
   - [x] 13.7 Document the four env vars that switch delivery to Gmail SMTP later, with zero code change — in `settings.py` and `backend/.env.example`
   - [x] 13.8 Tests: token issued, token validates, expired token rejected, token single-use — plus sign-in ends an unused link, deactivated accounts, weak passwords, CSRF, and every other session signed out
 
-- [ ] 14.0 Personal Info screen
-  - [ ] 14.1 Profile read and update endpoints for email and fullname
-  - [ ] 14.2 Require the current password to change email — with no verification, a typo in the login identifier locks the account out immediately
-  - [ ] 14.3 Change-password endpoint requiring the current password
-  - [ ] 14.4 Personal Info page
-  - [ ] 14.5 Tests including the wrong-current-password rejection
-  - [ ] 14.6 Let the user pick one of the glass icons (`GlassIcon`) as their user icon, replacing the yellow circle and initial in the account chip (`AccountMenu`). The user's idea, 2026-10-14: "a fun twist". **Decided 2026-10-15: build it as part of 14.0**, on the same page
+- [x] 14.0 Personal Info screen
+  - [x] 14.1 Profile read and update endpoints for email and fullname — `GET`/`PATCH /api/auth/profile/`, always the signed-in user (no id in the URL); also takes `avatar_glass`
+  - [x] 14.2 Require the current password to change email — with no verification, a typo in the login identifier locks the account out immediately
+  - [x] 14.3 Change-password endpoint requiring the current password — `POST /api/auth/password/`; keeps this session, signs out every other. **Follow-up once 15.0 is merged:** a tight per-user throttle on both current-password checks (they use `check_password`, so axes does not count them, and a stolen session could otherwise guess at the general 240/min). **Done:** `CurrentPasswordThrottle`, 10/hour per account, shared by both checks; every check counts, right or wrong, and a name or avatar edit does not check. A visible 429, which the page shows
+  - [x] 14.4 Personal Info page — `/account`, linked from the account menu
+  - [x] 14.5 Tests including the wrong-current-password rejection — 19 backend, 8 frontend
+  - [x] 14.6 Let the user pick one of the glass icons (`GlassIcon`) as their user icon, replacing the yellow circle and initial in the account chip (`AccountMenu`). The user's idea, 2026-10-14: "a fun twist". **Decided 2026-10-15: build it as part of 14.0**, on the same page. Shipped as `avatar_glass` on the user (migration `accounts.0005`, additive) and chip style "C1" (warm grey chip, white disc), chosen by the user 2026-10-16 as good for now; the glass icons also got flush rims, a new shot glass and an SVG Glencairn
   - **Decided 2026-10-15:** the page shows the username but does not let it be edited. Only email and full name are editable
 
-- [x] 15.0 Rate limiting (Tier 1) — built on `feature/rate-limiting` (2026-10-16), not yet merged. **After deploy, verify `TRUSTED_PROXY_COUNT` with `/api/auth/client-ip/` (see 15.6)**
+- [x] 15.0 Rate limiting (Tier 1) — built on `feature/rate-limiting` (2026-10-16) by a subagent; live as of 2026-10-20 (PR #31). **After deploy, verify `TRUSTED_PROXY_COUNT` with `/api/auth/client-ip/` (see 15.6)**
   - [x] 15.1 DRF `AnonRateThrottle` and `UserRateThrottle` in the `REST_FRAMEWORK` block — defaults `anon` 300/min per IP and `user` 240/min per account. The user one is `SignedInUserThrottle` (`backend/throttling.py`), which skips anonymous requests: stock `UserRateThrottle` would also count guests by IP at the signed-in rate. 429s say how long to wait and carry `Cache-Control: no-store, private` (custom `EXCEPTION_HANDLER`). Tests keep the real limits: `TEST_RUNNER` empties the cache before each test
   - [x] 15.2 Record in-code that throttling is ~3x looser than configured under `gunicorn --workers 3`, since each worker counts separately without a shared cache
   - [x] 15.3 Add `django-axes` for login brute-force protection — DB-backed, so it *is* accurate across workers — `django-axes==8.0.0` (Python 3.9–3.13, Django 4.2). Its nine migrations only create its own tables; rehearsed on a copy of the `mixology` restore in `mixology-pg18` (migrated to `main` first, then axes) and the whole suite passed on Python 3.12 + Postgres 18. `LoginLockoutBackend` (a subclass of `AxesStandaloneBackend`) is first in `AUTHENTICATION_BACKENDS` and lets request-less `authenticate()` calls (test client, server code) through rather than raising. Successful sign-ins are not logged (`AXES_DISABLE_ACCESS_LOG`); failures show under Axes in admin, where deleting a row unlocks someone
