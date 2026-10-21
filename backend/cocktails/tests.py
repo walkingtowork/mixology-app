@@ -1,4 +1,6 @@
-from django.core.management import call_command
+from io import StringIO
+
+from django.core.management import CommandError, call_command
 from django.db import IntegrityError, connection, transaction
 from django.db.migrations.executor import MigrationExecutor
 from django.test import TestCase, TransactionTestCase, override_settings
@@ -2268,3 +2270,76 @@ class OwnerRebackfillMigrationTests(OwnerBackfillMigrationTests):
 
     BEFORE = [('cocktails', '0011_backfill_owner')]
     AFTER = [('cocktails', '0012_backfill_owner_again')]
+
+
+class CloneUserDataCommandTests(TwoUserAPITestCase):
+    """`clone_user_data` copies one bar to another account and touches no one else's rows."""
+
+    def setUp(self):
+        super().setUp()
+        self.demo = get_user_model().objects.create_user(username='demo', email='demo@example.com')
+        Order.objects.create(recipe=self.theirs['recipe'], menu=self.theirs['menu'], guest_name='Sam')
+
+    def clone(self, *args):
+        call_command('clone_user_data', *args, stdout=StringIO())
+
+    def test_copies_every_owned_row_to_the_target(self):
+        self.clone('other', 'demo')
+
+        self.assertEqual(
+            sorted(IngredientCategory.objects.filter(owner=self.demo).values_list('name', flat=True)),
+            ['Agave', 'Rum'],
+        )
+        smith = Ingredient.objects.get(owner=self.demo, name='Smith & Cross')
+        self.assertEqual(smith.category.owner, self.demo)
+        self.assertTrue(Ingredient.objects.get(owner=self.demo, name='Rum').is_generic)
+
+        recipe = Recipe.objects.get(owner=self.demo, name='Daiquiri')
+        self.assertEqual(list(recipe.ingredients.all()), [smith])
+
+        menu = Menu.objects.get(owner=self.demo, name='Tiki Night')
+        self.assertTrue(menu.is_published)
+        self.assertNotEqual(menu.share_token, self.theirs['menu'].share_token)
+        self.assertEqual([item.recipe for item in menu.items.all()], [recipe])
+        self.assertFalse(menu.orders.exists())
+
+        self.assertEqual(BuyListItem.objects.get(owner=self.demo).ingredient, smith)
+
+    def test_leaves_the_source_and_other_users_alone(self):
+        self.clone('other', 'demo')
+        self.clone('other', 'demo', '--reset')
+
+        for owner, bar in [(self.other, self.theirs), (self.user, self.mine)]:
+            with self.subTest(owner=owner.username):
+                self.assertEqual(Recipe.objects.filter(owner=owner).count(), 1)
+                self.assertEqual(Menu.objects.filter(owner=owner).count(), 1)
+                self.assertEqual(bar['menu'].items.count(), 1)
+        self.assertEqual(self.theirs['menu'].orders.count(), 1)
+
+    def test_reset_replaces_the_targets_data(self):
+        self.clone('other', 'demo')
+        Recipe.objects.create(owner=self.demo, name='Scratch Test')
+
+        self.clone('other', 'demo', '--reset')
+
+        self.assertEqual(
+            list(Recipe.objects.filter(owner=self.demo).values_list('name', flat=True)),
+            ['Daiquiri'],
+        )
+
+    def test_refuses_to_merge_into_a_target_with_data(self):
+        self.clone('other', 'demo')
+        with self.assertRaisesMessage(CommandError, 'Use --reset'):
+            self.clone('other', 'demo')
+        self.assertEqual(Recipe.objects.filter(owner=self.demo).count(), 1)
+
+    def test_refuses_bad_targets(self):
+        get_user_model().objects.create_superuser(username='admin', email='admin@example.com')
+        for args, message in [
+            (('other', 'admin', '--reset'), 'staff account'),
+            (('other', 'other'), 'same user'),
+            (('other', 'nobody'), 'No user'),
+        ]:
+            with self.subTest(args=args), self.assertRaisesMessage(CommandError, message):
+                self.clone(*args)
+        self.assertEqual(Recipe.objects.filter(owner=self.other).count(), 1)
