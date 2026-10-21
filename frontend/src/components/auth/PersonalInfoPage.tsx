@@ -6,6 +6,7 @@ import Button from '../ui/Button';
 import FormField from '../ui/FormField';
 import GlassIcon from '../ui/GlassIcon';
 import NewPasswordFields from './NewPasswordFields';
+import PasswordInput from './PasswordInput';
 import './PersonalInfoPage.css';
 
 type Avatar = GlassType | '';
@@ -41,20 +42,16 @@ function AvatarPicker({ username, value, onChange }: {
   );
 }
 
-/** Name, email and picture. A new email needs the current password: it is how you sign in. */
+/** Name and picture. Email has its own form, since changing it needs the password. */
 function ProfileForm({ user }: { user: User }) {
   const { updateUser } = useAuth();
   const [fullname, setFullname] = useState(user.fullname);
-  const [email, setEmail] = useState(user.email);
   const [avatar, setAvatar] = useState<Avatar>(user.avatar_glass);
-  const [currentPassword, setCurrentPassword] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
-  const emailChanged = email.trim() !== user.email;
-  const changed = emailChanged || fullname.trim() !== user.fullname || avatar !== user.avatar_glass;
-  const ready = changed && email.trim() !== '' && (!emailChanged || currentPassword !== '');
+  const ready = fullname.trim() !== user.fullname || avatar !== user.avatar_glass;
 
   const edit = <T,>(set: (value: T) => void) => (value: T) => {
     set(value);
@@ -65,18 +62,12 @@ function ProfileForm({ user }: { user: User }) {
     e.preventDefault();
     if (!ready) return;
     const changes: ProfileChanges = { fullname: fullname.trim(), avatar_glass: avatar };
-    if (emailChanged) {
-      changes.email = email.trim();
-      changes.current_password = currentPassword;
-    }
     setSaving(true);
     setError(null);
     try {
       const updated = await updateProfile(changes);
       updateUser(updated);
       setFullname(updated.fullname);
-      setEmail(updated.email);
-      setCurrentPassword('');
       setSaved(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save your details.');
@@ -101,31 +92,6 @@ function ProfileForm({ user }: { user: User }) {
           maxLength={150}
         />
       </FormField>
-      <FormField label="Email" htmlFor="profile-email">
-        <input
-          id="profile-email"
-          type="email"
-          value={email}
-          onChange={e => edit(setEmail)(e.target.value)}
-          autoComplete="email"
-        />
-      </FormField>
-      {emailChanged && (
-        <FormField label="Current password" htmlFor="profile-current-password">
-          <input
-            id="profile-current-password"
-            type="password"
-            value={currentPassword}
-            onChange={e => setCurrentPassword(e.target.value)}
-            autoComplete="current-password"
-          />
-        </FormField>
-      )}
-      {emailChanged && (
-        <p className="personal-info-hint">
-          You sign in with your email, so changing it needs your password.
-        </p>
-      )}
       <fieldset className="personal-info-fieldset">
         <legend>Your picture</legend>
         <p className="personal-info-hint">Shown on your account button at the top of the page.</p>
@@ -137,6 +103,73 @@ function ProfileForm({ user }: { user: User }) {
           {saving ? 'Saving…' : 'Save'}
         </Button>
         {saved && <span className="personal-info-saved" role="status">Saved</span>}
+      </div>
+    </form>
+  );
+}
+
+/** A new email needs the current password: it is how you sign in. */
+function EmailForm({ user }: { user: User }) {
+  const { updateUser } = useAuth();
+  const [email, setEmail] = useState(user.email);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  const ready = email.trim() !== '' && email.trim() !== user.email && currentPassword !== '';
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ready) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const updated = await updateProfile({ email: email.trim(), current_password: currentPassword });
+      updateUser(updated);
+      setEmail(updated.email);
+      setCurrentPassword('');
+      setSaved(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not change your email.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <form className="personal-info-section" onSubmit={handleSubmit} aria-labelledby="email-heading">
+      <h2 id="email-heading">Change email</h2>
+      <p className="personal-info-hint">
+        You sign in with your email, so changing it needs your current password.
+      </p>
+      <FormField label="Email" htmlFor="email-new">
+        <input
+          id="email-new"
+          type="email"
+          value={email}
+          onChange={e => {
+            setEmail(e.target.value);
+            setSaved(false);
+          }}
+          autoComplete="email"
+        />
+      </FormField>
+      <FormField label="Current password" htmlFor="email-current-password">
+        <PasswordInput
+          id="email-current-password"
+          value={currentPassword}
+          onChange={setCurrentPassword}
+          autoComplete="current-password"
+          label="Current password"
+        />
+      </FormField>
+      {error && <p className="personal-info-error" role="alert">{error}</p>}
+      <div className="personal-info-actions">
+        <Button type="submit" variant="primary" disabled={!ready || saving}>
+          {saving ? 'Saving…' : 'Change email'}
+        </Button>
+        {saved && <span className="personal-info-saved" role="status">Email changed</span>}
       </div>
     </form>
   );
@@ -175,12 +208,12 @@ function PasswordForm() {
     <form className="personal-info-section" onSubmit={handleSubmit} aria-labelledby="password-heading">
       <h2 id="password-heading">Change password</h2>
       <FormField label="Current password" htmlFor="password-current">
-        <input
+        <PasswordInput
           id="password-current"
-          type="password"
           value={currentPassword}
-          onChange={e => setCurrentPassword(e.target.value)}
+          onChange={setCurrentPassword}
           autoComplete="current-password"
+          label="Current password"
         />
       </FormField>
       <NewPasswordFields
@@ -206,7 +239,7 @@ function PasswordForm() {
   );
 }
 
-/** Your own account: details, picture and password. */
+/** Your own account: details, picture, email and password. */
 export default function PersonalInfoPage() {
   const { user } = useAuth();
   // Only reachable through RequireAuth, so there is always a user.
@@ -215,6 +248,7 @@ export default function PersonalInfoPage() {
     <div className="personal-info">
       <h1>Personal info</h1>
       <ProfileForm user={user} />
+      <EmailForm user={user} />
       <PasswordForm />
     </div>
   );
