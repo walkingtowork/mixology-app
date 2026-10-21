@@ -12,7 +12,9 @@ const DRAWN_CENTRE_Y: Record<GlassType, number> = {
   champagne_flute: 27.5,
   collins: 27.5,
   shot: 33,
-  glencairn: 26.5,
+  glencairn: 30,
+  hurricane: 26.5,
+  tiki_mug: 27,
 };
 
 const DISC = 32;

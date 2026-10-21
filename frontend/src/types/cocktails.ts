@@ -1,6 +1,6 @@
 export type Unit = 'oz' | 'ml' | 'tsp' | 'tbsp' | 'barspoon' | 'dash' | 'drops' | 'spritz' | 'rinse' | 'pinch';
 
-export type GlassType = 'rocks' | 'old_fashioned' | 'martini' | 'coupe' | 'champagne_flute' | 'collins' | 'shot' | 'glencairn';
+export type GlassType = 'rocks' | 'old_fashioned' | 'martini' | 'coupe' | 'champagne_flute' | 'collins' | 'shot' | 'glencairn' | 'hurricane' | 'tiki_mug';
 
 export const GLASS_OPTIONS: { value: GlassType; label: string }[] = [
   { value: 'rocks', label: 'Rocks' },
@@ -11,6 +11,8 @@ export const GLASS_OPTIONS: { value: GlassType; label: string }[] = [
   { value: 'collins', label: 'Collins' },
   { value: 'shot', label: 'Shot' },
   { value: 'glencairn', label: 'Glencairn' },
+  { value: 'hurricane', label: 'Hurricane' },
+  { value: 'tiki_mug', label: 'Tiki Mug' },
 ];
 
 export type StockLevel = 0 | 25 | 50 | 75 | 100;
