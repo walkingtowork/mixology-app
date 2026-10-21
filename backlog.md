@@ -93,8 +93,9 @@ like it has two selected items).
 Notes for the redesign (from 14.6, 2026-10-16):
 - **Consider moving every glass icon to SVG.** They are CSS boxes today (`GlassIcon.tsx`
   plus `App.css`), which can't make curved shapes, and render differently as the browser
-  rounds their 1.5px borders (the rim fix in 14.6). The Glencairn is already an SVG drawn
-  to match, so it is the template.
+  rounds their 1.5px borders (the rim fix in 14.6). The Glencairn, Hurricane and Tiki Mug
+  are already SVGs drawn to match (PR #35, sharing `SvgGlass` in `GlassIcon.tsx`), so they
+  are the template.
 - **Revisit the account chip.** It shipped as "C1" (outline-free warm grey chip, white disc
   holding the glass avatar) as good enough for now, not a final look.
 
@@ -195,6 +196,7 @@ throttling is deferred until there is a reason.
       secure cookies and HSTS, Vercel previews off, owner-only `/api/orders/` with separate
       guest endpoints, frontend test framework (9.0), login, invite-only signup
 - [x] Backend tests for menus, orders, guest ordering and the buy list (159 tests)
+- [x] Hurricane and Tiki Mug glasses, and a shorter Glencairn (PR #35, 2026-10-21)
 
 ## Ingredient Categories - Out of Scope
 
