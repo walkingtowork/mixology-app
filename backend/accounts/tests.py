@@ -852,9 +852,15 @@ class ProfileTests(APITestCase):
     def test_avatar_can_be_cleared_but_not_made_up(self):
         self.patch({'avatar_glass': 'coupe'})
         self.assertEqual(self.patch({'avatar_glass': ''}).status_code, status.HTTP_200_OK)
-        self.assertEqual(self.patch({'avatar_glass': 'tiki_mug'}).status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.patch({'avatar_glass': 'yard_glass'}).status_code, status.HTTP_400_BAD_REQUEST)
         self.user.refresh_from_db()
         self.assertEqual(self.user.avatar_glass, '')
+
+    def test_avatar_can_be_a_hurricane_or_tiki_mug(self):
+        for glass in ('hurricane', 'tiki_mug'):
+            self.assertEqual(self.patch({'avatar_glass': glass}).status_code, status.HTTP_200_OK)
+            self.user.refresh_from_db()
+            self.assertEqual(self.user.avatar_glass, glass)
 
     def test_username_and_other_fields_cannot_be_changed(self):
         self.patch({'username': 'hacker', 'is_staff': True, 'is_superuser': True, 'fullname': 'A'})

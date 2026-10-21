@@ -13,6 +13,8 @@ GLASS_CHOICES = [
     ('collins', 'Collins'),
     ('shot', 'Shot'),
     ('glencairn', 'Glencairn'),
+    ('hurricane', 'Hurricane'),
+    ('tiki_mug', 'Tiki Mug'),
 ]
 
 DECORATION_CHOICES = [
