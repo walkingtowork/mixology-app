@@ -20,6 +20,7 @@ beforeEach(() => {
 
 const accountChip = () => screen.findByRole('button', { name: 'Account: walkingtowork' });
 const details = async () => within(await screen.findByRole('form', { name: 'Your details' }));
+const emailForm = async () => within(await screen.findByRole('form', { name: 'Change email' }));
 const passwordForm = async () => within(await screen.findByRole('form', { name: 'Change password' }));
 
 describe('personal info page', () => {
@@ -37,7 +38,7 @@ describe('personal info page', () => {
     expect(username).toHaveValue('walkingtowork');
     expect(username).toBeDisabled();
     expect(screen.getByLabelText('Full name')).toHaveValue('Alex Lin');
-    expect(screen.getByLabelText('Email')).toHaveValue('host@example.com');
+    expect((await emailForm()).getByLabelText('Email')).toHaveValue('host@example.com');
     expect(screen.getByRole('radio', { name: 'Initial' })).toBeChecked();
   });
 
@@ -60,37 +61,48 @@ describe('personal info page', () => {
     expect(within(await accountChip()).queryByText('W')).not.toBeInTheDocument();
   });
 
-  it('asks for the current password before changing the email', async () => {
+});
+
+describe('changing the email', () => {
+  it('always shows the current password field, and needs it before saving', async () => {
     vi.mocked(api.updateProfile).mockResolvedValue({ ...me, email: 'new@example.com' });
     const { user: u } = renderAt('/account', <App />);
-    const form = await details();
+    const form = await emailForm();
+    const password = form.getByLabelText('Current password');
+    expect(password).toBeInTheDocument();
+
     const email = form.getByLabelText('Email');
     await u.clear(email);
     await u.type(email, 'new@example.com');
-
-    const save = form.getByRole('button', { name: 'Save' });
+    const save = form.getByRole('button', { name: 'Change email' });
     expect(save).toBeDisabled();
-    await u.type(form.getByLabelText('Current password'), 'correct-horse');
+    await u.type(password, 'correct-horse');
     await u.click(save);
 
-    expect(api.updateProfile).toHaveBeenCalledWith({
-      fullname: 'Alex Lin', avatar_glass: '', email: 'new@example.com', current_password: 'correct-horse',
-    });
-    expect(await screen.findByRole('status')).toHaveTextContent('Saved');
+    expect(api.updateProfile).toHaveBeenCalledWith({ email: 'new@example.com', current_password: 'correct-horse' });
+    expect(await screen.findByRole('status')).toHaveTextContent('Email changed');
+    expect(password).toHaveValue('');
   });
 
-  it("shows why the server refused the details, and keeps what was typed", async () => {
+  it("won't save an unchanged email, even with the password", async () => {
+    const { user: u } = renderAt('/account', <App />);
+    const form = await emailForm();
+    await u.type(form.getByLabelText('Current password'), 'correct-horse');
+    expect(form.getByRole('button', { name: 'Change email' })).toBeDisabled();
+  });
+
+  it("shows why the server refused the email, and keeps what was typed", async () => {
     vi.mocked(api.updateProfile).mockRejectedValue(new Error('That password is incorrect.'));
     const { user: u } = renderAt('/account', <App />);
-    const form = await details();
+    const form = await emailForm();
     const email = form.getByLabelText('Email');
     await u.clear(email);
     await u.type(email, 'new@example.com');
     await u.type(form.getByLabelText('Current password'), 'wrong');
-    await u.click(form.getByRole('button', { name: 'Save' }));
+    await u.click(form.getByRole('button', { name: 'Change email' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('That password is incorrect.');
-    expect(screen.getByLabelText('Email')).toHaveValue('new@example.com');
+    expect(email).toHaveValue('new@example.com');
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 });
@@ -119,6 +131,19 @@ describe('changing the password', () => {
     await fillIn(u, 'something-else');
     expect(screen.getByRole('button', { name: 'Change password' })).toBeDisabled();
     expect(screen.getByText("The passwords don't match.")).toBeInTheDocument();
+  });
+
+  it('gives each password field its own Show/Hide button', async () => {
+    const { user: u } = renderAt('/account', <App />);
+    const form = await passwordForm();
+    const fresh = form.getByLabelText('New password');
+    const confirm = form.getByLabelText('Confirm new password');
+    await u.click(form.getByRole('button', { name: 'Show confirm new password' }));
+    expect(confirm).toHaveAttribute('type', 'text');
+    expect(fresh).toHaveAttribute('type', 'password');
+    expect(form.getByLabelText('Current password')).toHaveAttribute('type', 'password');
+    await u.click(form.getByRole('button', { name: 'Hide confirm new password' }));
+    expect(confirm).toHaveAttribute('type', 'password');
   });
 
   it('shows a wrong current password, and stays signed in', async () => {
