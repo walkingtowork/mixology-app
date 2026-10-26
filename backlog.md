@@ -99,6 +99,11 @@ Notes for the redesign (from 14.6, 2026-10-16):
 - **Revisit the account chip.** It shipped as "C1" (outline-free warm grey chip, white disc
   holding the glass avatar) as good enough for now, not a final look.
 
+Note from the user, 2026-10-21 (after using Personal Info on desktop):
+- **Use the width on desktop.** Pages are sized for a phone column (Personal Info is
+  `max-width: 600px`), which is right on mobile but leaves a lot of empty side space on a
+  desktop. The redesign should give desktop its own layout rather than a centred phone column.
+
 ## 6. Marketing homepage
 
 - [ ] **Public homepage explaining the app** (5) — the app requires a login, so a signed-out

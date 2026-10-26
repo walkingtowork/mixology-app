@@ -1,6 +1,5 @@
-import { useState } from 'react';
 import FormField from '../ui/FormField';
-import './NewPasswordFields.css';
+import PasswordInput from './PasswordInput';
 
 interface NewPasswordFieldsProps {
   /** Prefixes the input ids, so two forms on one page could not collide. */
@@ -13,41 +12,31 @@ interface NewPasswordFieldsProps {
   label?: string;
 }
 
-/** A new password typed twice, with one Show/Hide button for both. Used at signup, reset and on Personal Info. */
+/** A new password typed twice, each with its own Show/Hide button. Used at signup, reset and on Personal Info. */
 export default function NewPasswordFields({
   idPrefix, password, confirm, onPasswordChange, onConfirmChange, label = 'Password',
 }: NewPasswordFieldsProps) {
-  const [showPassword, setShowPassword] = useState(false);
+  const confirmLabel = `Confirm ${label.toLowerCase()}`;
   const confirmProblem = confirm && confirm !== password ? "The passwords don't match." : undefined;
 
   return (
     <>
       <FormField label={label} htmlFor={`${idPrefix}-password`}>
-        <div className="password-input">
-          <input
-            id={`${idPrefix}-password`}
-            type={showPassword ? 'text' : 'password'}
-            value={password}
-            onChange={e => onPasswordChange(e.target.value)}
-            autoComplete="new-password"
-          />
-          <button
-            type="button"
-            className="password-toggle"
-            onClick={() => setShowPassword(s => !s)}
-            aria-pressed={showPassword}
-          >
-            {showPassword ? 'Hide' : 'Show'}
-          </button>
-        </div>
-      </FormField>
-      <FormField label={`Confirm ${label.toLowerCase()}`} htmlFor={`${idPrefix}-confirm`} error={confirmProblem}>
-        <input
-          id={`${idPrefix}-confirm`}
-          type={showPassword ? 'text' : 'password'}
-          value={confirm}
-          onChange={e => onConfirmChange(e.target.value)}
+        <PasswordInput
+          id={`${idPrefix}-password`}
+          value={password}
+          onChange={onPasswordChange}
           autoComplete="new-password"
+          label={label}
+        />
+      </FormField>
+      <FormField label={confirmLabel} htmlFor={`${idPrefix}-confirm`} error={confirmProblem}>
+        <PasswordInput
+          id={`${idPrefix}-confirm`}
+          value={confirm}
+          onChange={onConfirmChange}
+          autoComplete="new-password"
+          label={confirmLabel}
         />
       </FormField>
     </>

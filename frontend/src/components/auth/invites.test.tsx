@@ -58,14 +58,14 @@ describe('signup page', () => {
     expect(screen.getByText('Letters and numbers only.')).toBeInTheDocument();
   });
 
-  it('shows and hides both passwords together', async () => {
+  it('shows and hides each password on its own', async () => {
     const { user: u } = renderAt('/invite/abc123', <App />);
     const password = await screen.findByLabelText('Password');
     expect(password).toHaveAttribute('type', 'password');
-    await u.click(screen.getByRole('button', { name: 'Show' }));
+    await u.click(screen.getByRole('button', { name: 'Show password' }));
     expect(password).toHaveAttribute('type', 'text');
-    expect(screen.getByLabelText('Confirm password')).toHaveAttribute('type', 'text');
-    await u.click(screen.getByRole('button', { name: 'Hide' }));
+    expect(screen.getByLabelText('Confirm password')).toHaveAttribute('type', 'password');
+    await u.click(screen.getByRole('button', { name: 'Hide password' }));
     expect(password).toHaveAttribute('type', 'password');
   });
 
