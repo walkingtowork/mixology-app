@@ -114,9 +114,11 @@ Note from the user, 2026-10-21 (after using Personal Info on desktop):
 
 - [ ] **Menu sections — event vs standard drinks** (8) — sections within one menu ("Tonight's
       specials" / "The usual" / "Zero-proof") rather than separate pages, so guests keep a
-      single scroll
+      single scroll. Brainstorm and decisions in `PROJECT_CONTEXT.md`, "Menu sections";
+      the free-text notes block shipped first as a stand-in (2026-10-30)
 - [ ] **Non-alcoholic drinks** (3) — mark a recipe non-alcoholic, label it on the menu and
-      filter by it; a "Zero-proof" section comes free with menu sections
+      filter by it; a "Zero-proof" section comes free with menu sections. Includes a
+      "make it N/A" order option, shown on Orders and on stats
 - [ ] **Last call / ordering cutoff** (5) — the one piece of the original ordering plan never
       built
 - [ ] **Guest name hint on the order form** (1) — nudge guests toward distinct names. Names

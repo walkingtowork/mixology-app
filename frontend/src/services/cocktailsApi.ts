@@ -420,6 +420,7 @@ export async function updateMenu(
   data: {
     name?: string;
     theme_notes?: string;
+    notes?: string;
     is_published?: boolean;
     top_decoration?: DecorationKey;
     bottom_decoration?: DecorationKey;

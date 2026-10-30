@@ -166,6 +166,49 @@ Note `cancelOrder` hard-deletes, so cancelled drinks leave no trace — there is
 
 ---
 
+## Menu sections — brainstorm (2026-10-30)
+
+Agreed with the user the day before the Halloween party. The **notes block** shipped first as
+a stand-in: `Menu.notes`, free text below the drinks on the shared menu (`# ` = header,
+`- ` = bullet, blank line = new paragraph), edited on the menu's planning screen. Single
+column, at the bottom. When real sections arrive, existing notes can be converted into them.
+
+Sections the user wants to consider:
+- **Neat pours / spirits**: a small pour of one bottle (whiskey, liqueurs, umeshu…). Possibly
+  a header per type, and maybe two columns in a smaller font
+- **Non-alcoholic**: a zero-proof list, and/or an icon on main-menu drinks that can be made
+  N/A. A **leaf** is the working choice for the icon; the user is open to others, so show options
+- **Classics**: drinks that are available but not part of the event menu
+- **Notes**: free text, optionally with no header (this is what shipped)
+
+Decisions so far:
+- **Pours, classics and notes are not orderable.** They're ask-the-bartender items. A pour is
+  an Ingredient, not a Recipe, and `Order` points at a Recipe
+- **"Make it N/A" will be an ordering option** on drinks that allow it, carried on the order,
+  shown on the Orders screen **and on the stats screen**
+- **Sections will probably be reused across menus**, but need an interface for adding and
+  removing what's in them (not a fixed list)
+
+Proposed shape (not yet agreed):
+- Sections are generic: "Tonight's specials", "Classics" and "Zero-Proof" are all drink
+  sections with different titles. A section header can be blank
+- Each section picks a display style: **full cards** (today's look), **compact** (name and
+  one line, for classics), **two-column list** (small font, for pours), **free text** (notes)
+- Pours come from Ingredients, so stock levels already apply: list chosen bottles, or every
+  in-stock bottle in chosen categories, and a bottle at 0% drops off on its own. A header
+  per category solves the "own header per type" question
+- Two recipe flags: "can be made N/A" (icon on the menu, enables the order option) and
+  "non-alcoholic" (what a Zero-Proof section lists)
+- Reuse: copy sections from another menu, or let a pours section be "everything in stock in
+  these categories" so it never needs rebuilding
+
+Other section ideas raised: beer, wine and cans in the fridge; shots; hot drinks (the guest
+order limit should be revisited once these exist); food (e.g. Umeshu & Tacos);
+"bartender's choice" (guest names a spirit and a flavor); house rules ("2 drinks in the
+queue at a time"); "ask about…" for off-menu options.
+
+Before building: render a mockup with options (N/A icons, pours layout) for the user to pick.
+
 ## Multi-user accounts — agreed decisions
 
 **Status: in progress** — 1.0–8.0 shipped as of 2026-10-13; order scoping (PR #23) 10.0 (PR #24), 11.0 (PR #25), 9.0 (PR #26) and 12.0 (invites, PR #27) are all live as of 2026-10-14; 13.0 (password reset, PR #29) merged 2026-10-15; 14.0 is next. The login work was moved ahead of 9.0 (frontend tests) on 2026-10-14 so a login screen exists before the 2026-10-31 party. Full task breakdown, and a

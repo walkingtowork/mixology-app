@@ -158,6 +158,8 @@ class Menu(models.Model):
     is_published = models.BooleanField(default=False)
     share_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     theme_notes = models.TextField(blank=True)
+    # Free text shown to guests below the drinks: `# ` lines are headers, `- ` lines bullets.
+    notes = models.TextField(blank=True)
     top_decoration = models.CharField(
         max_length=32, choices=DECORATION_CHOICES, default='none'
     )

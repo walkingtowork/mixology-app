@@ -154,7 +154,7 @@ class MenuSerializer(serializers.ModelSerializer):
         model = Menu
         fields = [
             'id', 'name', 'is_active', 'is_published', 'share_token',
-            'theme_notes', 'top_decoration', 'bottom_decoration',
+            'theme_notes', 'notes', 'top_decoration', 'bottom_decoration',
             'created_at', 'updated_at', 'items', 'item_count',
         ]
         read_only_fields = ['share_token', 'created_at', 'updated_at', 'is_active']

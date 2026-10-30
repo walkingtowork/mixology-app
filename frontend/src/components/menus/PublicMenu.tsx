@@ -5,6 +5,7 @@ import type { Menu, Order } from '../../types/cocktails';
 import GlassIcon from '../ui/GlassIcon';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import { DecorationSlot } from './DecorationSlot';
+import MenuNotes from './MenuNotes';
 import './PublicMenu.css';
 
 const GUEST_NAME_KEY = 'barCart_guestName';
@@ -170,6 +171,8 @@ export default function PublicMenu() {
           </li>
         ))}
       </ul>
+
+      <MenuNotes notes={menu.notes} />
 
       {/* Name modal */}
       {showNameModal && (

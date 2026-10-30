@@ -1480,6 +1480,17 @@ class MenuAPITests(AuthenticatedAPITestCase):
         self.menu.refresh_from_db()
         self.assertFalse(self.menu.is_active)
 
+    def test_notes_are_saved_and_shown_on_the_public_menu(self):
+        notes = '# Neat Pours\n- Hibiki Harmony\n- Choya Umeshu'
+        response = self.client.patch(
+            f'/api/menus/{self.menu.id}/', {'notes': notes}, format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['notes'], notes)
+        self.client.logout()
+        response = self.client.get(f'/api/public/menu/{self.menu.share_token}/')
+        self.assertEqual(response.data['notes'], notes)
+
     def test_list_reports_item_count(self):
         MenuItem.objects.create(menu=self.menu, recipe=self.negroni, order=1)
         response = self.client.get('/api/menus/')

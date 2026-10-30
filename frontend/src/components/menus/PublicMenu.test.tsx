@@ -32,6 +32,25 @@ describe('PublicMenu', () => {
     expect(await screen.findByRole('button', { name: 'Order' })).toBeInTheDocument();
   });
 
+  it('shows the notes below the drinks, with headers and bullets but no Order buttons', async () => {
+    vi.mocked(api.fetchPublicMenu).mockResolvedValue(menu({
+      notes: '# Neat Pours\n- Hibiki Harmony\n- Choya Umeshu\n\nJust ask the bartender.',
+    }));
+    renderMenu();
+    const notes = await screen.findByRole('region', { name: 'More from the bar' });
+    expect(within(notes).getByRole('heading', { name: 'Neat Pours' })).toBeInTheDocument();
+    expect(within(notes).getAllByRole('listitem').map(li => li.textContent))
+      .toEqual(['Hibiki Harmony', 'Choya Umeshu']);
+    expect(within(notes).getByText('Just ask the bartender.')).toBeInTheDocument();
+    expect(within(notes).queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('shows no notes section when the menu has none', async () => {
+    renderMenu();
+    expect(await screen.findByText('Negroni')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'More from the bar' })).not.toBeInTheDocument();
+  });
+
   it('hides the Order button on an inactive menu but keeps My Orders', async () => {
     vi.mocked(api.fetchPublicMenu).mockResolvedValue(menu({ is_active: false }));
     renderMenu();
