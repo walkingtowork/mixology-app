@@ -24,6 +24,7 @@ export function menu(overrides: Partial<Menu> = {}): Menu {
     is_published: true,
     share_token: '11111111-2222-3333-4444-555555555555',
     theme_notes: '',
+    notes: '',
     top_decoration: 'none',
     bottom_decoration: 'none',
     created_at: '2026-10-14T10:00:00Z',

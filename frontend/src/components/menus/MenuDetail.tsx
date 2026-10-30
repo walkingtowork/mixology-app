@@ -23,6 +23,7 @@ import {
   activateMenu,
   fetchMenus,
   reorderMenuItems,
+  updateMenu,
 } from '../../services/cocktailsApi';
 import type { Menu, MenuItem, Recipe } from '../../types/cocktails';
 import Button from '../ui/Button';
@@ -31,6 +32,7 @@ import LoadingSpinner from '../ui/LoadingSpinner';
 import ConfirmModal from '../ui/ConfirmModal';
 import RecipeDrawer from './RecipeDrawer';
 import EditRecipeDrawer from './EditRecipeDrawer';
+import MenuNotes from './MenuNotes';
 import './MenuDetail.css';
 
 function stockClass(level: number) {
@@ -43,6 +45,60 @@ function stockLabel(level: number) {
   if (level === 0) return 'Out of stock';
   if (level <= 25) return 'Low stock';
   return '';
+}
+
+function NotesEditor({ menu, onSaved }: { menu: Menu; onSaved: (menu: Menu) => void }) {
+  const [notes, setNotes] = useState(menu.notes);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const dirty = notes !== menu.notes;
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      onSaved(await updateMenu(menu.id, { notes }));
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch {
+      setError('Failed to save notes.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <section className="menu-notes-editor">
+      <label htmlFor="menu-notes" className="menu-notes-editor-title">Notes</label>
+      <p className="menu-notes-editor-help">
+        Shown to guests below the drinks, for anything they ask the bartender for rather than
+        order: neat pours, zero-proof options, classics. Start a line with <code>#</code> for
+        a header and <code>-</code> for a bullet. A blank line starts a new paragraph.
+      </p>
+      <textarea
+        id="menu-notes"
+        className="form-input menu-notes-editor-input"
+        rows={8}
+        value={notes}
+        onChange={e => setNotes(e.target.value)}
+        placeholder={'# Neat Pours\n- Hibiki Harmony\n- Choya Umeshu\n\nAsk about zero-proof versions of any drink.'}
+      />
+      {error && <p className="menu-detail-error">{error}</p>}
+      <div className="menu-notes-editor-actions">
+        <Button variant="primary" size="sm" onClick={handleSave} disabled={saving || !dirty}>
+          {saving ? 'Saving…' : 'Save Notes'}
+        </Button>
+        {saved && !dirty && <span className="menu-notes-editor-saved" role="status">Saved</span>}
+      </div>
+      {notes.trim() && (
+        <div className="menu-notes-editor-preview">
+          <span className="menu-notes-editor-preview-label">Preview</span>
+          <MenuNotes notes={notes} />
+        </div>
+      )}
+    </section>
+  );
 }
 
 interface SortableItemProps {
@@ -358,6 +414,8 @@ export default function MenuDetail() {
           </DndContext>
         )}
       </div>
+
+      <NotesEditor menu={menu} onSaved={setMenu} />
 
       {showDrawer && (
         <RecipeDrawer

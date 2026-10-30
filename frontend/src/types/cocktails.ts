@@ -77,6 +77,7 @@ export interface Menu {
   is_published: boolean;
   share_token: string;
   theme_notes: string;
+  notes: string;
   top_decoration: DecorationKey;
   bottom_decoration: DecorationKey;
   created_at: string;
