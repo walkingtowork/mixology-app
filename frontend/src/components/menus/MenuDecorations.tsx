@@ -12,6 +12,8 @@
  * Art is never auto-flipped between slots — mirroring was tried and reverted (7c62399).
  */
 
+import { useId } from 'react';
+
 type ArtProps = { size?: number };
 
 const BRANCH = '#5C3A2E';
@@ -223,6 +225,183 @@ export function PumpkinArt({ size = 210 }: ArtProps) {
         stroke="#4D7C0F" strokeWidth="2" fill="none" strokeLinecap="round" opacity={0.8} />
       <path d="M 110 104 C 118 96 130 98 130 108 C 130 118 116 120 112 112"
         stroke="#4D7C0F" strokeWidth="1.8" fill="none" strokeLinecap="round" opacity={0.7} />
+    </svg>
+  );
+}
+
+/* ---------- Halloween ---------- */
+
+const NIGHT = '#2A2230';
+const MOON = '#F2C45A';
+const STAR = '#E8B64A';
+
+/**
+ * A crescent: a disc with a second circle masked out of it. The mask id comes from
+ * `useId` because a picker shows several copies of the same art on one page.
+ */
+function Crescent({ cx, cy, r, cutX, cutY, cutR }: {
+  cx: number; cy: number; r: number; cutX: number; cutY: number; cutR: number;
+}) {
+  const id = useId();
+  return (
+    <>
+      <mask id={id}>
+        <rect x={-20} y={-20} width={260} height={260} fill="#fff" />
+        <circle cx={cutX} cy={cutY} r={cutR} fill="#000" />
+      </mask>
+      <circle cx={cx} cy={cy} r={r} fill={MOON} mask={`url(#${id})`} />
+    </>
+  );
+}
+
+/** Four-pointed twinkle, radius `s`. */
+function Sparkle({ x, y, s, fill }: { x: number; y: number; s: number; fill: string }) {
+  return (
+    <path transform={`translate(${x},${y}) scale(${s})`}
+      d="M0,-1 Q.12,-.12 1,0 Q.12,.12 0,1 Q-.12,.12 -1,0 Q-.12,-.12 0,-1Z" fill={fill} />
+  );
+}
+
+/**
+ * One ghost, roughly 100 units wide at scale 1. White art disappears at the slot's 30%
+ * opacity, so it carries a lavender outline that survives the fade.
+ */
+function Ghost({ x, y, s, angle }: { x: number; y: number; s: number; angle: number }) {
+  const stroke = '#7C6F93';
+  const sw = 2.6 / s;
+  const eye = '#2E2438';
+  return (
+    <g transform={`translate(${x},${y}) rotate(${angle}) scale(${s})`}>
+      <ellipse cx={-47} cy={8} rx={11} ry={6.5} transform="rotate(-35,-47,8)"
+        fill="#fff" stroke={stroke} strokeWidth={sw} />
+      <ellipse cx={47} cy={6} rx={11} ry={6.5} transform="rotate(30,47,6)"
+        fill="#fff" stroke={stroke} strokeWidth={sw} />
+      <path d="M -45 50 L -45 -15 A 45 45 0 0 1 45 -15 L 45 50 Q 37.5 38 30 50 Q 22.5 62 15 50 Q 7.5 38 0 50 Q -7.5 62 -15 50 Q -22.5 38 -30 50 Q -37.5 62 -45 50 Z"
+        fill="#fff" stroke={stroke} strokeWidth={sw} strokeLinejoin="round" />
+      <ellipse cx={25} cy={10} rx={11} ry={30} fill="#E6E0F0" opacity={0.85} />
+      <ellipse cx={-15} cy={-14} rx={5.5} ry={7.5} fill={eye} />
+      <ellipse cx={15} cy={-14} rx={5.5} ry={7.5} fill={eye} />
+      <circle cx={-13.2} cy={-16.5} r={1.9} fill="#fff" />
+      <circle cx={16.8} cy={-16.5} r={1.9} fill="#fff" />
+      <ellipse cx={-26} cy={1} rx={7} ry={4} fill={PETAL} opacity={0.85} />
+      <ellipse cx={26} cy={1} rx={7} ry={4} fill={PETAL} opacity={0.85} />
+      <ellipse cx={0} cy={3} rx={4} ry={5} fill={eye} />
+    </g>
+  );
+}
+
+export function GhostArt({ size = 220 }: ArtProps) {
+  const lavender = '#A89BC2';
+  return (
+    <svg width={size} height={size} viewBox="0 0 220 220" aria-hidden="true">
+      <Ghost x={92} y={88} s={1} angle={-9} />
+      <Ghost x={180} y={46} s={0.4} angle={12} />
+      <text x={150} y={128} transform="rotate(-8,150,128)" fill="#7C6F93"
+        fontFamily="'Playfair Display', Georgia, serif" fontStyle="italic" fontWeight={600} fontSize={20}>
+        boo!
+      </text>
+      <Sparkle x={30} y={168} s={6} fill={lavender} />
+      <Sparkle x={190} y={96} s={4.5} fill={lavender} />
+      <Sparkle x={150} y={18} s={3.5} fill={lavender} />
+    </svg>
+  );
+}
+
+export function BlackCatArt({ size = 220 }: ArtProps) {
+  const cat = '#241E2B';
+  const eye = '#D9E86A';
+  return (
+    <svg width={size} height={size} viewBox="0 0 220 220" aria-hidden="true">
+      <Crescent cx={92} cy={92} r={72} cutX={122} cutY={72} cutR={62} />
+      {/* Cat sits in the hollow of the crescent; its tail hangs over the outer edge */}
+      <g transform="translate(120,140)" fill={cat}>
+        <path d="M -22,-8 C -42,-2 -46,22 -34,38 C -28,46 -18,44 -21,35"
+          fill="none" stroke={cat} strokeWidth={6.5} strokeLinecap="round" />
+        <ellipse cx={-6} cy={-15} rx={19} ry={15} />
+        <ellipse cx={3} cy={-30} rx={14} ry={23} />
+        <ellipse cx={9} cy={-1.5} rx={8} ry={3.5} />
+        <circle cx={8} cy={-56} r={14.5} />
+        <path d="M -4,-62 L -2,-80 L 9,-68 Z" />
+        <path d="M 8,-68 L 20,-79 L 21,-60 Z" />
+        <ellipse cx={2.5} cy={-57} rx={3} ry={4} fill={eye} />
+        <ellipse cx={13.5} cy={-57} rx={3} ry={4} fill={eye} />
+        <ellipse cx={2.5} cy={-57} rx={0.9} ry={3.2} />
+        <ellipse cx={13.5} cy={-57} rx={0.9} ry={3.2} />
+      </g>
+      <Sparkle x={182} y={36} s={7} fill={STAR} />
+      <Sparkle x={200} y={100} s={4.5} fill={STAR} />
+      <Sparkle x={30} y={192} s={5} fill={STAR} />
+      <Sparkle x={166} y={168} s={3.5} fill={STAR} />
+    </svg>
+  );
+}
+
+/** Spokes fan out from the canvas corner (0,0); rings sag back toward it between spokes. */
+const WEB_SPOKES = [6, 22, 38, 54, 70, 86].map(a => a * Math.PI / 180);
+const WEB_RINGS = [38, 74, 112, 150, 190];
+const webPoint = (r: number, a: number) => `${(r * Math.cos(a)).toFixed(1)},${(r * Math.sin(a)).toFixed(1)}`;
+const WEB_RING_PATHS = WEB_RINGS.map(r =>
+  WEB_SPOKES.map((a, i) => i === 0
+    ? `M${webPoint(r, a)}`
+    : `Q${webPoint(r * 0.86, (a + WEB_SPOKES[i - 1]) / 2)} ${webPoint(r, a)}`,
+  ).join(' '),
+);
+
+export function CobwebArt({ size = 220 }: ArtProps) {
+  const thread = '#6F6680';
+  return (
+    <svg width={size} height={size} viewBox="0 0 220 220" aria-hidden="true">
+      <g stroke={thread} strokeWidth={1.3} strokeLinecap="round" fill="none">
+        {WEB_SPOKES.map(a => <path key={a} d={`M0,0 L${webPoint(205, a)}`} />)}
+        {WEB_RING_PATHS.map(d => <path key={d} d={d} />)}
+      </g>
+      {/* Spider hanging from the outer ring on its own thread */}
+      <line x1={146} y1={104} x2={146} y2={146} stroke={thread} strokeWidth={1.2} />
+      <g transform="translate(146,158)">
+        <g fill="none" stroke={NIGHT} strokeWidth={2.4} strokeLinecap="round">
+          {[0, 1, 2, 3].map(k => {
+            const y0 = -5 + k * 4, y1 = -14 + k * 7, y2 = -2 + k * 8;
+            return (
+              <g key={k}>
+                <path d={`M 9,${y0} Q 24,${y1} 27,${y2}`} />
+                <path d={`M -9,${y0} Q -24,${y1} -27,${y2}`} />
+              </g>
+            );
+          })}
+        </g>
+        <circle r={13} fill={NIGHT} />
+        <circle cx={-4.6} cy={-2} r={3.8} fill="#fff" />
+        <circle cx={4.6} cy={-2} r={3.8} fill="#fff" />
+        <circle cx={-4} cy={-1.4} r={1.7} fill={NIGHT} />
+        <circle cx={5.2} cy={-1.4} r={1.7} fill={NIGHT} />
+        <path d="M -3.5,5 Q 0,8 3.5,5" fill="none" stroke="#fff" strokeWidth={1.3} strokeLinecap="round" />
+        <ellipse cx={-8.5} cy={3.5} rx={2.6} ry={1.6} fill={PETAL} opacity={0.8} />
+        <ellipse cx={8.5} cy={3.5} rx={2.6} ry={1.6} fill={PETAL} opacity={0.8} />
+      </g>
+    </svg>
+  );
+}
+
+/** Unit bat, wingspan 2, centred on its body. */
+const BAT_PATH =
+  'M0,-.18 L.07,-.36 L.13,-.16 C.35,-.25 .6,-.5 1,-.32 Q.82,-.12 .84,.06 Q.68,-.06 .56,.1 ' +
+  'Q.44,-.02 .3,.16 Q.2,.06 .12,.12 L0,.3 L-.12,.12 Q-.2,.06 -.3,.16 Q-.44,-.02 -.56,.1 ' +
+  'Q-.68,-.06 -.84,.06 Q-.82,-.12 -1,-.32 C-.6,-.5 -.35,-.25 -.13,-.16 L-.07,-.36 Z';
+
+const Bat = (props: Omit<LeafProps, 'fill'>) => <Leaf d={BAT_PATH} fill={NIGHT} {...props} />;
+
+export function BatsArt({ size = 220 }: ArtProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 220 220" aria-hidden="true">
+      <Crescent cx={62} cy={60} r={46} cutX={84} cutY={46} cutR={40} />
+      {/* Flock flying out of the corner toward the menu, shrinking with distance */}
+      <Bat x={132} y={72} r={36} angle={-10} />
+      <Bat x={184} y={122} r={24} angle={14} />
+      <Bat x={96} y={140} r={19} angle={-18} opacity={0.9} />
+      <Bat x={192} y={36} r={15} angle={22} opacity={0.85} />
+      <Bat x={50} y={188} r={12} angle={8} opacity={0.75} />
+      <Sparkle x={150} y={16} s={4} fill={STAR} />
+      <Sparkle x={20} y={126} s={4} fill={STAR} />
     </svg>
   );
 }

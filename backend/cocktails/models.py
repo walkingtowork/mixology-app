@@ -25,6 +25,10 @@ DECORATION_CHOICES = [
     ('acorn', 'Acorns & Oak'),
     ('pumpkin', 'Pumpkins'),
     ('wheat', 'Wheat & Dried Grass'),
+    ('ghost', 'Little Ghost'),
+    ('black_cat', 'Black Cat & Moon'),
+    ('cobweb', 'Cobweb & Spider'),
+    ('bats', 'Bats & Moon'),
 ]
 
 UNIT_CHOICES = [

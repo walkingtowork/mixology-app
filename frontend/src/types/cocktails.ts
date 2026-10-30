@@ -64,7 +64,11 @@ export type DecorationKey =
   | 'maple'
   | 'acorn'
   | 'pumpkin'
-  | 'wheat';
+  | 'wheat'
+  | 'ghost'
+  | 'black_cat'
+  | 'cobweb'
+  | 'bats';
 
 export interface Menu {
   id: number;

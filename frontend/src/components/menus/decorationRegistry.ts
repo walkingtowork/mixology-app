@@ -1,6 +1,8 @@
 import type { ComponentType } from 'react';
 import type { DecorationKey } from '../../types/cocktails';
-import { UmeArt, TacoArt, MapleArt, PumpkinArt } from './MenuDecorations';
+import {
+  UmeArt, TacoArt, MapleArt, PumpkinArt, GhostArt, BlackCatArt, CobwebArt, BatsArt,
+} from './MenuDecorations';
 
 export type ArtProps = { size?: number };
 
@@ -22,6 +24,10 @@ export const DECORATIONS: Record<DecorationKey, DecorationEntry> = {
   taco: { label: 'Taco', Art: TacoArt, composedFor: 'bottom' },
   maple: { label: 'Maple Branch', Art: MapleArt, composedFor: 'top' },
   pumpkin: { label: 'Pumpkins', Art: PumpkinArt, composedFor: 'bottom' },
+  ghost: { label: 'Little Ghost', Art: GhostArt, composedFor: 'top' },
+  black_cat: { label: 'Black Cat & Moon', Art: BlackCatArt, composedFor: 'top' },
+  cobweb: { label: 'Cobweb & Spider', Art: CobwebArt, composedFor: 'top' },
+  bats: { label: 'Bats & Moon', Art: BatsArt, composedFor: 'top' },
   // Sketched but not drawn — they stay in DECORATION_CHOICES so the keys are
   // reserved, and `selectableDecorations()` keeps them out of the picker until
   // they have artwork.
