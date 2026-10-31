@@ -407,8 +407,4 @@
   .public-menu {
     padding: var(--space-8) var(--space-4);
   }
-
-  .public-menu-glass {
-    display: none;
-  }
 }
